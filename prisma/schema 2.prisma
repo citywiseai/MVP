@@ -1,0 +1,165 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  memberships   Membership[]
+  projects      Project[] @relation("UserProjects")
+  tasks         Task[]
+  notes         Note[]
+  ownedProjects Project[] @relation("ProjectOwner")
+}
+
+model Org {
+  id            String    @id @default(cuid())
+  name          String
+  slug          String    @unique
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  memberships   Membership[]
+  projects      Project[]
+}
+
+model Membership {
+  id            String    @id @default(cuid())
+  role          String    // OWNER, ADMIN, ENGINEER, VIEWER
+  userId        String
+  orgId         String
+  createdAt     DateTime  @default(now())
+  
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org           Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, orgId])
+}
+
+model Project {
+  id                    String    @id @default(cuid())
+  name                  String
+  description           String?
+  status                String    @default("active")
+  orgId                 String
+  parcelId              String?
+  
+  // New detailed fields from calculator
+  fullAddress           String?
+  propertyType          String?   // Commercial, Residential, Multi-family, Mixed-use
+  jurisdiction          String?
+  projectType           String?   // From dropdown
+  mainContact           String?
+  lotSizeSqFt           Int?
+  buildingFootprintSqFt Int?
+  totalSfModified       Int?
+  outsideFootprintSf    Int?
+  hillsideGrade         Boolean   @default(false)
+  onSeptic              Boolean   @default(false)
+  scopeOfWork           String?   @db.Text
+  
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  org                   Org              @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  parcel                Parcel?          @relation(fields: [parcelId], references: [id])
+  tasks                 Task[]
+  notes                 Note[]
+  User                  User?            @relation("ProjectOwner", fields: [userId], references: [id])
+  userId                String?
+  engineeringReqs       EngineeringRequirement[]
+
+  projectFiles          ProjectFile[]
+
+  users                 User[]           @relation("UserProjects")
+}
+
+model Parcel {
+  id            String    @id @default(cuid())
+  apn           String
+  address       String
+  jurisdiction  String
+  zoningCode    String
+  lotSizeSqFt   Int
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  projects      Project[]
+  zoningRules   ZoningRule[]
+  
+  @@unique([apn, jurisdiction])
+}
+
+model ZoningRule {
+  id            String    @id @default(cuid())
+  parcelId      String
+  jurisdiction  String
+  zoningCode    String
+  field         String    // front_setback_ft, max_height_ft, etc
+  value         String
+  unit          String?
+  sourceUrl     String?
+  notes         String?
+  createdAt     DateTime  @default(now())
+  
+  parcel        Parcel    @relation(fields: [parcelId], references: [id], onDelete: Cascade)
+}
+
+model Task {
+  id            String    @id @default(cuid())
+  title         String
+  description   String?
+  status        String    @default("TODO")
+  projectId     String
+  createdById   String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy     User      @relation(fields: [createdById], references: [id])
+}
+
+model Note {
+  id            String    @id @default(cuid())
+  content       String
+  projectId     String
+  authorId      String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  author        User      @relation(fields: [authorId], references: [id])
+}
+
+model ProjectFile {
+  id            String    @id @default(cuid())
+  projectId     String
+  filename      String
+  filepath      String
+  fileSize      Int
+  createdAt     DateTime  @default(now())
+  
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model EngineeringRequirement {
+  id            String    @id @default(cuid())
+  projectId     String
+  discipline    String    // structural, mep, civil, soils, survey
+  required      Boolean   @default(true)
+  status        String    @default("pending") // pending, in_progress, completed
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}

@@ -1,0 +1,147 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  memberships   Membership[]
+  projects      Project[] @relation("UserProjects")
+  tasks         Task[]
+  notes         Note[]
+  ownedProjects Project[] @relation("ProjectOwner")
+}
+
+model Org {
+  id            String    @id @default(cuid())
+  name          String
+  slug          String    @unique
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  memberships   Membership[]
+  projects      Project[]
+}
+
+model Membership {
+  id            String    @id @default(cuid())
+  role          String
+  userId        String
+  orgId         String
+  createdAt     DateTime  @default(now())
+
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org           Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, orgId])
+}
+
+model Project {
+  id                    String    @id @default(cuid())
+  name                  String
+  description           String?
+  status                String    @default("active")
+  
+  // Address & Location
+  fullAddress           String?
+  streetNumber          String?
+  streetName            String?
+  city                  String?
+  state                 String?
+  zipCode               String?
+  county                String?
+  
+  // Property Details
+  propertyType          String?
+  projectType           String?
+  jurisdiction          String?
+  lotSizeSqFt           Int?
+  buildingFootprintSqFt Int?
+  totalSfExisting       Int?
+  totalSfProposed       Int?
+  totalSfModified       Int?
+  totalCost             Float?
+  
+  // Setback Requirements (in feet)
+  frontSetback          Int?      @default(25)
+  rearSetback           Int?      @default(20) 
+  sideSetback           Int?      @default(5)
+  setbackNotes          String?
+
+  // Relations
+  orgId                 String
+  userId                String?
+  parcelId              String?
+  
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  
+  // Relationships
+  org                   Org       @relation(fields: [orgId], references: [id])
+  owner                 User?     @relation("ProjectOwner", fields: [userId], references: [id])
+  members               User[]    @relation("UserProjects")
+  
+  requirements          EngineeringRequirement[]
+  tasks                 Task[]
+  notes                 Note[]
+  chatMessages          ChatMessage[]
+}
+
+model Task {
+  id            String    @id @default(cuid())
+  title         String
+  description   String?
+  status        String    @default("pending")
+  dueDate       DateTime?
+  projectId     String
+  createdById   String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy     User      @relation(fields: [createdById], references: [id])
+}
+
+model Note {
+  id            String    @id @default(cuid())
+  content       String
+  projectId     String
+  authorId      String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  author        User      @relation(fields: [authorId], references: [id])
+}
+
+model EngineeringRequirement {
+  id            String    @id @default(cuid())
+  discipline    String
+  required      Boolean   @default(true)
+  status        String    @default("pending")
+  notes         String?
+  projectId     String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model ChatMessage {
+  id            String    @id @default(cuid())
+  content       String
+  role          String
+  projectId     String
+  createdAt     DateTime  @default(now())
+
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}

@@ -1,0 +1,10 @@
+import React from 'react';
+
+export default function ParcelsFetchPage() {
+  return (
+    <div>
+      <h1>Fetch Parcels</h1>
+      {/* Add parcel fetching UI here */}
+    </div>
+  );
+}
