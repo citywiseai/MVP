@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { PrismaClient } from "@prisma/client"
 import Link from "next/link"
-import NewProjectClientForm from './NewProjectClientForm'
+import NewProjectClientForm from './new/NewProjectClientForm'
 import { analyzeProjectScope } from "@/lib/ai"
 
 const prisma = new PrismaClient()
@@ -57,7 +57,7 @@ export default async function NewProjectPage() {
     
     if (fullAddress && (fullAddress.toLowerCase().includes('phoenix') || fullAddress.toLowerCase().includes('az'))) {
       try {
-        const { getMaricopaParcelByAddress } = await import('@/lib/maricopa-gis')
+  const { getMaricopaParcelByAddress } = await import('@/lib/regrid')
         const streetAddress = fullAddress.split(',')[0].trim()
         const parcelData = await getMaricopaParcelByAddress(streetAddress)
         

@@ -162,19 +162,56 @@ async function convertRequirementsToTasks(formData: FormData) {
     if (!existingTask) {
       await prisma.task.create({
         data: {
-          projectId,
-          title: `Complete ${req.discipline}`,
-          description: req.notes || undefined,
-          createdBy: { connect: { id: user.id } },
-          status: 'TODO',
-        }
-      })
-    }
-  }
-  
-  revalidatePath(`/projects/${projectId}`)
-}
+      {/* DEBUG - Remove after testing */}
+      {/* Debug log moved to useEffect or handler, not in JSX */}
 
+      {/* Property Visualization - NEW INTERACTIVE MAP */}
+      {(project as any).parcel && (() => {
+        // Parse boundaryCoordinates properly
+        let boundaryCoords: number[][] = []
+        const rawBoundary = (project as any).parcel.boundaryCoordinates
+        
+        if (typeof rawBoundary === 'string') {
+          try {
+            boundaryCoords = JSON.parse(rawBoundary)
+          } catch (e) {
+            console.error('Failed to parse boundaryCoordinates:', e)
+          }
+        } else if (Array.isArray(rawBoundary)) {
+          boundaryCoords = rawBoundary
+        }
+
+        // Debug log moved here
+        console.log('✅ Final boundary coordinates:', {
+          count: boundaryCoords.length,
+          first: boundaryCoords[0],
+          last: boundaryCoords[boundaryCoords.length - 1]
+        })
+
+        return (
+          <PropertyVisualization
+            parcelData={{
+              latitude: (project as any).parcel.latitude,
+              longitude: (project as any).parcel.longitude,
+              boundaryCoordinates: boundaryCoords,
+              zoningRules: zoningRules
+            }}
+            platMapUrl={
+              zoningRules?.find((rule) => rule.type === 'subdivision')?.mcrweblink || undefined
+            }
+            subdivisionName={
+              zoningRules?.find((rule) => rule.type === 'subdivision')?.name
+            }
+            platReference={
+              zoningRules?.find((rule) => rule.type === 'subdivision')?.platBook
+                ? `MCR ${zoningRules.find((rule) => rule.type === 'subdivision')?.platBook}-${
+                    zoningRules.find((rule) => rule.type === 'subdivision')?.platPage
+                  }`
+                : undefined
+            }
+          />
+        )
+      })()}
 export default async function ProjectDetailPage({
   params,
 }: {
@@ -189,28 +226,62 @@ export default async function ProjectDetailPage({
 
   const project = await prisma.project.findUnique({
     where: { id },
-    include: {
+    select: {
+      id: true,
+      name: true,
+      status: true,
+      jurisdiction: true,
+      lotSizeSqFt: true,
+      createdAt: true,
+      updatedAt: true,
+      userId: true,
+      orgId: true,
+      fullAddress: true,
+      scopeOfWork: true,
+      projectType: true,
+      propertyType: true,
+      buildingFootprintSqFt: true,
+      parcelId: true,
+      setbackFront: true,
+      setbackRear: true,
+      setbackSideLeft: true,
+      setbackSideRight: true,
+      parcel: true,
       notes: {
-        include: {
-          author: true
-        },
         orderBy: { createdAt: 'desc' }
       },
       projectFiles: {
         orderBy: { createdAt: 'desc' }
       },
       tasks: {
-        orderBy: { createdAt: 'desc' },
-        include: {
-          createdBy: true
-        }
+        orderBy: { createdAt: 'desc' }
       },
       engineeringRequirements: {
         orderBy: { createdAt: 'desc' }
-      },
-      parcel: true
+      }
     },
-  })
+  }) as {
+    id: string
+    status: string
+    jurisdiction: string | null
+    lotSizeSqFt: number | null
+    createdAt: Date
+    updatedAt: Date
+    name: string
+    userId: string | null
+    orgId: string
+    fullAddress: string | null
+    scopeOfWork?: string | null
+    projectType?: string | null
+    propertyType?: string | null
+    buildingFootprintSqFt?: number | null
+    parcelId?: string | null
+    parcel?: any
+    notes?: any[]
+    projectFiles?: any[]
+    tasks?: any[]
+    engineeringRequirements?: any[]
+  }
   
   if (!project) {
     notFound()
@@ -313,41 +384,70 @@ export default async function ProjectDetailPage({
           </div>
         )}
 
-        {/* DEBUG - Remove after testing */}
-        {(project as any).parcel && console.log('🔍 Parcel data for map:', {
-          hasParcel: !!(project as any).parcel,
-          lat: (project as any).parcel?.latitude,
-          lng: (project as any).parcel?.longitude,
-          boundaryCount: ((project as any).parcel?.boundaryCoordinates as any)?.length || 0,
-          zoningRulesCount: zoningRules?.length || 0,
-          subdivisionRule: zoningRules?.find((rule) => rule.type === 'subdivision'),
-          mcrweblink: zoningRules?.find((rule) => rule.type === 'subdivision')?.mcrweblink
-        })}
-
         {/* Property Visualization - NEW INTERACTIVE MAP */}
-        {(project as any).parcel && (
-          <PropertyVisualization
-            parcelData={{
-              latitude: (project as any).parcel.latitude,
-              longitude: (project as any).parcel.longitude,
-              boundaryCoordinates: (project as any).parcel.boundaryCoordinates as number[][],
-              zoningRules: zoningRules
-            }}
-            platMapUrl={
-              zoningRules?.find((rule) => rule.type === 'subdivision')?.mcrweblink || undefined
+        {(project as any).parcel && (() => {
+          // Extract zoningRules
+          const zoningRules = (project as any).parcel?.zoningRules as Array<{
+            type: string
+            name?: string
+            code?: string
+            platBook?: string
+            platPage?: string
+            mcrweblink?: string
+          }> | undefined
+
+          // Parse boundaryCoordinates properly
+          let boundaryCoords: number[][] = []
+          const rawBoundary = (project as any).parcel.boundaryCoordinates
+          
+          if (typeof rawBoundary === 'string') {
+            try {
+              boundaryCoords = JSON.parse(rawBoundary)
+            } catch (e) {
+              console.error('Failed to parse boundaryCoordinates:', e)
             }
-            subdivisionName={
-              zoningRules?.find((rule) => rule.type === 'subdivision')?.name
-            }
-            platReference={
-              zoningRules?.find((rule) => rule.type === 'subdivision')?.platBook
-                ? `MCR ${zoningRules.find((rule) => rule.type === 'subdivision')?.platBook}-${
-                    zoningRules.find((rule) => rule.type === 'subdivision')?.platPage
-                  }`
-                : undefined
-            }
-          />
-        )}
+          } else if (Array.isArray(rawBoundary)) {
+            boundaryCoords = rawBoundary
+          }
+
+          // Debug log
+          console.log('✅ Final boundary coordinates:', {
+            count: boundaryCoords.length,
+            first: boundaryCoords[0],
+            last: boundaryCoords[boundaryCoords.length - 1]
+          })
+
+          return (
+            <PropertyVisualization
+              projectId={project.id}
+              parcelData={{
+                latitude: (project as any).parcel.latitude,
+                longitude: (project as any).parcel.longitude,
+                boundaryCoordinates: boundaryCoords,
+                zoningRules: zoningRules
+              }}
+              initialSetbacks={{
+                front: project.setbackFront ?? 25,
+                rear: project.setbackRear ?? 20,
+                sideLeft: project.setbackSideLeft ?? 10,
+                sideRight: project.setbackSideRight ?? 10,
+              }}
+              platMapUrl={
+                zoningRules?.find((rule) => rule.type === 'subdivision')?.mcrweblink || undefined
+              }
+              subdivisionName={
+                zoningRules?.find((rule) => rule.type === 'subdivision')?.name
+              }
+              platReference={
+                zoningRules?.find((rule) => rule.type === 'subdivision')?.platBook
+                  ? `MCR ${zoningRules.find((rule) => rule.type === 'subdivision')?.platBook}-$
+                      {zoningRules.find((rule) => rule.type === 'subdivision')?.platPage}
+                    `
+                  : undefined
+              }
+            />
+          )
+        })()}
 
         {/* Maps Section */}
         {project.fullAddress && (

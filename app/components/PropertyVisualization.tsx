@@ -7,12 +7,10 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, Maximize2, Minimize2, Map, Building2, Grid3x3, MapPin } from 'lucide-react';
 
-const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
-console.log('Mapbox token:', token ? 'Token exists' : 'NO TOKEN FOUND');
-mapboxgl.accessToken = token;
+mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
 
 interface PropertyVisualizationProps {
-  projectId: string;
+  address: string;
   parcelData?: {
     geometry?: {
       type: string;
@@ -31,7 +29,7 @@ interface PropertyVisualizationProps {
 }
 
 export default function PropertyVisualization({ 
-  projectId,
+  address, 
   parcelData,
   buildingFootprint 
 }: PropertyVisualizationProps) {
@@ -42,6 +40,7 @@ export default function PropertyVisualization({
   const [activeLayer, setActiveLayer] = useState<'satellite' | 'street'>('satellite');
   const [showParcel, setShowParcel] = useState(true);
   const [showBuilding, setShowBuilding] = useState(true);
+  const [showZoning, setShowZoning] = useState(false);
 
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
@@ -104,7 +103,7 @@ export default function PropertyVisualization({
       map.current?.remove();
       map.current = null;
     };
-  }, [parcelData, buildingFootprint]);
+  }, []);
 
   useEffect(() => {
     if (!map.current) return;

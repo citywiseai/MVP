@@ -1,149 +1,144 @@
-'use client'
+'use client';
 
-import Link from "next/link"
-import { useRouter, useSearchParams } from "next/navigation"
-import { useState, useMemo } from "react"
-import { ProjectChatWrapper } from "@/components/ProjectChatWrapper"
-
-import { SetbackMap } from "@/components/SetbackMap"
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useMemo } from "react";
+import { ProjectChatWrapper } from "@/components/ProjectChatWrapper";
+import PropertyVisualization from "@/components/PropertyVisualization";
 
 interface Project {
-  id: string
-  name: string
-  description?: string | null
-  status: string
-  fullAddress?: string | null
-  propertyType?: string | null
-  projectType?: string | null
-  createdAt?: Date | string
+  id: string;
+  name: string;
+  description?: string | null;
+  status: string;
+  fullAddress?: string | null;
+  propertyType?: string | null;
+  projectType?: string | null;
+  createdAt?: Date | string;
   parcel?: {
-    address?: string | null
-    latitude?: number | null
-    longitude?: number | null
-    boundaryCoordinates?: any
-    zoningRules?: { field: string; value: string; unit: string }[]
-    lotSizeSqFt?: number | null
-  } | null
+    id?: string;
+    address?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    boundaryCoordinates?: any;
+    zoningRules?: { field: string; value: string; unit: string }[];
+    lotSizeSqFt?: number | null;
+  } | null;
   engineeringReqs?: {
-    id: string
-    requirement: string
-    discipline?: string | null
-    required: boolean
-    notes?: string | null
-  }[]
+    id: string;
+    requirement: string;
+    discipline?: string | null;
+    required: boolean;
+    notes?: string | null;
+  }[];
   tasks?: {
-    id: string
-    title: string
-    description?: string | null
-    status: string
-  }[]
+    id: string;
+    title: string;
+    description?: string | null;
+    status: string;
+  }[];
   notes?: {
-    id: string
-    content: string
-    createdAt: Date
-  }[]
+    id: string;
+    content: string;
+    createdAt: Date;
+  }[];
 }
 
 interface ProjectsDashboardProps {
-  projects: Project[]
-  selectedProject: Project | null
-  userEmail: string
+  projects: Project[];
+  selectedProject: Project | null;
+  userEmail: string;
 }
 
 export function ProjectsDashboard({ projects, selectedProject, userEmail }: ProjectsDashboardProps) {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const [sortBy, setSortBy] = useState<'name' | 'date' | 'status' | 'address'>('date')
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
-  const [deletingProject, setDeletingProject] = useState<string | null>(null)
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [sortBy, setSortBy] = useState<'name' | 'date' | 'status' | 'address'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [deletingProject, setDeletingProject] = useState<string | null>(null);
 
-  // Sort projects based on current sort settings
   const sortedProjects = useMemo(() => {
     const sorted = [...projects].sort((a, b) => {
-      let aValue: string | number | Date
-      let bValue: string | number | Date
+      let aValue: string | number | Date;
+      let bValue: string | number | Date;
 
       switch (sortBy) {
         case 'name':
-          aValue = a.name.toLowerCase()
-          bValue = b.name.toLowerCase()
-          break
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+          break;
         case 'date':
-          aValue = new Date(a.createdAt || 0)
-          bValue = new Date(b.createdAt || 0)
-          break
+          aValue = new Date(a.createdAt || 0);
+          bValue = new Date(b.createdAt || 0);
+          break;
         case 'status':
-          aValue = a.status.toLowerCase()
-          bValue = b.status.toLowerCase()
-          break
+          aValue = a.status.toLowerCase();
+          bValue = b.status.toLowerCase();
+          break;
         case 'address':
-          aValue = (a.fullAddress || a.parcel?.address || '').toLowerCase()
-          bValue = (b.fullAddress || b.parcel?.address || '').toLowerCase()
-          break
+          aValue = (a.fullAddress || a.parcel?.address || '').toLowerCase();
+          bValue = (b.fullAddress || b.parcel?.address || '').toLowerCase();
+          break;
         default:
-          return 0
+          return 0;
       }
 
-      if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1
-      if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1
-      return 0
-    })
-    return sorted
-  }, [projects, sortBy, sortOrder])
+      if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return sorted;
+  }, [projects, sortBy, sortOrder]);
 
   const handleProjectSelect = (projectId: string) => {
-    const params = new URLSearchParams(searchParams)
-    params.set('project', projectId)
-    router.push(`/dashboard?${params.toString()}`)
-  }
+    const params = new URLSearchParams(searchParams);
+    params.set('project', projectId);
+    router.push(`/dashboard?${params.toString()}`);
+  };
 
   const toggleSort = (newSortBy: typeof sortBy) => {
     if (sortBy === newSortBy) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
     } else {
-      setSortBy(newSortBy)
-      setSortOrder('asc')
+      setSortBy(newSortBy);
+      setSortOrder('asc');
     }
-  }
+  };
 
   const handleDeleteProject = async (projectId: string, projectName: string, event: React.MouseEvent) => {
-    event.stopPropagation() // Prevent triggering project selection
+    event.stopPropagation();
     
     if (!confirm(`Are you sure you want to delete "${projectName}"? This action cannot be undone.`)) {
-      return
+      return;
     }
 
-    setDeletingProject(projectId)
+    setDeletingProject(projectId);
     
     try {
       const response = await fetch(`/api/projects/${projectId}`, {
         method: 'DELETE',
-      })
+      });
 
       if (response.ok) {
-        // If the deleted project was selected, clear the selection
         if (selectedProject?.id === projectId) {
-          router.push('/dashboard')
+          router.push('/dashboard');
         } else {
-          // Refresh the page to update the project list
-          router.refresh()
+          router.refresh();
         }
       } else {
-        alert('Failed to delete project. Please try again.')
+        alert('Failed to delete project. Please try again.');
       }
     } catch (error) {
-      console.error('Error deleting project:', error)
-      alert('Failed to delete project. Please try again.')
+      console.error('Error deleting project:', error);
+      alert('Failed to delete project. Please try again.');
     } finally {
-      setDeletingProject(null)
+      setDeletingProject(null);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar */}
       <div className="w-80 bg-white shadow-lg border-r border-gray-200 flex flex-col">
-        {/* Header */}
         <div className="p-4 border-b border-gray-200">
           <div className="flex justify-between items-center mb-4">
             <h1 className="text-xl font-bold">CityWise AI</h1>
@@ -166,7 +161,6 @@ export function ProjectsDashboard({ projects, selectedProject, userEmail }: Proj
             </Link>
           </div>
           
-          {/* Sort Controls */}
           <div className="flex gap-1 text-xs">
             <span className="text-gray-500 mr-2">Sort by:</span>
             <button
@@ -204,7 +198,6 @@ export function ProjectsDashboard({ projects, selectedProject, userEmail }: Proj
           </div>
         </div>
 
-        {/* Project List */}
         <div className="flex-1 overflow-y-auto">
           {sortedProjects.length === 0 ? (
             <div className="p-4 text-center text-gray-500">
@@ -215,8 +208,8 @@ export function ProjectsDashboard({ projects, selectedProject, userEmail }: Proj
           ) : (
             <div className="p-2">
               {sortedProjects.map((project) => {
-                const displayAddress = project.fullAddress || project.parcel?.address
-                const isDeleting = deletingProject === project.id
+                const displayAddress = project.fullAddress || project.parcel?.address;
+                const isDeleting = deletingProject === project.id;
                 return (
                   <div
                     key={project.id}
@@ -251,7 +244,6 @@ export function ProjectsDashboard({ projects, selectedProject, userEmail }: Proj
                       </div>
                     </button>
                     
-                    {/* Delete Button */}
                     <button
                       onClick={(e) => handleDeleteProject(project.id, project.name, e)}
                       disabled={isDeleting}
@@ -267,14 +259,13 @@ export function ProjectsDashboard({ projects, selectedProject, userEmail }: Proj
                       )}
                     </button>
                   </div>
-                )
+                );
               })}
             </div>
           )}
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col">
         {selectedProject ? (
           <ProjectDetailPanel project={selectedProject} />
@@ -289,27 +280,21 @@ export function ProjectsDashboard({ projects, selectedProject, userEmail }: Proj
         )}
       </div>
     </div>
-  )
+  );
 }
 
-interface ProjectDetailPanelProps {
-  project: Project
-}
-
-// ...existing code...
-// (Insert the complete updated ProjectDetailPanel function provided by the user here)
 function ProjectDetailPanel({ project }: { project: Project }) {
-  const router = useRouter()
-  const [taskTitle, setTaskTitle] = useState('')
-  const [taskDescription, setTaskDescription] = useState('')
-  const [noteContent, setNoteContent] = useState('')
-  const [loading, setLoading] = useState(false)
+  const router = useRouter();
+  const [taskTitle, setTaskTitle] = useState('');
+  const [taskDescription, setTaskDescription] = useState('');
+  const [noteContent, setNoteContent] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleAddTask = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!taskTitle.trim()) return
+    e.preventDefault();
+    if (!taskTitle.trim()) return;
     
-    setLoading(true)
+    setLoading(true);
     try {
       await fetch('/api/tasks', {
         method: 'POST',
@@ -319,16 +304,16 @@ function ProjectDetailPanel({ project }: { project: Project }) {
           title: taskTitle,
           description: taskDescription || null
         })
-      })
-      setTaskTitle('')
-      setTaskDescription('')
-      router.refresh()
+      });
+      setTaskTitle('');
+      setTaskDescription('');
+      router.refresh();
     } catch (error) {
-      console.error('Error adding task:', error)
+      console.error('Error adding task:', error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleCompleteTask = async (taskId: string) => {
     try {
@@ -336,31 +321,31 @@ function ProjectDetailPanel({ project }: { project: Project }) {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ taskId, status: 'COMPLETED' })
-      })
-      router.refresh()
+      });
+      router.refresh();
     } catch (error) {
-      console.error('Error completing task:', error)
+      console.error('Error completing task:', error);
     }
-  }
+  };
 
   const handleDeleteTask = async (taskId: string) => {
-    if (!confirm('Delete this task?')) return
+    if (!confirm('Delete this task?')) return;
     
     try {
       await fetch(`/api/tasks?taskId=${taskId}`, {
         method: 'DELETE'
-      })
-      router.refresh()
+      });
+      router.refresh();
     } catch (error) {
-      console.error('Error deleting task:', error)
+      console.error('Error deleting task:', error);
     }
-  }
+  };
 
   const handleAddNote = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!noteContent.trim()) return
+    e.preventDefault();
+    if (!noteContent.trim()) return;
     
-    setLoading(true)
+    setLoading(true);
     try {
       await fetch('/api/notes', {
         method: 'POST',
@@ -369,54 +354,51 @@ function ProjectDetailPanel({ project }: { project: Project }) {
           projectId: project.id,
           content: noteContent
         })
-      })
-      setNoteContent('')
-      router.refresh()
+      });
+      setNoteContent('');
+      router.refresh();
     } catch (error) {
-      console.error('Error adding note:', error)
+      console.error('Error adding note:', error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleDeleteNote = async (noteId: string) => {
-    if (!confirm('Delete this note?')) return
+    if (!confirm('Delete this note?')) return;
     
     try {
       await fetch(`/api/notes?noteId=${noteId}`, {
         method: 'DELETE'
-      })
-      router.refresh()
+      });
+      router.refresh();
     } catch (error) {
-      console.error('Error deleting note:', error)
+      console.error('Error deleting note:', error);
     }
-  }
+  };
 
   const handleConvertToTasks = async () => {
-    if (!confirm('Convert all required engineering items to tasks?')) return
+    if (!confirm('Convert all required engineering items to tasks?')) return;
     
-    setLoading(true)
+    setLoading(true);
     try {
       const response = await fetch('/api/requirements-to-tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ projectId: project.id })
-      })
-      const data = await response.json()
-      alert(`Created ${data.created} new tasks`)
-      router.refresh()
+      });
+      const data = await response.json();
+      alert(`Created ${data.created} new tasks`);
+      router.refresh();
     } catch (error) {
-      console.error('Error converting requirements:', error)
+      console.error('Error converting requirements:', error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
-
-  const encodedAddress = encodeURIComponent(project.fullAddress || project.parcel?.address || '')
+  };
 
   return (
     <div className="flex-1 overflow-y-auto">
-      {/* Project Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-start justify-between">
           <div className="flex-1">
@@ -446,32 +428,55 @@ function ProjectDetailPanel({ project }: { project: Project }) {
       </div>
 
       <div className="p-6 space-y-6">
-        {/* Interactive Setback Map */}
-        {(
+        {project.parcel && (
           <div className="bg-white rounded-lg border border-gray-200">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Property Setback Visualization</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Property Visualization</h2>
               <p className="text-sm text-gray-600 mt-1">
-                Interactive map showing property boundaries and buildable area
+                Interactive map showing property boundaries
               </p>
             </div>
             <div className="p-6">
-             <SetbackMap
-               parcelData={{
-                 id: project.parcel.id,
-                 latitude: project.parcel.latitude,
-                 longitude: project.parcel.longitude,
-                 boundaryCoordinates: project.parcel.boundaryCoordinates,
-                 address: project.fullAddress || project.parcel.address || ''
-               }}
-               zoningRules={project.parcel.zoningRules || []}
-               lotSizeSqFt={project.parcel.lotSizeSqFt || 0}
+              <PropertyVisualization
+                parcelData={{
+                  latitude: project.parcel?.latitude ?? 0,
+                  longitude: project.parcel?.longitude ?? 0,
+                  boundaryCoordinates: (() => {
+                    const rawBoundary = project.parcel?.boundaryCoordinates;
+                    if (!rawBoundary) return [];
+                    let coords = rawBoundary;
+                    if (typeof coords === 'string') {
+                      try {
+                        coords = JSON.parse(coords);
+                      } catch (e) {
+                        console.error('Failed to parse boundaryCoordinates:', e);
+                        return [];
+                      }
+                    }
+                    if (Array.isArray(coords) && coords.length > 0 && Array.isArray(coords[0]) && Array.isArray(coords[0][0])) {
+                      return coords[0];
+                    }
+                    return Array.isArray(coords) ? coords : [];
+                  })(),
+                  zoningRules: (() => {
+                    const rules = project.parcel?.zoningRules;
+                    if (!rules) return [];
+                    if (typeof rules === 'string') {
+                      try {
+                        return JSON.parse(rules);
+                      } catch (e) {
+                        return [];
+                      }
+                    }
+                    return Array.isArray(rules) ? rules : [];
+                  })()
+                }}
+                parcelId={project.parcel?.id}
               />
             </div>
           </div>
         )}
 
-        {/* Engineering Requirements */}
         {project.engineeringReqs && project.engineeringReqs.length > 0 && (
           <div className="bg-white rounded-lg border border-gray-200">
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
@@ -534,15 +539,12 @@ function ProjectDetailPanel({ project }: { project: Project }) {
           </div>
         )}
 
-        {/* Tasks and Notes Grid */}
         <div className="grid md:grid-cols-2 gap-6">
-          {/* Tasks Section */}
           <div className="bg-white rounded-lg border border-gray-200">
             <div className="px-6 py-4 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">Tasks</h2>
             </div>
             <div className="p-6">
-              {/* Task List */}
               <div className="space-y-3 mb-6">
                 {project.tasks && project.tasks.length > 0 ? (
                   project.tasks.map((task) => (
@@ -592,7 +594,6 @@ function ProjectDetailPanel({ project }: { project: Project }) {
                 )}
               </div>
 
-              {/* Add Task Form */}
               <form onSubmit={handleAddTask} className="space-y-3 pt-4 border-t border-gray-200">
                 <input
                   type="text"
@@ -620,13 +621,11 @@ function ProjectDetailPanel({ project }: { project: Project }) {
             </div>
           </div>
 
-          {/* Notes Section */}
           <div className="bg-white rounded-lg border border-gray-200">
             <div className="px-6 py-4 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">Notes</h2>
             </div>
             <div className="p-6">
-              {/* Notes List */}
               <div className="space-y-3 mb-6 max-h-96 overflow-y-auto">
                 {project.notes && project.notes.length > 0 ? (
                   project.notes.map((note) => (
@@ -651,7 +650,6 @@ function ProjectDetailPanel({ project }: { project: Project }) {
                 )}
               </div>
 
-              {/* Add Note Form */}
               <form onSubmit={handleAddNote} className="space-y-3 pt-4 border-t border-gray-200">
                 <textarea
                   value={noteContent}
@@ -673,7 +671,6 @@ function ProjectDetailPanel({ project }: { project: Project }) {
           </div>
         </div>
 
-        {/* AI Project Assistant */}
         <div className="bg-white rounded-lg border border-gray-200">
           <div className="px-6 py-4 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-gray-900">AI Project Assistant</h2>
@@ -685,7 +682,7 @@ function ProjectDetailPanel({ project }: { project: Project }) {
               projectType: project.projectType || '',
               propertyType: project.propertyType || '',
               jurisdiction: project.parcel?.address?.split(',').slice(-2).join(',') || '',
-              squareFootage: 0, // This would need to be added to schema
+              squareFootage: 0,
               scopeOfWork: '',
               hillsideGrade: false,
               onSeptic: false
@@ -699,5 +696,5 @@ function ProjectDetailPanel({ project }: { project: Project }) {
         </div>
       </div>
     </div>
-  )
+  );
 }
