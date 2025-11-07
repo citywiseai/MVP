@@ -7,11 +7,30 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  HOMEOWNER
+  BUILDER
+  DEVELOPER
+  ARCHITECT
+  ENGINEER
+  REAL_ESTATE
+  OTHER
+}
+
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
   name          String?
   password      String?
+  phone         String?
+  role          UserRole?
+  companyName   String?
+  licenseNumber String?
+  serviceArea   String?
+  businessAddress String?
+  projectTypes  String[]  @default([])
+  challenges    String[]  @default([])
+  onboardingCompleted Boolean @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -35,145 +54,127 @@ model Org {
 }
 
 model Membership {
-  id            String    @id @default(cuid())
-  role          String
-  userId        String
-  orgId         String
-  createdAt     DateTime  @default(now())
+  id        String   @id @default(cuid())
+  userId    String
+  orgId     String
+  role      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  org           Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org  Org  @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   @@unique([userId, orgId])
 }
 
 model Project {
-  id                    String    @id @default(cuid())
-  name                  String
-  description           String?
-  status                String    @default("active")
-  orgId                 String
-  userId                String?
-  parcelId              String?
-  
-  // Address and location fields
-  fullAddress           String?
-  propertyType          String?   // Commercial, Residential, Multi-family, Mixed-use
-  jurisdiction          String?
-  projectType           String?   // From dropdown
-  mainContact           String?
-  lotSizeSqFt           Int?
-  buildingFootprintSqFt Int?
-  totalSfModified       Int?
-  outsideFootprintSf    Int?
-  hillsideGrade         Boolean   @default(false)
-  onSeptic              Boolean   @default(false)
-  scopeOfWork           String?   @db.Text
-  
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  name            String
+  description     String?
+  status          String    @default("active")
+  fullAddress     String?
+  propertyType    String?
+  projectType     String?
+  ownerId         String
+  orgId           String?
+  parcelId        String?   @unique
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  org                   Org              @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  parcel                Parcel?          @relation(fields: [parcelId], references: [id])
-  tasks                 Task[]
-  notes                 Note[]
-  owner                 User?            @relation("ProjectOwner", fields: [userId], references: [id])
-  engineeringReqs       EngineeringRequirement[]
-  projectFiles          ProjectFile[]
-  chatMessages          ChatMessage[]
+  owner           User               @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  org             Org?               @relation(fields: [orgId], references: [id])
+  parcel          Parcel?            @relation(fields: [parcelId], references: [id])
+  tasks           Task[]
+  notes           Note[]
+  files           ProjectFile[]
+  engineeringReqs EngineeringRequirement[]
+  chatMessages    ChatMessage[]
+}
+
+model Parcel {
+  id                   String   @id @default(cuid())
+  apn                  String   @unique
+  address              String?
+  city                 String?
+  state                String?
+  zipCode              String?
+  county               String?
+  zoning               String?
+  lotSizeSqFt          Float?
+  latitude             Float?
+  longitude            Float?
+  boundaryCoordinates  Json?
+  zoningRules          Json?
+  propertyMetadata     Json?
+  existingSqFt         Float?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  project              Project?
 }
 
 model Task {
   id          String   @id @default(cuid())
   title       String
   description String?
-  status      String   @default("TODO")
+  status      String   @default("PENDING")
   projectId   String
-  userId      String?
+  assignedToId String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  user        User?    @relation(fields: [userId], references: [id])
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignedTo  User?   @relation(fields: [assignedToId], references: [id])
 }
 
 model Note {
   id        String   @id @default(cuid())
-  content   String   @db.Text
+  content   String
   projectId String
-  userId    String?
+  authorId  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  user      User?    @relation(fields: [userId], references: [id])
-}
-
-model EngineeringRequirement {
-  id          String   @id @default(cuid())
-  requirement String   @db.Text
-  discipline  String?  // The engineering discipline (Structural, MEP, etc.)
-  required    Boolean  @default(false)
-  notes       String?  @db.Text
-  projectId   String
-  custom      Boolean  @default(false) // True if user-edited or user-added
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-}
-
-model Parcel {
-  id          String    @id @default(cuid())
-  apn         String?   @unique  // Assessor's Parcel Number
-  address     String?
-  city        String?
-  state       String?
-  zipCode     String?
-  county      String?
-  jurisdiction String?
-  acreage     Float?
-  sqft        Int?
-  lotSizeSqFt Int?
-  zoning      String?
-  zoningCode  String?
-  landUse     String?
-  latitude    Float?
-  longitude   Float?
-  boundaryCoordinates Json? // Array of [lng, lat] pairs
-  zoningRules Json[]    @default([])
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  projects    Project[]
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  author    User    @relation(fields: [authorId], references: [id])
 }
 
 model ProjectFile {
   id          String   @id @default(cuid())
-  filename    String
-  originalName String
-  filepath    String?
-  mimeType    String
-  size        Int
+  fileName    String
+  fileUrl     String
+  fileType    String?
+  fileSize    Int?
   projectId   String
-  uploadedBy  String?
+  uploadedById String
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  uploader    User?    @relation("UploadedFiles", fields: [uploadedBy], references: [id])
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploadedBy  User    @relation("UploadedFiles", fields: [uploadedById], references: [id])
+}
+
+model EngineeringRequirement {
+  id          String   @id @default(cuid())
+  projectId   String
+  requirement String
+  discipline  String?
+  required    Boolean  @default(false)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
 model ChatMessage {
-  id          String   @id @default(cuid())
-  message     String   @db.Text
-  response    String   @db.Text
-  role        String   // 'user' or 'assistant'
-  projectId   String
-  userId      String?
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  projectId String
+  userId    String
+  role      String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
 
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  user        User?    @relation(fields: [userId], references: [id])
-
-  @@index([projectId, createdAt])
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User    @relation(fields: [userId], references: [id])
 }

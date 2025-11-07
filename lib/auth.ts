@@ -22,7 +22,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!user) {
           return null
         }
-        // Temporarily no password check
         return {
           id: user.id,
           email: user.email,
@@ -31,6 +30,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
     })
   ],
+  pages: {
+    signIn: '/login',
+    signOut: '/',
+    error: '/login',
+  },
   session: {
     strategy: "jwt"
   },

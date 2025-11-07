@@ -1,48 +1,79 @@
-import { signIn } from "../../lib/auth"
+import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import Link from "next/link";
+import CityWiseLogo from "@/components/CityWiseLogo";
 
-export default function LoginPage() {
-  async function handleLogin(formData: FormData) {
-    "use server"
-    await signIn("credentials", {
-      email: formData.get("email"),
-      password: formData.get("password"),
-      redirectTo: "/dashboard"
-    })
+export default async function LoginPage() {
+  const session = await auth();
+  
+  if (session?.user) {
+    redirect('/dashboard');
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full bg-white p-8 rounded-lg shadow">
-        <h1 className="text-2xl font-bold mb-6">Sign In</h1>
-        <form action={handleLogin} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">Email</label>
-            <input
-              name="email"
-              type="email"
-              required
-              placeholder="test@test.com"
-              className="w-full px-3 py-2 border rounded-md"
-            />
+    <div className="min-h-screen bg-gradient-to-br from-[#1e3a5f] via-[#2c4f6f] to-[#9caf88] flex items-center justify-center p-6">
+      <div className="max-w-md w-full">
+        <div className="text-center mb-8">
+          <Link href="/" className="inline-block">
+            <CityWiseLogo theme="light" width={180} />
+          </Link>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-2xl p-8">
+          <h2 className="text-2xl font-bold text-[#1e3a5f] mb-2 text-center">Welcome Back</h2>
+          <p className="text-gray-600 text-center mb-8">Sign in to continue to your projects</p>
+
+          <form action="/api/auth/signin" method="post" className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-[#1e3a5f] mb-2">
+                Email
+              </label>
+              <input
+                type="email"
+                name="email"
+                required
+                className="w-full px-4 py-3 border border-[#9caf88]/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9caf88] focus:border-transparent"
+                placeholder="you@example.com"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[#1e3a5f] mb-2">
+                Password
+              </label>
+              <input
+                type="password"
+                name="password"
+                required
+                className="w-full px-4 py-3 border border-[#9caf88]/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9caf88] focus:border-transparent"
+                placeholder="••••••••"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="w-full bg-[#1e3a5f] text-white py-3 rounded-lg font-semibold hover:bg-[#2c4f6f] transition-colors"
+            >
+              Sign In
+            </button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
+              Don't have an account?{' '}
+              <Link href="/signup" className="text-[#1e3a5f] font-semibold hover:text-[#2c4f6f]">
+                Sign up
+              </Link>
+            </p>
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Password</label>
-            <input
-              name="password"
-              type="password"
-              required
-              placeholder="Password"
-              className="w-full px-3 py-2 border rounded-md"
-            />
-          </div>
-          <button
-            type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700"
-          >
-            Sign In
-          </button>
-        </form>
+        </div>
+
+        <div className="text-center mt-6">
+          <Link href="/" className="text-white/80 hover:text-white text-sm">
+            ← Back to home
+          </Link>
+        </div>
       </div>
     </div>
-  )
+  );
 }
