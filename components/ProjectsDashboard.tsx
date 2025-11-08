@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Building2, Plus, ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
+import { Building2, Plus, ChevronDown, ChevronUp, Trash2, Upload, FileText } from 'lucide-react'
 import { SignOutButton } from './SignOutButton'
 import dynamic from 'next/dynamic'
 import DashboardEmptyState from './DashboardEmptyState'
@@ -25,8 +25,8 @@ interface ProjectsDashboardProps {
   selectedProject?: any
 }
 
-export function ProjectsDashboard({ 
-  projects: initialProjects, 
+export function ProjectsDashboard({
+  projects: initialProjects,
   userEmail,
   selectedProject: initialSelectedProject
 }: ProjectsDashboardProps) {
@@ -41,11 +41,30 @@ export function ProjectsDashboard({
     engineering: true,
     tasks: true,
     notes: true,
+    files: true,
   })
+  const [uploadingFile, setUploadingFile] = useState(false)
 
   const selectedProject = projects.find(p => p.id === selectedProjectId)
 
-  // Sorting logic
+  const getProjectScope = (project: any) => {
+    return project.scopeOfWork || project.description || ''
+  }
+
+  const formatAddress = (address: string | null | undefined) => {
+    if (!address) return null
+    return address
+      .replace(/,\s*phoenix/i, ', Phoenix')
+      .replace(/,\s*az\s*/i, ', AZ ')
+      .replace(/\s+/g, ' ')
+      .trim()
+  }
+
+  const formatSqFt = (sqft: number | null | undefined) => {
+    if (!sqft) return null
+    return sqft.toLocaleString() + ' sq ft'
+  }
+
   const sortedProjects = [...projects].sort((a, b) => {
     let comparison = 0
     
@@ -79,50 +98,35 @@ export function ProjectsDashboard({
   const handleDeleteProject = async (projectId: string, e: React.MouseEvent) => {
     e.stopPropagation()
     
-    if (!confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
-      return
-    }
+    if (!confirm('Are you sure you want to delete this project?')) return
 
     try {
-      const res = await fetch(`/api/projects/${projectId}`, {
-        method: 'DELETE',
-      })
-
-      if (!res.ok) throw new Error('Failed to delete project')
-
+      const res = await fetch(`/api/projects/${projectId}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Failed to delete')
       setProjects(projects.filter(p => p.id !== projectId))
-      if (selectedProjectId === projectId) {
-        setSelectedProjectId(null)
-      }
+      if (selectedProjectId === projectId) setSelectedProjectId(null)
     } catch (error) {
-      console.error('Error deleting project:', error)
+      console.error(error)
       alert('Failed to delete project')
     }
   }
 
-  const handleCompleteTask = async (taskId: string) => {
+  const handleTaskStatusChange = async (taskId: string, newStatus: string) => {
     try {
       const res = await fetch('/api/tasks', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ taskId, status: 'COMPLETED' }),
+        body: JSON.stringify({ taskId, status: newStatus }),
       })
-
-      if (!res.ok) throw new Error('Failed to complete task')
-
+      if (!res.ok) throw new Error('Failed')
       setProjects(projects.map(p => {
         if (p.id === selectedProjectId) {
-          return {
-            ...p,
-            tasks: p.tasks.map((t: any) => 
-              t.id === taskId ? { ...t, status: 'COMPLETED' } : t
-            )
-          }
+          return { ...p, tasks: p.tasks.map((t: any) => t.id === taskId ? { ...t, status: newStatus } : t) }
         }
         return p
       }))
     } catch (error) {
-      console.error('Error completing task:', error)
+      console.error(error)
     }
   }
 
@@ -133,20 +137,15 @@ export function ProjectsDashboard({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ taskId }),
       })
-
-      if (!res.ok) throw new Error('Failed to delete task')
-
+      if (!res.ok) throw new Error('Failed')
       setProjects(projects.map(p => {
         if (p.id === selectedProjectId) {
-          return {
-            ...p,
-            tasks: p.tasks.filter((t: any) => t.id !== taskId)
-          }
+          return { ...p, tasks: p.tasks.filter((t: any) => t.id !== taskId) }
         }
         return p
       }))
     } catch (error) {
-      console.error('Error deleting task:', error)
+      console.error(error)
     }
   }
 
@@ -160,30 +159,19 @@ export function ProjectsDashboard({
       const res = await fetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          projectId: selectedProjectId,
-          title,
-          description,
-        }),
+        body: JSON.stringify({ projectId: selectedProjectId, title, description }),
       })
-
-      if (!res.ok) throw new Error('Failed to create task')
-
+      if (!res.ok) throw new Error('Failed')
       const newTask = await res.json()
-
       setProjects(projects.map(p => {
         if (p.id === selectedProjectId) {
-          return {
-            ...p,
-            tasks: [...p.tasks, newTask]
-          }
+          return { ...p, tasks: [...(p.tasks || []), newTask] }
         }
         return p
       }))
-
       e.currentTarget.reset()
     } catch (error) {
-      console.error('Error creating task:', error)
+      console.error(error)
     }
   }
 
@@ -194,20 +182,15 @@ export function ProjectsDashboard({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ noteId }),
       })
-
-      if (!res.ok) throw new Error('Failed to delete note')
-
+      if (!res.ok) throw new Error('Failed')
       setProjects(projects.map(p => {
         if (p.id === selectedProjectId) {
-          return {
-            ...p,
-            notes: p.notes.filter((n: any) => n.id !== noteId)
-          }
+          return { ...p, notes: p.notes.filter((n: any) => n.id !== noteId) }
         }
         return p
       }))
     } catch (error) {
-      console.error('Error deleting note:', error)
+      console.error(error)
     }
   }
 
@@ -220,75 +203,73 @@ export function ProjectsDashboard({
       const res = await fetch('/api/notes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          projectId: selectedProjectId,
-          content,
-        }),
+        body: JSON.stringify({ projectId: selectedProjectId, content }),
       })
-
-      if (!res.ok) throw new Error('Failed to create note')
-
+      if (!res.ok) throw new Error('Failed')
       const newNote = await res.json()
-
       setProjects(projects.map(p => {
         if (p.id === selectedProjectId) {
-          return {
-            ...p,
-            notes: [...p.notes, newNote]
-          }
+          return { ...p, notes: [...(p.notes || []), newNote] }
         }
         return p
       }))
-
       e.currentTarget.reset()
     } catch (error) {
-      console.error('Error creating note:', error)
+      console.error(error)
     }
   }
 
   const handleConvertToTasks = async () => {
     if (!selectedProject) return
-
     try {
       const res = await fetch('/api/requirements-to-tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ projectId: selectedProjectId }),
       })
-
-      if (!res.ok) throw new Error('Failed to convert requirements')
-
+      if (!res.ok) throw new Error('Failed')
       const newTasks = await res.json()
-
       setProjects(projects.map(p => {
         if (p.id === selectedProjectId) {
-          return {
-            ...p,
-            tasks: [...p.tasks, ...newTasks]
-          }
+          return { ...p, tasks: [...(p.tasks || []), ...newTasks] }
         }
         return p
       }))
-
-      alert(`Created ${newTasks.length} tasks from engineering requirements!`)
+      alert(`Created ${newTasks.length} tasks!`)
     } catch (error) {
-      console.error('Error converting requirements:', error)
-      alert('Failed to convert requirements to tasks')
+      console.error(error)
     }
   }
 
   const toggleSection = (section: keyof typeof expandedSections) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }))
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }))
   }
 
-  // If no projects, show beautiful empty state
+  const getStatusColor = (status: string) => {
+    const normalizedStatus = status.toUpperCase()
+    switch (normalizedStatus) {
+      case 'TODO':
+      case 'TO DO':
+        return 'bg-blue-100 text-blue-700 border-blue-200'
+      case 'IN PROGRESS':
+      case 'IN_PROGRESS':
+        return 'bg-yellow-100 text-yellow-700 border-yellow-200'
+      case 'UNDER REVIEW':
+      case 'UNDER_REVIEW':
+        return 'bg-orange-100 text-orange-700 border-orange-200'
+      case 'ON HOLD':
+      case 'ON_HOLD':
+        return 'bg-red-100 text-red-700 border-red-200'
+      case 'COMPLETED':
+        return 'bg-green-100 text-green-700 border-green-200'
+      default:
+        return 'bg-gray-100 text-gray-700 border-gray-200'
+    }
+  }
+
   if (projects.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#faf8f3] via-[#faf8f3] to-[#9caf88]/10">
-        {/* Header */}
         <div className="border-b border-gray-200 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
           <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
             <h1 className="text-2xl font-bold text-[#1e3a5f]">CityWise AI</h1>
@@ -298,7 +279,6 @@ export function ProjectsDashboard({
             </div>
           </div>
         </div>
-
         <DashboardEmptyState />
       </div>
     )
@@ -306,9 +286,7 @@ export function ProjectsDashboard({
 
   return (
     <div className="flex h-screen bg-[#faf8f3]">
-      {/* Sidebar */}
       <div className="w-80 border-r border-gray-200 flex flex-col bg-white shadow-lg">
-        {/* Sidebar Header with Gradient */}
         <div className="p-6 bg-gradient-to-br from-[#1e3a5f] to-[#2c4f6f] text-white">
           <div className="flex items-center gap-3 mb-4">
             <Building2 className="w-8 h-8" />
@@ -320,20 +298,15 @@ export function ProjectsDashboard({
           <SignOutButton />
         </div>
 
-        {/* Projects Section */}
         <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-[#9caf88]/10 to-transparent">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-bold text-[#1e3a5f] text-lg">Projects</h2>
-            <button
-              onClick={() => router.push('/ai-scope')}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#d4836f] to-[#c86f4d] hover:from-[#c86f4d] hover:to-[#d4836f] text-white rounded-lg text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg"
-            >
+            <button onClick={() => router.push('/ai-scope')} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#d4836f] to-[#c86f4d] hover:from-[#c86f4d] hover:to-[#d4836f] text-white rounded-lg text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg">
               <Plus className="w-4 h-4" />
               New
             </button>
           </div>
 
-          {/* Sort Buttons */}
           <div className="flex gap-2 flex-wrap">
             {[
               { field: 'name' as SortField, label: 'Name' },
@@ -341,71 +314,29 @@ export function ProjectsDashboard({
               { field: 'createdAt' as SortField, label: 'Date' },
               { field: 'status' as SortField, label: 'Status' },
             ].map(({ field, label }) => (
-              <button
-                key={field}
-                onClick={() => toggleSort(field)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
-                  sortField === field
-                    ? 'bg-[#9caf88] text-white shadow-md'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
+              <button key={field} onClick={() => toggleSort(field)} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${sortField === field ? 'bg-[#9caf88] text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
                 {label} {sortField === field && (sortOrder === 'asc' ? '↑' : '↓')}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Project List */}
         <div className="flex-1 overflow-y-auto">
           {sortedProjects.map((project) => (
-            <div
-              key={project.id}
-              onClick={() => {
-                setSelectedProjectId(project.id)
-                router.push(`/dashboard?project=${project.id}`, { scroll: false })
-              }}
-              className={`p-4 cursor-pointer transition-all duration-200 border-l-4 relative group ${
-                selectedProjectId === project.id
-                  ? 'bg-gradient-to-r from-[#9caf88]/20 to-transparent border-[#9caf88]'
-                  : 'border-transparent hover:bg-gray-50 hover:border-gray-300'
-              }`}
-            >
+            <div key={project.id} onClick={() => { setSelectedProjectId(project.id); router.push(`/dashboard?project=${project.id}`, { scroll: false }) }} className={`p-4 cursor-pointer transition-all duration-200 border-l-4 relative group ${selectedProjectId === project.id ? 'bg-gradient-to-r from-[#9caf88]/20 to-transparent border-[#9caf88]' : 'border-transparent hover:bg-gray-50 hover:border-gray-300'}`}>
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <Building2 className={`w-4 h-4 flex-shrink-0 ${
-                      selectedProjectId === project.id ? 'text-[#9caf88]' : 'text-gray-400'
-                    }`} />
-                    <h3 className="font-semibold text-[#1e3a5f] truncate text-sm">
-                      {project.name}
-                    </h3>
+                    <Building2 className={`w-4 h-4 flex-shrink-0 ${selectedProjectId === project.id ? 'text-[#9caf88]' : 'text-gray-400'}`} />
+                    <h3 className="font-semibold text-[#1e3a5f] truncate text-sm">{project.name}</h3>
                   </div>
-                  {project.fullAddress && (
-                    <p className="text-xs text-gray-500 truncate ml-6">
-                      {project.fullAddress}
-                    </p>
-                  )}
-                  {project.description && (
-                    <p className="text-xs text-gray-600 truncate mt-1 ml-6">
-                      {project.description}
-                    </p>
-                  )}
+                  {project.fullAddress && <p className="text-xs text-gray-500 truncate ml-6">{formatAddress(project.fullAddress)}</p>}
+                  {getProjectScope(project) && <p className="text-xs text-gray-600 line-clamp-2 mt-1 ml-6">{getProjectScope(project)}</p>}
                   <div className="flex items-center gap-2 mt-2 ml-6">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                      project.status === 'active' 
-                        ? 'bg-[#9caf88]/20 text-[#9caf88]' 
-                        : 'bg-gray-100 text-gray-600'
-                    }`}>
-                      {project.status}
-                    </span>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${project.status === 'active' ? 'bg-[#9caf88]/20 text-[#9caf88]' : 'bg-gray-100 text-gray-600'}`}>{project.status}</span>
                   </div>
                 </div>
-                <button
-                  onClick={(e) => handleDeleteProject(project.id, e)}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity ml-2 p-1.5 hover:bg-red-50 rounded-lg"
-                  title="Delete project"
-                >
+                <button onClick={(e) => handleDeleteProject(project.id, e)} className="opacity-0 group-hover:opacity-100 transition-opacity ml-2 p-1.5 hover:bg-red-50 rounded-lg" title="Delete">
                   <Trash2 className="w-4 h-4 text-red-500" />
                 </button>
               </div>
@@ -414,7 +345,6 @@ export function ProjectsDashboard({
         </div>
       </div>
 
-      {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto">
         {!selectedProject ? (
           <div className="flex items-center justify-center h-full">
@@ -423,98 +353,48 @@ export function ProjectsDashboard({
                 <Building2 className="w-12 h-12 text-[#1e3a5f]/40" />
               </div>
               <h2 className="text-2xl font-bold text-[#1e3a5f] mb-2">Select a Project</h2>
-              <p className="text-gray-600">Choose a project from the sidebar to view its details</p>
+              <p className="text-gray-600">Choose a project from the sidebar</p>
             </div>
           </div>
         ) : (
           <div className="max-w-6xl mx-auto p-8">
-            {/* Project Header */}
             <div className="mb-8 bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
-                  <h1 className="text-3xl font-bold text-[#1e3a5f] mb-2">
-                    {selectedProject.name}
-                  </h1>
-                  {selectedProject.description && (
-                    <p className="text-gray-600 mb-4">{selectedProject.description}</p>
-                  )}
+                  <h1 className="text-3xl font-bold text-[#1e3a5f] mb-2">{selectedProject.name}</h1>
+                  {getProjectScope(selectedProject) && <p className="text-gray-700 mb-4 whitespace-pre-wrap">{getProjectScope(selectedProject)}</p>}
                   <div className="flex flex-wrap gap-3">
-                    <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium ${
-                      selectedProject.status === 'active' 
-                        ? 'bg-[#9caf88]/20 text-[#9caf88]' 
-                        : 'bg-gray-100 text-gray-600'
-                    }`}>
-                      {selectedProject.status}
-                    </span>
-                    {selectedProject.fullAddress && (
-                      <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">
-                        📍 {selectedProject.fullAddress}
-                      </span>
-                    )}
-                    {selectedProject.propertyType && (
-                      <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">
-                        🏠 {selectedProject.propertyType}
-                      </span>
-                    )}
+                    <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium ${selectedProject.status === 'active' ? 'bg-[#9caf88]/20 text-[#9caf88]' : 'bg-gray-100 text-gray-600'}`}>{selectedProject.status}</span>
+                    {selectedProject.fullAddress && <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">📍 {formatAddress(selectedProject.fullAddress)}</span>}
+                    {selectedProject.propertyType && <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">🏠 {selectedProject.propertyType}</span>}
+                    {(selectedProject.parcel?.lotSizeSqFt || selectedProject.lotSizeSqFt) && <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">📐 Lot: {formatSqFt(selectedProject.parcel?.lotSizeSqFt || selectedProject.lotSizeSqFt)}</span>}
+                    {(selectedProject.buildingFootprintSqFt || selectedProject.totalSfModified) && <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">🏗️ Building: {formatSqFt(selectedProject.buildingFootprintSqFt || selectedProject.totalSfModified)}</span>}
                   </div>
                 </div>
-                <button
-                  onClick={() => router.push(`/projects/${selectedProject.id}/edit`)}
-                  className="px-6 py-3 border-2 border-[#9caf88] text-[#9caf88] hover:bg-[#9caf88] hover:text-white rounded-xl font-medium transition-all duration-200"
-                >
-                  Edit Project
-                </button>
+                <button onClick={() => router.push(`/projects/${selectedProject.id}/edit`)} className="px-6 py-3 border-2 border-[#9caf88] text-[#9caf88] hover:bg-[#9caf88] hover:text-white rounded-xl font-medium transition-all duration-200">Edit</button>
               </div>
             </div>
 
-            {/* Property Visualization */}
             {selectedProject.parcel && (
               <div className="mb-8 bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
                 <h2 className="text-xl font-bold text-[#1e3a5f] mb-4">Property Visualization</h2>
-                <PropertyVisualization
-                  parcelData={{
-                    id: selectedProject.parcel.id,
-                    latitude: selectedProject.parcel.latitude,
-                    longitude: selectedProject.parcel.longitude,
-                    boundaryCoordinates: selectedProject.parcel.boundaryCoordinates,
-                    zoningRules: selectedProject.parcel.zoningRules,
-                  }}
-                  parcelId={selectedProject.parcel.id}
-                />
+                <PropertyVisualization parcelData={{ id: selectedProject.parcel.id, latitude: selectedProject.parcel.latitude, longitude: selectedProject.parcel.longitude, boundaryCoordinates: selectedProject.parcel.boundaryCoordinates, zoningRules: selectedProject.parcel.zoningRules }} parcelId={selectedProject.parcel.id} />
               </div>
             )}
 
-            {/* Engineering Requirements */}
             {selectedProject.engineeringReqs && selectedProject.engineeringReqs.length > 0 && (
               <div className="mb-8 bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-                <button
-                  onClick={() => toggleSection('engineering')}
-                  className="w-full p-6 flex items-center justify-between hover:bg-gray-50 transition-colors"
-                >
-                  <h2 className="text-xl font-bold text-[#1e3a5f]">Engineering Requirements</h2>
-                  {expandedSections.engineering ? (
-                    <ChevronUp className="w-5 h-5 text-gray-400" />
-                  ) : (
-                    <ChevronDown className="w-5 h-5 text-gray-400" />
-                  )}
+                <button onClick={() => toggleSection('engineering')} className="w-full p-6 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                  <h2 className="text-xl font-bold text-[#1e3a5f]">Requirements</h2>
+                  {expandedSections.engineering ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
                 </button>
-                
                 {expandedSections.engineering && (
                   <div className="px-6 pb-6">
                     <div className="space-y-3 mb-4">
                       {selectedProject.engineeringReqs.map((req: any) => (
-                        <div 
-                          key={req.id}
-                          className="p-4 bg-gradient-to-r from-gray-50 to-transparent rounded-xl border border-gray-200"
-                        >
+                        <div key={req.id} className="p-4 bg-gradient-to-r from-gray-50 to-transparent rounded-xl border border-gray-200">
                           <div className="flex items-start gap-3">
-                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                              req.required
-                                ? 'bg-[#d4836f]/20 text-[#d4836f]'
-                                : 'bg-gray-200 text-gray-600'
-                            }`}>
-                              {req.required ? 'Required' : 'Optional'}
-                            </span>
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${req.required ? 'bg-[#d4836f]/20 text-[#d4836f]' : 'bg-gray-200 text-gray-600'}`}>{req.required ? 'Required' : 'Optional'}</span>
                             <div className="flex-1">
                               <h4 className="font-semibold text-[#1e3a5f] mb-1">{req.discipline}</h4>
                               <p className="text-sm text-gray-600">{req.notes}</p>
@@ -523,172 +403,114 @@ export function ProjectsDashboard({
                         </div>
                       ))}
                     </div>
-                    <button
-                      onClick={handleConvertToTasks}
-                      className="w-full px-4 py-3 bg-gradient-to-r from-[#9caf88] to-[#8a9d78] hover:from-[#8a9d78] hover:to-[#9caf88] text-white rounded-xl font-medium transition-all duration-200 shadow-md hover:shadow-lg"
-                    >
-                      Convert to Tasks
-                    </button>
+                    <button onClick={handleConvertToTasks} className="w-full px-4 py-3 bg-gradient-to-r from-[#9caf88] to-[#8a9d78] hover:from-[#8a9d78] hover:to-[#9caf88] text-white rounded-xl font-medium transition-all duration-200 shadow-md hover:shadow-lg">Convert to Tasks</button>
                   </div>
                 )}
               </div>
             )}
 
-            {/* Tasks & Notes Side by Side */}
-            <div className="grid md:grid-cols-2 gap-6 mb-8">
-              {/* Tasks */}
+            <div className="grid md:grid-cols-3 gap-6 mb-8">
               <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-                <button
-                  onClick={() => toggleSection('tasks')}
-                  className="w-full p-6 flex items-center justify-between hover:bg-gray-50 transition-colors"
-                >
-                  <h3 className="text-lg font-bold text-[#1e3a5f]">
-                    Tasks ({selectedProject.tasks?.length || 0})
-                  </h3>
-                  {expandedSections.tasks ? (
-                    <ChevronUp className="w-5 h-5 text-gray-400" />
-                  ) : (
-                    <ChevronDown className="w-5 h-5 text-gray-400" />
-                  )}
+                <button onClick={() => toggleSection('tasks')} className="w-full p-6 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                  <h3 className="text-lg font-bold text-[#1e3a5f]">Tasks ({selectedProject.tasks?.length || 0})</h3>
+                  {expandedSections.tasks ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
                 </button>
-
                 {expandedSections.tasks && (
                   <div className="px-6 pb-6">
                     <div className="space-y-2 mb-4 max-h-96 overflow-y-auto">
                       {selectedProject.tasks?.map((task: any) => (
-                        <div 
-                          key={task.id}
-                          className="p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-[#9caf88] transition-colors"
-                        >
+                        <div key={task.id} className="p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-[#9caf88] transition-colors">
                           <div className="flex items-start gap-3">
-                            <input
-                              type="checkbox"
-                              checked={task.status === 'COMPLETED'}
-                              onChange={() => handleCompleteTask(task.id)}
-                              className="mt-1 w-4 h-4 text-[#9caf88] rounded focus:ring-[#9caf88]"
-                            />
+                            <select value={task.status} onChange={(e) => handleTaskStatusChange(task.id, e.target.value)} className={`px-2 py-1 text-xs font-medium rounded border ${getStatusColor(task.status)} focus:outline-none focus:ring-2 focus:ring-[#9caf88]`}>
+                              <option value="TODO">To Do</option>
+                              <option value="IN_PROGRESS">In Progress</option>
+                              <option value="UNDER_REVIEW">Under Review</option>
+                              <option value="ON_HOLD">On Hold</option>
+                              <option value="COMPLETED">Completed</option>
+                            </select>
                             <div className="flex-1 min-w-0">
-                              <h4 className={`font-medium text-sm ${
-                                task.status === 'COMPLETED' ? 'line-through text-gray-400' : 'text-[#1e3a5f]'
-                              }`}>
-                                {task.title}
-                              </h4>
-                              {task.description && (
-                                <p className="text-xs text-gray-500 mt-1">{task.description}</p>
-                              )}
-                              <span className={`inline-block mt-2 px-2 py-0.5 rounded-full text-xs font-medium ${
-                                task.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
-                                task.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-700' :
-                                'bg-gray-100 text-gray-600'
-                              }`}>
-                                {task.status}
-                              </span>
+                              <h4 className={`font-medium text-sm ${task.status === 'COMPLETED' ? 'line-through text-gray-400' : 'text-[#1e3a5f]'}`}>{task.title}</h4>
+                              {task.description && <p className="text-xs text-gray-500 mt-1">{task.description}</p>}
                             </div>
-                            <button
-                              onClick={() => handleDeleteTask(task.id)}
-                              className="p-1 hover:bg-red-50 rounded"
-                              title="Delete task"
-                            >
-                              <Trash2 className="w-4 h-4 text-red-500" />
-                            </button>
+                            <button onClick={() => handleDeleteTask(task.id)} className="p-1 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4 text-red-500" /></button>
                           </div>
                         </div>
                       ))}
                     </div>
-
-                    {/* Add Task Form */}
                     <form onSubmit={handleAddTask} className="space-y-2">
-                      <input
-                        type="text"
-                        name="title"
-                        placeholder="Task title"
-                        required
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9caf88] focus:border-transparent"
-                      />
-                      <input
-                        type="text"
-                        name="description"
-                        placeholder="Description (optional)"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9caf88] focus:border-transparent"
-                      />
-                      <button
-                        type="submit"
-                        className="w-full px-4 py-2 bg-[#9caf88] hover:bg-[#8a9d78] text-white rounded-lg font-medium transition-colors"
-                      >
-                        Add Task
-                      </button>
+                      <input type="text" name="title" placeholder="Task title" required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9caf88] text-sm" />
+                      <input type="text" name="description" placeholder="Description" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9caf88] text-sm" />
+                      <button type="submit" className="w-full px-4 py-2 bg-[#9caf88] hover:bg-[#8a9d78] text-white rounded-lg font-medium transition-colors text-sm">Add Task</button>
                     </form>
                   </div>
                 )}
               </div>
 
-              {/* Notes */}
               <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-                <button
-                  onClick={() => toggleSection('notes')}
-                  className="w-full p-6 flex items-center justify-between hover:bg-gray-50 transition-colors"
-                >
-                  <h3 className="text-lg font-bold text-[#1e3a5f]">
-                    Notes ({selectedProject.notes?.length || 0})
-                  </h3>
-                  {expandedSections.notes ? (
-                    <ChevronUp className="w-5 h-5 text-gray-400" />
-                  ) : (
-                    <ChevronDown className="w-5 h-5 text-gray-400" />
-                  )}
+                <button onClick={() => toggleSection('notes')} className="w-full p-6 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                  <h3 className="text-lg font-bold text-[#1e3a5f]">Notes ({selectedProject.notes?.length || 0})</h3>
+                  {expandedSections.notes ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
                 </button>
-
                 {expandedSections.notes && (
                   <div className="px-6 pb-6">
                     <div className="space-y-2 mb-4 max-h-96 overflow-y-auto">
                       {selectedProject.notes?.map((note: any) => (
-                        <div 
-                          key={note.id}
-                          className="p-3 bg-gray-50 rounded-lg border border-gray-200"
-                        >
+                        <div key={note.id} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex-1">
                               <p className="text-sm text-gray-700 whitespace-pre-wrap">{note.content}</p>
-                              <p className="text-xs text-gray-400 mt-2">
-                                {new Date(note.createdAt).toLocaleString()}
-                              </p>
+                              <p className="text-xs text-gray-400 mt-2">{new Date(note.createdAt).toLocaleString()}</p>
                             </div>
-                            <button
-                              onClick={() => handleDeleteNote(note.id)}
-                              className="p-1 hover:bg-red-50 rounded"
-                              title="Delete note"
-                            >
-                              <Trash2 className="w-4 h-4 text-red-500" />
-                            </button>
+                            <button onClick={() => handleDeleteNote(note.id)} className="p-1 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4 text-red-500" /></button>
                           </div>
                         </div>
                       ))}
                     </div>
-
-                    {/* Add Note Form */}
                     <form onSubmit={handleAddNote}>
-                      <textarea
-                        name="content"
-                        placeholder="Add a note..."
-                        required
-                        rows={3}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9caf88] focus:border-transparent mb-2"
-                      />
-                      <button
-                        type="submit"
-                        className="w-full px-4 py-2 bg-[#9caf88] hover:bg-[#8a9d78] text-white rounded-lg font-medium transition-colors"
-                      >
-                        Add Note
-                      </button>
+                      <textarea name="content" placeholder="Add a note..." required rows={3} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9caf88] mb-2 text-sm" />
+                      <button type="submit" className="w-full px-4 py-2 bg-[#9caf88] hover:bg-[#8a9d78] text-white rounded-lg font-medium transition-colors text-sm">Add Note</button>
                     </form>
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+                <button onClick={() => toggleSection('files')} className="w-full p-6 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                  <h3 className="text-lg font-bold text-[#1e3a5f]">Files ({selectedProject.files?.length || 0})</h3>
+                  {expandedSections.files ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+                </button>
+                {expandedSections.files && (
+                  <div className="px-6 pb-6">
+                    <div className="space-y-2 mb-4 max-h-96 overflow-y-auto">
+                      {selectedProject.files?.map((file: any) => (
+                        <div key={file.id} className="p-3 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-between">
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <FileText className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-700 truncate">{file.name}</p>
+                              <p className="text-xs text-gray-400">{(file.size / 1024).toFixed(1)} KB</p>
+                            </div>
+                          </div>
+                          <button className="p-1 hover:bg-red-50 rounded ml-2"><Trash2 className="w-4 h-4 text-red-500" /></button>
+                        </div>
+                      ))}
+                    </div>
+                    <label className="w-full px-4 py-3 bg-[#9caf88] hover:bg-[#8a9d78] text-white rounded-lg font-medium transition-colors cursor-pointer flex items-center justify-center gap-2">
+                      {uploadingFile ? <><div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>Uploading...</> : <><Upload className="w-4 h-4" />Upload File</>}
+                      <input type="file" className="hidden" disabled={uploadingFile} />
+                    </label>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* AI Assistant */}
             <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-              <h3 className="text-lg font-bold text-[#1e3a5f] mb-4">AI Project Assistant</h3>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#9caf88] to-[#8a9d78] flex items-center justify-center">
+                  <span className="text-white font-bold text-lg">S</span>
+                </div>
+                <h3 className="text-lg font-bold text-[#1e3a5f]">Scout</h3>
+              </div>
               <ProjectChatWrapper projectId={selectedProject.id} />
             </div>
           </div>

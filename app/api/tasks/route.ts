@@ -30,7 +30,6 @@ export async function POST(request: NextRequest) {
       projectId,
       title,
       description: description || null,
-      userId: user.id,
       status: 'TODO',
     }
   })

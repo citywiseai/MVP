@@ -23,184 +23,86 @@ interface ChatMessage {
 }
 
 interface ProjectChatWrapperProps {
-  projectData: {
-    name: string
-    projectType: string
-    propertyType: string
-    jurisdiction: string
-    squareFootage: number
-    scopeOfWork: string
-    hillsideGrade: boolean
-    onSeptic: boolean
-  }
-  initialRequirements: EngineeringRequirement[]
   projectId: string
 }
 
-export function ProjectChatWrapper({ projectData, initialRequirements, projectId }: ProjectChatWrapperProps) {
-  const [requirements, setRequirements] = useState(initialRequirements)
-  const [updateMessage, setUpdateMessage] = useState<string | null>(null)
-  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([])
-  const [showHistory, setShowHistory] = useState(false)
-  const [loadingHistory, setLoadingHistory] = useState(false)
+export default function ProjectChatWrapper({ projectId }: ProjectChatWrapperProps) {
+  const [projectData, setProjectData] = useState<any>(null)
+  const [requirements, setRequirements] = useState<EngineeringRequirement[]>([])
+  const [loading, setLoading] = useState(true)
   const router = useRouter()
 
-  // Load chat history
-  const loadChatHistory = async () => {
-    setLoadingHistory(true)
-    try {
-      const response = await fetch(`/api/projects/${projectId}/chat-history`)
-      if (response.ok) {
-        const data = await response.json()
-        setChatHistory(data.chatMessages || [])
+  useEffect(() => {
+    const fetchProjectData = async () => {
+      try {
+        const res = await fetch(`/api/projects/${projectId}`)
+        if (!res.ok) throw new Error('Failed to fetch project')
+        const data = await res.json()
+        
+        setProjectData({
+          name: data.name,
+          projectType: data.projectType,
+          propertyType: data.propertyType,
+          jurisdiction: data.jurisdiction,
+          fullAddress: data.fullAddress,
+          description: data.description
+        })
+        
+        setRequirements(data.engineeringReqs || [])
+      } catch (error) {
+        console.error('Error fetching project:', error)
+      } finally {
+        setLoading(false)
       }
-    } catch (error) {
-      console.error('Failed to load chat history:', error)
-    } finally {
-      setLoadingHistory(false)
     }
+
+    if (projectId) {
+      fetchProjectData()
+    }
+  }, [projectId])
+
+  const handleRequirementsUpdate = (newRequirements: EngineeringRequirement[]) => {
+    setRequirements(newRequirements)
+    router.refresh()
   }
 
-  // Load chat history when component mounts or when history is shown
-  useEffect(() => {
-    if (showHistory && chatHistory.length === 0) {
-      loadChatHistory()
-    }
-  }, [showHistory, projectId])
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1e3a5f]"></div>
+      </div>
+    )
+  }
 
-  const handleRequirementsUpdate = async (newRequirements: EngineeringRequirement[], explanation?: string) => {
-    console.log('handleRequirementsUpdate called with:', { newRequirements, explanation })
-    setRequirements(newRequirements)
-    
-    if (explanation) {
-      setUpdateMessage(explanation)
-      // Clear the message after 5 seconds
-      setTimeout(() => setUpdateMessage(null), 5000)
-    }
-
-    // Update requirements in the database
-    try {
-      console.log('Calling update-requirements API with:', { projectId, requirements: newRequirements })
-      
-      const response = await fetch('/api/update-requirements', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          projectId,
-          requirements: newRequirements
-        }),
-      })
-      
-      const result = await response.json()
-      console.log('API response:', result)
-      
-      if (!response.ok) {
-        throw new Error(`API error: ${result.error}`)
-      }
-
-      // Use Next.js router to refresh the page data
-      router.refresh()
-      
-      // Reload chat history to include the new message
-      if (showHistory) {
-        loadChatHistory()
-      }
-      
-    } catch (error) {
-      console.error('Failed to update requirements:', error)
-    }
+  if (!projectData) {
+    return (
+      <div className="p-4 text-center text-gray-500">
+        Unable to load project data
+      </div>
+    )
   }
 
   return (
     <div className="space-y-4">
-      {updateMessage && (
-        <div className="bg-green-50 border border-green-200 rounded-md p-4">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-green-700">{updateMessage}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Chat History Toggle */}
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">AI Project Assistant</h3>
-        <button
-          onClick={() => setShowHistory(!showHistory)}
-          className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
-        >
-          {showHistory ? 'Hide History' : 'Show Chat History'}
-        </button>
-      </div>
-
-      {/* Chat History Display */}
-      {showHistory && (
-        <div className="bg-gray-50 rounded-lg border border-gray-200 p-4 max-h-96 overflow-y-auto">
-          <h4 className="font-medium text-gray-700 mb-3">Chat History</h4>
-          {loadingHistory ? (
-            <div className="text-center py-4">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="text-sm text-gray-500 mt-2">Loading chat history...</p>
-            </div>
-          ) : chatHistory.length === 0 ? (
-            <p className="text-sm text-gray-500 text-center py-4">No previous conversations</p>
-          ) : (
-            <div className="space-y-4">
-              {chatHistory.map((chat) => (
-                <div key={chat.id} className="space-y-2">
-                  <div className="bg-blue-50 rounded-lg p-3">
-                    <div className="flex justify-between items-start mb-1">
-                      <span className="text-sm font-medium text-blue-800">You</span>
-                      <span className="text-xs text-blue-600">
-                        {new Date(chat.createdAt).toLocaleString()}
-                      </span>
-                    </div>
-                    <p className="text-sm text-blue-700">{chat.message}</p>
-                  </div>
-                  <div className="bg-white rounded-lg p-3 border border-gray-200">
-                    <div className="flex justify-between items-start mb-1">
-                      <span className="text-sm font-medium text-gray-800">AI Assistant</span>
-                    </div>
-                    <p className="text-sm text-gray-700">{chat.response}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Updated Requirements Display */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-        <h3 className="text-lg font-semibold mb-4">Current Engineering Requirements</h3>
-        <div className="space-y-3">
-          {requirements.map((req, index) => (
-            <div key={index} className="flex items-start justify-between p-3 border rounded-lg">
+      {requirements.length > 0 && (
+        <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+          <h4 className="font-semibold text-sm text-gray-700">Current Requirements:</h4>
+          {requirements.map((req, idx) => (
+            <div key={idx} className="flex items-start gap-2 text-sm">
               <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-semibold">{req.discipline}</span>
-                  {req.required && (
-                    <span className="text-xs px-2 py-1 bg-red-100 text-red-800 rounded">
-                      Required
-                    </span>
-                  )}
-                </div>
+                <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
+                  req.required ? 'bg-blue-100 text-blue-700' : 'bg-gray-200 text-gray-600'
+                }`}>
+                  {req.discipline}
+                </span>
                 {req.notes && (
-                  <p className="text-sm text-gray-600">{req.notes}</p>
+                  <p className="text-sm text-gray-600 mt-1">{req.notes}</p>
                 )}
               </div>
             </div>
           ))}
         </div>
-      </div>
+      )}
 
       <ProjectChat
         projectData={projectData}

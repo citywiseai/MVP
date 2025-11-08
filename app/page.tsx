@@ -1,132 +1,165 @@
-import Link from 'next/link';
-import { auth } from '@/lib/auth';
-import CityWiseLogo from '@/components/CityWiseLogo';
+import Link from 'next/link'
+import CityWiseLogo from '@/components/CityWiseLogo'
 
-export default async function HomePage() {
-  const session = await auth();
-
+export default function Home() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#1e3a5f] via-[#2c4f6f] to-[#9caf88]">
-      <nav className="bg-white/10 backdrop-blur-sm border-b border-white/20">
-        <div className="container mx-auto px-6 py-4 flex justify-between items-center">
-          <CityWiseLogo theme="light" width={160} />
-          {session?.user && (
-            <Link
-              href="/dashboard"
-              className="px-6 py-2 bg-white text-[#1e3a5f] rounded-lg font-semibold hover:bg-gray-100 transition-colors"
-            >
-              Dashboard
+    <div className="min-h-screen">
+      {/* Navigation */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-[#1e3a5f] via-[#2c4f6f] to-[#1e3a5f] border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <Link href="/" className="flex items-center">
+              <CityWiseLogo theme="light" width={160} />
             </Link>
-          )}
+            <div className="flex items-center gap-4">
+              <Link
+                href="/login"
+                className="px-6 py-2 text-white hover:text-white/80 font-medium transition-colors"
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/signup"
+                className="px-6 py-2.5 bg-[#d4836f] hover:bg-[#c86f4d] text-white rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+              >
+                Get Started
+              </Link>
+            </div>
+          </div>
         </div>
       </nav>
 
-      <div className="container mx-auto px-6 py-20">
-        <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
+      {/* Hero Section */}
+      <section className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-[#1e3a5f] via-[#2c4f6f] to-[#1e3a5f]">
+        <div className="max-w-7xl mx-auto text-center">
+          <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6">
             Build Faster.
             <br />
             <span className="text-[#9caf88]">Permit Smarter.</span>
           </h1>
-          <p className="text-xl md:text-2xl text-white/90 mb-10 max-w-2xl mx-auto">
+          <p className="text-xl md:text-2xl text-white/90 mb-10 max-w-3xl mx-auto">
             AI-powered permit planning for residential projects
           </p>
-          <div className="flex gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
-              href={session?.user ? "/dashboard" : "/signup"}
-              className="px-8 py-4 bg-[#d4836f] text-white rounded-lg font-semibold text-lg hover:bg-[#c86f4d] transition-all shadow-lg hover:shadow-xl"
+              href="/signup"
+              className="inline-flex items-center justify-center px-8 py-4 bg-[#d4836f] hover:bg-[#c86f4d] text-white text-lg font-semibold rounded-xl transition-all duration-200 shadow-xl hover:shadow-2xl"
             >
-              {session?.user ? "Go to Dashboard" : "Get Started"}
+              Get Started
             </Link>
-            {!session?.user && (
-              <Link
-                href="/login"
-                className="px-8 py-4 bg-[#1e3a5f] text-white rounded-lg font-semibold text-lg hover:bg-[#2c4f6f] transition-all shadow-lg hover:shadow-xl"
-              >
-                Sign In
-              </Link>
-            )}
+            <Link
+              href="/how-it-works"
+              className="inline-flex items-center justify-center px-8 py-4 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white text-lg font-semibold rounded-xl transition-all duration-200 border border-white/20"
+            >
+              See How It Works
+            </Link>
           </div>
         </div>
+      </section>
 
-        <div className="grid md:grid-cols-3 gap-8 mt-24 max-w-5xl mx-auto">
-          <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-8 hover:bg-white/15 transition-all flex flex-col">
-            <div className="w-14 h-14 bg-[#9caf88] rounded-xl flex items-center justify-center mb-6">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-bold text-white mb-3 h-14 flex items-center">Zoning Analysis</h3>
-            <p className="text-white/80">
-              Automatic setback calculations, height limits, and building requirements for your property
-            </p>
-          </div>
-
-          <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-8 hover:bg-white/15 transition-all flex flex-col">
-            <div className="w-14 h-14 bg-[#d4836f] rounded-xl flex items-center justify-center mb-6">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-bold text-white mb-3 h-14 flex items-center">Engineering Needs</h3>
-            <p className="text-white/80">
-              AI-generated structural, MEP, and civil engineering requirements based on your project scope
-            </p>
-          </div>
-
-          <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-8 hover:bg-white/15 transition-all flex flex-col">
-            <div className="w-14 h-14 bg-[#1e3a5f] rounded-xl flex items-center justify-center mb-6">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-bold text-white mb-3 h-14 flex items-center">Permit Preparation</h3>
-            <p className="text-white/80">
-              Track requirements, manage tasks, and stay organized throughout the approval process
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-24 max-w-4xl mx-auto">
-          <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-12">
-            <div className="grid md:grid-cols-3 gap-8 text-center">
-              <div>
-                <div className="text-4xl font-bold text-white mb-2">10x</div>
-                <div className="text-white/80">Faster Planning</div>
+      {/* Features Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-[#faf8f3]">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-8">
+            {/* Feature 1 */}
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow">
+              <div className="w-16 h-16 bg-[#9caf88]/20 rounded-xl flex items-center justify-center mb-6">
+                <svg className="w-8 h-8 text-[#9caf88]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                </svg>
               </div>
-              <div>
-                <div className="text-4xl font-bold text-white mb-2">90%</div>
-                <div className="text-white/80">Time Saved</div>
+              <h3 className="text-2xl font-bold text-[#1e3a5f] mb-3">Zoning Analysis</h3>
+              <p className="text-gray-600">
+                Automatic setback calculations, height limits, and building requirements for your property
+              </p>
+            </div>
+
+            {/* Feature 2 */}
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow">
+              <div className="w-16 h-16 bg-[#d4836f]/20 rounded-xl flex items-center justify-center mb-6">
+                <svg className="w-8 h-8 text-[#d4836f]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
               </div>
-              <div>
-                <div className="text-4xl font-bold text-white mb-2">AI-Powered</div>
-                <div className="text-white/80">Smart Analysis</div>
+              <h3 className="text-2xl font-bold text-[#1e3a5f] mb-3">Engineering Needs</h3>
+              <p className="text-gray-600">
+                AI-generated structural, MEP, and civil engineering requirements based on your project scope
+              </p>
+            </div>
+
+            {/* Feature 3 */}
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow">
+              <div className="w-16 h-16 bg-[#1e3a5f]/20 rounded-xl flex items-center justify-center mb-6">
+                <svg className="w-8 h-8 text-[#1e3a5f]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
               </div>
+              <h3 className="text-2xl font-bold text-[#1e3a5f] mb-3">Permit Preparation</h3>
+              <p className="text-gray-600">
+                Track requirements, manage tasks, and stay organized throughout the approval process
+              </p>
             </div>
           </div>
         </div>
+      </section>
 
-        <div className="mt-24 text-center">
-          <h2 className="text-3xl font-bold text-white mb-4">
+      {/* Stats Section */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-[#1e3a5f]/5 to-[#9caf88]/5">
+        <div className="max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-8 text-center">
+            <div>
+              <div className="text-5xl font-bold text-[#1e3a5f] mb-2">10x</div>
+              <div className="text-gray-600 font-medium">Faster Planning</div>
+            </div>
+            <div>
+              <div className="text-5xl font-bold text-[#1e3a5f] mb-2">90%</div>
+              <div className="text-gray-600 font-medium">Time Saved</div>
+            </div>
+            <div>
+              <div className="text-5xl font-bold text-[#1e3a5f] mb-2">AI-Powered</div>
+              <div className="text-gray-600 font-medium">Smart Analysis</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-[#1e3a5f] via-[#2c4f6f] to-[#1e3a5f]">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
             Ready to streamline your next project?
           </h2>
-          <p className="text-white/80 mb-8">
-            Join builders and developers using CityWise AI
+          <p className="text-xl text-white/90 mb-8">
+            Join builders and homeowners who are navigating permits faster with CityWise AI
           </p>
-          <Link
-            href={session?.user ? "/dashboard" : "/signup"}
-            className="inline-block px-8 py-4 bg-[#d4836f] text-white rounded-lg font-semibold text-lg hover:bg-[#c86f4d] transition-all shadow-lg hover:shadow-xl"
-          >
-            {session?.user ? "Go to Dashboard" : "Start Your Project"}
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link
+              href="/signup"
+              className="inline-flex items-center justify-center px-8 py-4 bg-[#d4836f] hover:bg-[#c86f4d] text-white text-lg font-semibold rounded-xl transition-all duration-200 shadow-xl hover:shadow-2xl"
+            >
+              Get Started Free
+            </Link>
+            <Link
+              href="/features"
+              className="inline-flex items-center justify-center px-8 py-4 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white text-lg font-semibold rounded-xl transition-all duration-200 border border-white/20"
+            >
+              Explore Features
+            </Link>
+          </div>
         </div>
-      </div>
+      </section>
 
-      <footer className="border-t border-white/20 mt-20">
-        <div className="container mx-auto px-6 py-8 text-center text-white/60">
-          <p>© 2024 CityWise AI. All rights reserved.</p>
+      {/* Footer */}
+      <footer className="py-8 px-4 sm:px-6 lg:px-8 bg-[#1e3a5f] border-t border-white/10">
+        <div className="max-w-7xl mx-auto text-center">
+          <p className="text-white/60 text-sm">
+            🏗️ Phoenix Metro Area • 🤖 AI-Powered • ⚡ 10x Faster Planning
+          </p>
+          <p className="text-white/40 text-xs mt-2">
+            © 2024 CityWise AI. Simplifying preconstruction in Phoenix Metro.
+          </p>
         </div>
       </footer>
     </div>
-  );
+  )
 }

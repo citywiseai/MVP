@@ -28,7 +28,8 @@ export default async function DashboardPage({
               projects: {
                 include: {
                   parcel: true,
-                  engineeringReqs: true
+                  engineeringReqs: true,
+                  tasks: true
                 },
                 orderBy: {
                   createdAt: 'desc'
@@ -54,7 +55,7 @@ export default async function DashboardPage({
   }
 
   return (
-    <ProjectsDashboard 
+    <ProjectsDashboard
       projects={projects}
       selectedProject={selectedProject}
       userEmail={session.user.email!}

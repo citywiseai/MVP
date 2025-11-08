@@ -110,12 +110,12 @@ export default function AIScopeChat() {
   }, []);
 
   useEffect(() => {
-    if (parcelData) {
-      const greeting = {
-        role: "assistant" as const,
-        content: `Great! I found your property at ${parcelData.address}. Now, tell me about your project. What type of work are you planning? For example: addition, new construction, remodel, pool, ADU, etc.`
-      };
-      setMessages([greeting]);
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  useEffect(() => {
+    if (parcelData && messages.length === 0) {
+      startConversation();
     }
   }, [parcelData]);
 
@@ -280,7 +280,7 @@ export default function AIScopeChat() {
                   <span className="font-medium text-[#1e3a5f]">Lot Size:</span> {parcelData.lotSizeSqFt.toLocaleString()} sq ft
                 </div>
                 <div>
-                  <span className="font-medium text-[#1e3a5f]">Jurisdiction:</span> {parcelData.jurisdiction.charAt(0).toUpperCase() + parcelData.jurisdiction.slice(1)}
+                  <span className="font-medium text-[#1e3a5f]">Jurisdiction:</span> {parcelData.jurisdiction}
                 </div>
                 <div>
                   <span className="font-medium text-[#1e3a5f]">Zoning:</span> {parcelData.zoning}
@@ -288,11 +288,11 @@ export default function AIScopeChat() {
                 <div>
                   <span className="font-medium text-[#1e3a5f]">APN:</span> {parcelData.apn}
                 </div>
-
+                {parcelData.existingSqFt && (
                   <div>
-                    <span className="font-medium text-[#1e3a5f]">Building SF:</span> {parcelData.existingSqFt ? parcelData.existingSqFt.toLocaleString() : 'N/A'} sq ft
+                    <span className="font-medium text-[#1e3a5f]">Existing SF:</span> {parcelData.existingSqFt.toLocaleString()} sq ft
                   </div>
-                
+                )}
               </div>
             </div>
             <Button

@@ -3,16 +3,22 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(req: NextRequest) {
   try {
     const { address } = await req.json();
-    
-    // Check if Phoenix address
-    if (!address.toLowerCase().includes('phoenix') && !address.toLowerCase().includes('az')) {
+
+    if (!address) {
+      return NextResponse.json(
+        { error: 'Address is required' },
+        { status: 400 }
+      );
+    }
+
+    const lowerAddr = address.toLowerCase();
+    if (!lowerAddr.includes('phoenix') && !lowerAddr.includes('az')) {
       return NextResponse.json(
         { error: 'Currently only supporting Phoenix, AZ addresses' },
         { status: 400 }
       );
     }
 
-    // Fetch from Regrid
     const { getMaricopaParcelByAddress } = await import('@/lib/regrid');
     const streetAddress = address.split(',')[0].trim();
     const parcelData = await getMaricopaParcelByAddress(streetAddress);
@@ -25,11 +31,13 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({
-      address: `${parcelData.address}, ${parcelData.city}, AZ ${parcelData.zip}`,
-      jurisdiction: parcelData.city,
+      address: parcelData.address,
+      city: parcelData.city,
+      zip: parcelData.zip,
       lotSizeSqFt: Math.round(parcelData.lotSizeSqFt),
+      buildingSqFt: parcelData.buildingSqFt ? Math.round(parcelData.buildingSqFt) : null,
       apn: parcelData.apn,
-      zoning: 'R1-6',
+      zoning: parcelData.zoning || 'R1-6',
     });
   } catch (error) {
     console.error('Error searching parcel:', error);
