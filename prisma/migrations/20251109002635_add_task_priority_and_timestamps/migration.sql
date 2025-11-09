@@ -1,0 +1,7 @@
+-- DropForeignKey
+ALTER TABLE "Task" DROP CONSTRAINT "Task_assignedTo_fkey";
+
+-- AlterTable
+ALTER TABLE "Task" ADD COLUMN     "lastStatusChange" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN     "priority" TEXT NOT NULL DEFAULT 'MEDIUM',
+ALTER COLUMN "status" SET DEFAULT 'TODO';

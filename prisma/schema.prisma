@@ -35,7 +35,6 @@ model User {
   updatedAt           DateTime  @updatedAt
 
   memberships   Membership[]
-  tasks         Task[]
   notes         Note[]
   ownedProjects Project[]     @relation("ProjectOwner")
   uploadedFiles ProjectFile[] @relation("UploadedFiles")
@@ -112,17 +111,18 @@ model Parcel {
 }
 
 model Task {
-  id          String   @id @default(cuid())
-  title       String
-  description String?
-  status      String   @default("PENDING")
-  projectId   String
-  assignedTo  String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                String   @id @default(cuid())
+  title             String
+  description       String?
+  status            String   @default("TODO")
+  priority          String   @default("MEDIUM")
+  projectId         String
+  assignedTo        String?
+  lastStatusChange  DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
-  project      Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  assignedUser User?   @relation(fields: [assignedTo], references: [id])
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
 model Note {

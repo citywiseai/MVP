@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Building2, Plus, ChevronDown, ChevronUp, Trash2, Upload, FileText } from 'lucide-react'
+import { Building2, Plus, ChevronDown, ChevronUp, Trash2, Upload, FileText, MessageSquare } from 'lucide-react'
 import { SignOutButton } from './SignOutButton'
 import dynamic from 'next/dynamic'
 import DashboardEmptyState from './DashboardEmptyState'
@@ -44,6 +44,7 @@ export function ProjectsDashboard({
     files: true,
   })
   const [uploadingFile, setUploadingFile] = useState(false)
+  const [expandedTaskNotes, setExpandedTaskNotes] = useState<{ [key: string]: boolean }>({})
 
   const selectedProject = projects.find(p => p.id === selectedProjectId)
 
@@ -63,6 +64,19 @@ export function ProjectsDashboard({
   const formatSqFt = (sqft: number | null | undefined) => {
     if (!sqft) return null
     return sqft.toLocaleString() + ' sq ft'
+  }
+
+  const formatTimestamp = (date: Date | string) => {
+    const now = new Date()
+    const then = new Date(date)
+    const diffMs = now.getTime() - then.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    
+    if (diffMins < 1) return 'Just now'
+    if (diffMins < 60) return `${diffMins}m ago`
+    if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`
+    if (diffMins < 10080) return `${Math.floor(diffMins / 1440)}d ago`
+    return then.toLocaleDateString()
   }
 
   const sortedProjects = [...projects].sort((a, b) => {
@@ -85,6 +99,15 @@ export function ProjectsDashboard({
     
     return sortOrder === 'asc' ? comparison : -comparison
   })
+
+  const sortTasksByPriority = (tasks: any[]) => {
+    const priorityOrder = { 'HIGH': 0, 'MEDIUM': 1, 'LOW': 2 }
+    return [...tasks].sort((a, b) => {
+      const aPriority = priorityOrder[a.priority as keyof typeof priorityOrder] ?? 1
+      const bPriority = priorityOrder[b.priority as keyof typeof priorityOrder] ?? 1
+      return aPriority - bPriority
+    })
+  }
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
@@ -111,17 +134,18 @@ export function ProjectsDashboard({
     }
   }
 
-  const handleTaskStatusChange = async (taskId: string, newStatus: string) => {
+  const handleTaskUpdate = async (taskId: string, updates: any) => {
     try {
       const res = await fetch('/api/tasks', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ taskId, status: newStatus }),
+        body: JSON.stringify({ taskId, ...updates }),
       })
       if (!res.ok) throw new Error('Failed')
+      const updatedTask = await res.json()
       setProjects(projects.map(p => {
         if (p.id === selectedProjectId) {
-          return { ...p, tasks: p.tasks.map((t: any) => t.id === taskId ? { ...t, status: newStatus } : t) }
+          return { ...p, tasks: p.tasks.map((t: any) => t.id === taskId ? updatedTask : t) }
         }
         return p
       }))
@@ -245,6 +269,10 @@ export function ProjectsDashboard({
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }))
   }
 
+  const toggleTaskNotes = (taskId: string) => {
+    setExpandedTaskNotes(prev => ({ ...prev, [taskId]: !prev[taskId] }))
+  }
+
   const getStatusColor = (status: string) => {
     const normalizedStatus = status.toUpperCase()
     switch (normalizedStatus) {
@@ -262,6 +290,20 @@ export function ProjectsDashboard({
         return 'bg-red-100 text-red-700 border-red-200'
       case 'COMPLETED':
         return 'bg-green-100 text-green-700 border-green-200'
+      default:
+        return 'bg-gray-100 text-gray-700 border-gray-200'
+    }
+  }
+
+  const getPriorityColor = (priority: string) => {
+    const normalizedPriority = priority.toUpperCase()
+    switch (normalizedPriority) {
+      case 'HIGH':
+        return 'bg-red-100 text-red-700 border-red-200'
+      case 'MEDIUM':
+        return 'bg-yellow-100 text-yellow-700 border-yellow-200'
+      case 'LOW':
+        return 'bg-blue-100 text-blue-700 border-blue-200'
       default:
         return 'bg-gray-100 text-gray-700 border-gray-200'
     }
@@ -369,6 +411,9 @@ export function ProjectsDashboard({
                     {selectedProject.propertyType && <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">🏠 {selectedProject.propertyType}</span>}
                     {(selectedProject.parcel?.lotSizeSqFt || selectedProject.lotSizeSqFt) && <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">📐 Lot: {formatSqFt(selectedProject.parcel?.lotSizeSqFt || selectedProject.lotSizeSqFt)}</span>}
                     {(selectedProject.buildingFootprintSqFt || selectedProject.totalSfModified) && <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">🏗️ Building: {formatSqFt(selectedProject.buildingFootprintSqFt || selectedProject.totalSfModified)}</span>}
+                    {selectedProject.parcel?.apn && <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">📋 APN: {selectedProject.parcel.apn}</span>}
+                    {selectedProject.parcel?.zoning && <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">🏘️ Zoning: {selectedProject.parcel.zoning}</span>}
+                    {selectedProject.parcel?.city && <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">🏛️ {selectedProject.parcel.city.charAt(0).toUpperCase() + selectedProject.parcel.city.slice(1)}</span>}
                   </div>
                 </div>
                 <button onClick={() => router.push(`/projects/${selectedProject.id}/edit`)} className="px-6 py-3 border-2 border-[#9caf88] text-[#9caf88] hover:bg-[#9caf88] hover:text-white rounded-xl font-medium transition-all duration-200">Edit</button>
@@ -409,7 +454,7 @@ export function ProjectsDashboard({
               </div>
             )}
 
-            <div className="grid md:grid-cols-3 gap-6 mb-8">
+            <div className="mb-8">
               <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
                 <button onClick={() => toggleSection('tasks')} className="w-full p-6 flex items-center justify-between hover:bg-gray-50 transition-colors">
                   <h3 className="text-lg font-bold text-[#1e3a5f]">Tasks ({selectedProject.tasks?.length || 0})</h3>
@@ -417,22 +462,73 @@ export function ProjectsDashboard({
                 </button>
                 {expandedSections.tasks && (
                   <div className="px-6 pb-6">
-                    <div className="space-y-2 mb-4 max-h-96 overflow-y-auto">
-                      {selectedProject.tasks?.map((task: any) => (
+                    <div className="space-y-3 mb-4 max-h-[600px] overflow-y-auto">
+                      {sortTasksByPriority(selectedProject.tasks || []).map((task: any) => (
                         <div key={task.id} className="p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-[#9caf88] transition-colors">
-                          <div className="flex items-start gap-3">
-                            <select value={task.status} onChange={(e) => handleTaskStatusChange(task.id, e.target.value)} className={`px-2 py-1 text-xs font-medium rounded border ${getStatusColor(task.status)} focus:outline-none focus:ring-2 focus:ring-[#9caf88]`}>
-                              <option value="TODO">To Do</option>
-                              <option value="IN_PROGRESS">In Progress</option>
-                              <option value="UNDER_REVIEW">Under Review</option>
-                              <option value="ON_HOLD">On Hold</option>
-                              <option value="COMPLETED">Completed</option>
-                            </select>
-                            <div className="flex-1 min-w-0">
-                              <h4 className={`font-medium text-sm ${task.status === 'COMPLETED' ? 'line-through text-gray-400' : 'text-[#1e3a5f]'}`}>{task.title}</h4>
-                              {task.description && <p className="text-xs text-gray-500 mt-1">{task.description}</p>}
+                          <div className="space-y-2">
+                            <div className="flex items-start gap-2">
+                              <select value={task.priority} onChange={(e) => handleTaskUpdate(task.id, { priority: e.target.value })} className={`px-2 py-1 text-xs font-medium rounded border ${getPriorityColor(task.priority)} focus:outline-none focus:ring-2 focus:ring-[#9caf88]`}>
+                                <option value="HIGH">High</option>
+                                <option value="MEDIUM">Medium</option>
+                                <option value="LOW">Low</option>
+                              </select>
+                              <select value={task.status} onChange={(e) => handleTaskUpdate(task.id, { status: e.target.value })} className={`px-2 py-1 text-xs font-medium rounded border ${getStatusColor(task.status)} focus:outline-none focus:ring-2 focus:ring-[#9caf88]`}>
+                                <option value="TODO">To Do</option>
+                                <option value="IN_PROGRESS">In Progress</option>
+                                <option value="UNDER_REVIEW">Under Review</option>
+                                <option value="ON_HOLD">On Hold</option>
+                                <option value="COMPLETED">Completed</option>
+                              </select>
+                              <div className="flex-1 min-w-0">
+                                <h4 className={`font-medium text-sm ${task.status === 'COMPLETED' ? 'line-through text-gray-400' : 'text-[#1e3a5f]'}`}>{task.title}</h4>
+                              </div>
+                              <button onClick={() => handleDeleteTask(task.id)} className="p-1 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4 text-red-500" /></button>
                             </div>
-                            <button onClick={() => handleDeleteTask(task.id)} className="p-1 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4 text-red-500" /></button>
+                            
+                            {task.description && <p className="text-xs text-gray-500 pl-2">{task.description}</p>}
+                            
+                            <div className="flex items-center gap-2 text-xs text-gray-400 pl-2">
+                              <span>Updated {formatTimestamp(task.lastStatusChange)}</span>
+                            </div>
+
+                            <input
+                              type="text"
+                              placeholder="Assigned to..."
+                              value={task.assignedTo || ''}
+                              onChange={(e) => handleTaskUpdate(task.id, { assignedTo: e.target.value })}
+                              onBlur={(e) => {
+                                if (e.target.value !== task.assignedTo) {
+                                  handleTaskUpdate(task.id, { assignedTo: e.target.value })
+                                }
+                              }}
+                              className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-[#9caf88] focus:border-transparent"
+                            />
+
+                            <button
+                              onClick={() => toggleTaskNotes(task.id)}
+                              className="flex items-center gap-1 text-xs text-[#9caf88] hover:text-[#8a9d78] transition-colors"
+                            >
+                              <MessageSquare className="w-3 h-3" />
+                              {expandedTaskNotes[task.id] ? 'Hide notes' : 'Show notes'}
+                            </button>
+
+                            {expandedTaskNotes[task.id] && (
+                              <textarea
+                                value={task.description || ''}
+                                onChange={(e) => {
+                                  const updatedTasks = selectedProject.tasks.map((t: any) =>
+                                    t.id === task.id ? { ...t, description: e.target.value } : t
+                                  )
+                                  setProjects(projects.map(p =>
+                                    p.id === selectedProjectId ? { ...p, tasks: updatedTasks } : p
+                                  ))
+                                }}
+                                onBlur={() => handleTaskUpdate(task.id, { description: selectedProject.tasks.find((t: any) => t.id === task.id)?.description })}
+                                placeholder="Add notes about this task..."
+                                rows={3}
+                                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9caf88] focus:border-transparent resize-none"
+                              />
+                            )}
                           </div>
                         </div>
                       ))}
@@ -446,6 +542,9 @@ export function ProjectsDashboard({
                 )}
               </div>
 
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6 mb-8">
               <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
                 <button onClick={() => toggleSection('notes')} className="w-full p-6 flex items-center justify-between hover:bg-gray-50 transition-colors">
                   <h3 className="text-lg font-bold text-[#1e3a5f]">Notes ({selectedProject.notes?.length || 0})</h3>

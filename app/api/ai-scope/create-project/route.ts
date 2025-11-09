@@ -163,6 +163,34 @@ export async function POST(req: NextRequest) {
     const conversationSummary = parseScoutConversation(projectData.conversation || '');
     const cleanDescription = createProjectSummary(conversationSummary);
 
+    // Create Parcel if parcelData exists
+    let parcelId = null;
+    if (projectData.parcelData) {
+      console.log('📦 Creating parcel from Scout data');
+      try {
+        const parcel = await prisma.parcel.create({
+          data: {
+            apn: projectData.parcelData.apn || '',
+            address: projectData.parcelData.address,
+            city: projectData.parcelData.city,
+            state: projectData.parcelData.state || 'AZ',
+            zipCode: projectData.parcelData.zip,
+            zoning: projectData.parcelData.zoning,
+            lotSizeSqFt: projectData.parcelData.lotSize,
+            latitude: projectData.parcelData.latitude,
+            longitude: projectData.parcelData.longitude,
+            boundaryCoordinates: projectData.parcelData.boundaryCoordinates,
+            existingSqFt: projectData.parcelData.buildingSize,
+          }
+        });
+        parcelId = parcel.id;
+        console.log('✅ Parcel created:', parcel.id);
+      } catch (parcelError) {
+        console.error('⚠️ Error creating parcel:', parcelError);
+        // Continue without parcel if creation fails
+      }
+    }
+
     const project = await prisma.project.create({
       data: {
         name: `Project at ${formattedAddress || 'TBD'}`,
@@ -172,7 +200,7 @@ export async function POST(req: NextRequest) {
         description: cleanDescription,
         ownerId: user.id,
         orgId: orgId,
-        parcelId: null,
+        parcelId: parcelId,
       }
     });
 

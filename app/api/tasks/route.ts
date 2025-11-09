@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json()
-  const { projectId, title, description } = body
+  const { projectId, title, description, priority, assignedTo } = body
 
   if (!projectId || !title) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -31,6 +31,8 @@ export async function POST(request: NextRequest) {
       title,
       description: description || null,
       status: 'TODO',
+      priority: priority || 'MEDIUM',
+      assignedTo: assignedTo || null,
     }
   })
 
@@ -44,15 +46,24 @@ export async function PATCH(request: NextRequest) {
   }
 
   const body = await request.json()
-  const { taskId, status } = body
+  const { taskId, status, priority, assignedTo } = body
 
   if (!taskId) {
     return NextResponse.json({ error: 'Missing taskId' }, { status: 400 })
   }
 
+  const updateData: any = {}
+  
+  if (status !== undefined) {
+    updateData.status = status
+    updateData.lastStatusChange = new Date()
+  }
+  if (priority !== undefined) updateData.priority = priority
+  if (assignedTo !== undefined) updateData.assignedTo = assignedTo
+
   const task = await prisma.task.update({
     where: { id: taskId },
-    data: { status: status || 'COMPLETED' }
+    data: updateData
   })
 
   return NextResponse.json(task)
