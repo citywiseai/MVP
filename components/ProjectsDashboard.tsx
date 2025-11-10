@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Building2, Plus, ChevronDown, ChevronUp, Trash2, Upload, FileText, MessageSquare } from 'lucide-react'
 import { SignOutButton } from './SignOutButton'
@@ -48,6 +48,33 @@ export function ProjectsDashboard({
 
   const selectedProject = projects.find(p => p.id === selectedProjectId)
 
+
+  // Auto-fetch parcel data if project has address but no parcel
+  useEffect(() => {
+    const fetchParcelData = async () => {
+      if (selectedProject && selectedProject.fullAddress && !selectedProject.parcel) {
+        try {
+          const res = await fetch(`/api/projects/${selectedProject.id}/fetch-parcel`, {
+            method: 'POST',
+          })
+          if (res.ok) {
+            const data = await res.json()
+            if (data.parcel) {
+              // Update project with parcel data
+              setProjects(projects.map(p => 
+                p.id === selectedProject.id 
+                  ? { ...p, parcel: data.parcel }
+                  : p
+              ))
+            }
+          }
+        } catch (error) {
+          console.error('Failed to fetch parcel:', error)
+        }
+      }
+    }
+    fetchParcelData()
+  }, [selectedProjectId])
   const getProjectScope = (project: any) => {
     return project.scopeOfWork || project.description || ''
   }
@@ -410,22 +437,16 @@ export function ProjectsDashboard({
                     {selectedProject.fullAddress && <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">📍 {formatAddress(selectedProject.fullAddress)}</span>}
                     {selectedProject.propertyType && <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">🏠 {selectedProject.propertyType}</span>}
                     {(selectedProject.parcel?.lotSizeSqFt || selectedProject.lotSizeSqFt) && <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">📐 Lot: {formatSqFt(selectedProject.parcel?.lotSizeSqFt || selectedProject.lotSizeSqFt)}</span>}
-                    {(selectedProject.buildingFootprintSqFt || selectedProject.totalSfModified) && <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">🏗️ Building: {formatSqFt(selectedProject.buildingFootprintSqFt || selectedProject.totalSfModified)}</span>}
+                    {(selectedProject.parcel?.existingSqFt) && <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">🏗️ Building: {formatSqFt(selectedProject.parcel.existingSqFt)}</span>}
                     {selectedProject.parcel?.apn && <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">📋 APN: {selectedProject.parcel.apn}</span>}
                     {selectedProject.parcel?.zoning && <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">🏘️ Zoning: {selectedProject.parcel.zoning}</span>}
-                    {selectedProject.parcel?.city && <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">🏛️ {selectedProject.parcel.city.charAt(0).toUpperCase() + selectedProject.parcel.city.slice(1)}</span>}
+                    {selectedProject.parcel?.city && <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">🏛️ Jurisdiction: {selectedProject.parcel.city.charAt(0).toUpperCase() + selectedProject.parcel.city.slice(1)}</span>}
                   </div>
                 </div>
                 <button onClick={() => router.push(`/projects/${selectedProject.id}/edit`)} className="px-6 py-3 border-2 border-[#9caf88] text-[#9caf88] hover:bg-[#9caf88] hover:text-white rounded-xl font-medium transition-all duration-200">Edit</button>
               </div>
             </div>
 
-            {selectedProject.parcel && (
-              <div className="mb-8 bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
-                <h2 className="text-xl font-bold text-[#1e3a5f] mb-4">Property Visualization</h2>
-                <PropertyVisualization parcelData={{ id: selectedProject.parcel.id, latitude: selectedProject.parcel.latitude, longitude: selectedProject.parcel.longitude, boundaryCoordinates: selectedProject.parcel.boundaryCoordinates, zoningRules: selectedProject.parcel.zoningRules }} parcelId={selectedProject.parcel.id} />
-              </div>
-            )}
 
             {selectedProject.engineeringReqs && selectedProject.engineeringReqs.length > 0 && (
               <div className="mb-8 bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
