@@ -447,6 +447,21 @@ export function ProjectsDashboard({
               </div>
             </div>
 
+            {/* Property Visualization Map */}
+            {selectedProject.parcel?.boundaryCoordinates && selectedProject.parcel?.latitude && selectedProject.parcel?.longitude && (
+              <div className="mb-8 bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+                <div className="p-6 border-b border-gray-100">
+                  <h2 className="text-xl font-bold text-[#1e3a5f]">Property Map</h2>
+                </div>
+                <div className="p-6">
+                  <PropertyVisualization
+                    projectId={selectedProject.id}
+                    parcelData={selectedProject.parcel}
+                    buildingFootprint={null}
+                  />
+                </div>
+              </div>
+            )}
 
             {selectedProject.engineeringReqs && selectedProject.engineeringReqs.length > 0 && (
               <div className="mb-8 bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">

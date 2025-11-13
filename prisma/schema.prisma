@@ -74,7 +74,7 @@ model Project {
   projectType  String?
   ownerId      String
   orgId        String?
-  parcelId     String?  @unique
+  parcelId     String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -85,6 +85,7 @@ model Project {
   notes           Note[]
   files           ProjectFile[]
   engineeringReqs EngineeringRequirement[]
+  drawnShapes     DrawnShape[]
   chatMessages    ChatMessage[]
 }
 
@@ -104,10 +105,11 @@ model Parcel {
   zoningRules         Json?
   propertyMetadata    Json?
   existingSqFt        Float?
+  setbacks            Json?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
-  project Project?
+  projects Project[]
 }
 
 model Task {
@@ -304,4 +306,22 @@ model RuleTrigger {
   createdAt             DateTime              @default(now())
   
   @@index([ruleId])
+}
+
+
+model DrawnShape {
+  id          String   @id @default(cuid())
+  projectId   String
+  name        String
+  shapeType   String   // 'polygon', 'rectangle', 'circle', 'house', 'garage', 'adu'
+  coordinates Json     // GeoJSON coordinates array
+  area        Float    // Square feet
+  perimeter   Float    // Feet
+  properties  Json?    // Additional properties (stories, height, etc.)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
 }

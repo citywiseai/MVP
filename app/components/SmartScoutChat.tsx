@@ -53,37 +53,43 @@ export default function SmartScoutChat() {
     try {
       const cleanAddress = addressInput.replace(/, USA$/, '')
       
-      const response = await fetch('/api/parcels/search', {
+      // Use real-address-lookup API which includes boundary data
+      const response = await fetch('/api/real-address-lookup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address: cleanAddress }),
+        body: JSON.stringify({ address: cleanAddress })
       })
 
       if (response.ok) {
         const data = await response.json()
         console.log('Full parcel data from API:', data)
         console.log('Building SF from API:', data.buildingSqFt)
-        
-        const cityName = data.city ? (data.city.charAt(0).toUpperCase() + data.city.slice(1)) : 'Phoenix'
-        const formattedAddress = `${data.address}, ${cityName}, AZ ${data.zip}`
+        console.log('Geometry from API:', data.geometry)
         
         const parcel = {
           apn: data.apn || 'Unknown',
-          address: formattedAddress,
+          address: data.address,
           lotSize: data.lotSizeSqFt || 0,
           buildingSize: data.buildingSqFt || 0,
           zoning: data.zoning || 'Unknown',
-          jurisdiction: cityName
+          jurisdiction: data.jurisdiction || 'Phoenix',
+          latitude: data.latitude,
+          longitude: data.longitude,
+          boundaryCoordinates: data.geometry?.coordinates ? JSON.stringify(data.geometry.coordinates) : null,
+          city: data.jurisdiction || 'Phoenix',
+          state: 'AZ',
+          zip: data.address.match(/\d{5}$/)?.[0] || ''
         }
         
         console.log('Parcel object being set:', parcel)
         console.log('Building size in parcel:', parcel.buildingSize)
+        console.log('Has boundary data:', !!parcel.boundaryCoordinates)
         
         setParcelData(parcel)
 
         const greeting: Message = {
           role: 'assistant',
-          content: `Great! I found your property at ${formattedAddress}. Let's figure out what you'll need for permits. What type of work are you planning? (You can select multiple)`
+          content: `Great! I found your property at ${data.address}. Let's figure out what you'll need for permits. What type of work are you planning? (You can select multiple)`
         }
         setMessages([greeting])
         setCurrentButtons([
@@ -100,8 +106,8 @@ export default function SmartScoutChat() {
         alert('Property not found. Please check the address.')
       }
     } catch (error) {
-      console.error('Error:', error)
-      alert('Failed to find property')
+      console.error('Error looking up address:', error)
+      alert('Failed to find property. Please try again.')
     } finally {
       setLoadingAddress(false)
     }
@@ -238,7 +244,8 @@ export default function SmartScoutChat() {
           projectData: {
             fullAddress: parcelData?.address,
             projectType: 'ADDITION',
-            conversation
+            conversation,
+            parcelData: parcelData
           }
         }),
       })

@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+*.bak*
+*.backup
+*.tsx.bak*
+check_projects.sql
+update_setbacks.sh
