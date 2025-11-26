@@ -5,24 +5,54 @@ interface ParcelData {
   apn: string
   address: string
   city: string
+  state?: string
   zip: string
+  county?: string
   owner: string
+  ownerAddress?: string
+  ownerCity?: string
+  ownerState?: string
+  ownerZip?: string
   subdivision?: string
   lotSizeSqFt: number
   acres: number
+  frontage?: number
+  depth?: number
   latitude: number
   longitude: number
   boundaryCoordinates: number[][]
   boundaryRings: number[][][]
   zoning?: string
+  zoningCode?: string
+  zoningDescription?: string
+  landUseCode?: string
+  usedesc?: string
   yearBuilt?: number
   buildingSqFt?: number
   bedrooms?: number
   bathrooms?: number
+  stories?: number
+  constructionType?: string
+  roofType?: string
   propertyType?: string
   platBook?: string
   platPage?: string
   mcrweblink?: string
+  censusTract?: string
+  floodZone?: string
+  floodPlain?: string
+  landValue?: number
+  improvementValue?: number
+  totalValue?: number
+  assessedValue?: number
+  taxAmount?: number
+  taxYear?: number
+  lastSaleDate?: string
+  lastSalePrice?: number
+  schoolDistrict?: string
+  fireDistrict?: string
+  waterDistrict?: string
+  rawRegridData?: any  // Store the complete raw Regrid API response
 }
 
 export async function searchRegridParcel(address: string): Promise<ParcelData | null> {
@@ -88,27 +118,57 @@ export async function searchRegridParcel(address: string): Promise<ParcelData | 
       apn: props.parcelnumb || 'UNKNOWN',
       address: props.address || headline || address,
       city: props.city || props.scity || '',
+      state: props.state2 || props.sstate || 'AZ',
       zip: props.szip5 || props.szip || '',
+      county: props.county || props.scounty || '',
       owner: props.owner || '',
+      ownerAddress: props.mailadd || props.mail_address1 || '',
+      ownerCity: props.mail_city || '',
+      ownerState: props.mail_state2 || '',
+      ownerZip: props.mail_zip || '',
       subdivision: props.subdivision || null,
       lotSizeSqFt: props.sqft || (props.gisacre ? Math.round(props.gisacre * 43560) : 0),
       acres: props.gisacre || props.ll_gisacre || 0,
+      frontage: props.frontage || null,
+      depth: props.depth || null,
       latitude: parseFloat(props.lat) || 0,
       longitude: parseFloat(props.lon) || 0,
       boundaryCoordinates,
       boundaryRings,
       zoning: props.zoning || null,
+      zoningCode: props.zoning || null,
+      zoningDescription: props.zoning_description || null,
+      landUseCode: props.landuse || props.usecode || null,
+      usedesc: props.usedesc || null,
       yearBuilt: props.yearbuilt || null,
-      buildingSqFt: props.recrdareano || null,
+      buildingSqFt: props.recrdareano || props.improvarea || null,
       bedrooms: props.bedrooms || null,
-      bathrooms: props.bathfixtures || null,
+      bathrooms: props.bathfixtures || props.bathrooms || null,
+      stories: props.stories || null,
+      constructionType: props.construct || null,
+      roofType: props.rooftype || null,
       propertyType: props.usedesc || 'Single Family',
-  platBook: props.book || null,
-  platPage: props.page || null,
-  mcrweblink: props.mcrweblink || null
+      platBook: props.book || null,
+      platPage: props.page || null,
+      mcrweblink: props.mcrweblink || null,
+      censusTract: props.census || props.tract || null,
+      floodZone: props.fld_zone || props.flood_zone || null,
+      floodPlain: props.fema_flood || null,
+      landValue: props.landval || props.assessed_land || null,
+      improvementValue: props.improvval || props.assessed_improvement || null,
+      totalValue: props.totalval || props.assessed_total || null,
+      assessedValue: props.assdtotval || props.marketvalu || null,
+      taxAmount: props.taxtot || props.tax_amount || null,
+      taxYear: props.taxyear || props.tax_year || null,
+      lastSaleDate: props.saledt || props.sale_date || null,
+      lastSalePrice: props.price || props.saleprice || null,
+      schoolDistrict: props.schooldist || null,
+      fireDistrict: props.firedist || null,
+      waterDistrict: props.waterdist || null,
+      rawRegridData: props,  // Store the COMPLETE raw Regrid API response
     }
-    
-    console.log('✅ Returning parcel data:', parcelData)
+
+    console.log('✅ Returning parcel data with', Object.keys(props).length, 'raw Regrid fields')
     return parcelData
     
   } catch (error) {

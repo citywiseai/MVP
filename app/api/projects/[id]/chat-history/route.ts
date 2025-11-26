@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth'
 
-const prisma = new PrismaClient()
+
 
 export async function GET(
   request: NextRequest,
@@ -45,7 +45,7 @@ export async function GET(
       include: {
         user: {
           select: {
-            name: true,
+ame: true,
             email: true
           }
         }

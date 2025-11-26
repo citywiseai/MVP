@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { searchRegridParcel, getSubdivisionPlat } from '@/lib/regrid';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 export async function GET(req: NextRequest) {
   return NextResponse.json({ message: 'Parcels fetched successfully' });
@@ -62,29 +60,43 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Creating/updating parcel with APN:', parcelData.apn);
 
+    // Store the COMPLETE raw Regrid API response in propertyMetadata
+    // This ensures we don't lose any data fields from Regrid
+    const propertyMetadata = parcelData.rawRegridData || {};
+
+    console.log('📊 Storing', Object.keys(propertyMetadata).length, 'Regrid fields in propertyMetadata');
+
     // Create or update parcel in database
     const parcel = await prisma.parcel.upsert({
       where: { apn: parcelData.apn },
       create: {
         apn: parcelData.apn,
-        address: `${parcelData.address}, ${parcelData.city}, ${parcelData.zip}`,
-        jurisdiction: parcelData.city,
-        zoningCode: parcelData.zoning || '',
+        address: parcelData.address,
+        city: parcelData.city,
+        state: parcelData.state,
+        county: parcelData.county,
+        zipCode: parcelData.zip,
+        zoning: parcelData.zoning || '',
         lotSizeSqFt: Math.round(parcelData.lotSizeSqFt),
         latitude: parcelData.latitude,
         longitude: parcelData.longitude,
         boundaryCoordinates: parcelData.boundaryRings,
         zoningRules: zoningRules,
+        propertyMetadata: propertyMetadata,
       },
       update: {
-        address: `${parcelData.address}, ${parcelData.city}, ${parcelData.zip}`,
-        jurisdiction: parcelData.city,
-        zoningCode: parcelData.zoning || '',
+        address: parcelData.address,
+        city: parcelData.city,
+        state: parcelData.state,
+        county: parcelData.county,
+        zipCode: parcelData.zip,
+        zoning: parcelData.zoning || '',
         lotSizeSqFt: Math.round(parcelData.lotSizeSqFt),
         latitude: parcelData.latitude,
         longitude: parcelData.longitude,
         boundaryCoordinates: parcelData.boundaryRings,
         zoningRules: zoningRules,
+        propertyMetadata: propertyMetadata,
       },
     });
 

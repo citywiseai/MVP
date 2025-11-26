@@ -6,8 +6,10 @@ import { Building2, Plus, ChevronDown, ChevronUp, Trash2, Upload, FileText, Mess
 import { SignOutButton } from './SignOutButton'
 import dynamic from 'next/dynamic'
 import DashboardEmptyState from './DashboardEmptyState'
+import PropertyReportModal from './PropertyReportModal'
+import AssessorReportModal from './AssessorReportModal'
 
-const PropertyVisualization = dynamic(() => import('./PropertyVisualization'), {
+const MapboxPropertyVisualization = dynamic(() => import('./MapboxPropertyVisualization'), {
   ssr: false,
   loading: () => <div className="h-[400px] bg-gray-100 animate-pulse rounded-lg" />
 })
@@ -45,14 +47,28 @@ export function ProjectsDashboard({
   })
   const [uploadingFile, setUploadingFile] = useState(false)
   const [expandedTaskNotes, setExpandedTaskNotes] = useState<{ [key: string]: boolean }>({})
+  const [showPropertyReport, setShowPropertyReport] = useState(false)
+  const [assessorLoading, setAssessorLoading] = useState(false)
+  const [showAssessorReport, setShowAssessorReport] = useState(false)
+  const [assessorData, setAssessorData] = useState<any>(null)
 
   const selectedProject = projects.find(p => p.id === selectedProjectId)
 
 
   // Auto-fetch parcel data if project has address but no parcel
+  // Also fetch complete Regrid data if propertyMetadata is missing
   useEffect(() => {
+    console.log('🔄 useEffect: selectedProject changed:', selectedProject?.name || 'none');
+    console.log('🔄 useEffect: Has parcel?', !!selectedProject?.parcel);
+    console.log('🔄 useEffect: Parcel ID:', selectedProject?.parcel?.id);
+    console.log('🔄 useEffect: Parcel APN:', selectedProject?.parcel?.apn);
+
     const fetchParcelData = async () => {
-      if (selectedProject && selectedProject.fullAddress && !selectedProject.parcel) {
+      if (!selectedProject || !selectedProject.fullAddress) return;
+
+      // Case 1: No parcel data at all - fetch it
+      if (!selectedProject.parcel) {
+        console.log('🔄 No parcel data found, fetching...');
         try {
           const res = await fetch(`/api/projects/${selectedProject.id}/fetch-parcel`, {
             method: 'POST',
@@ -61,8 +77,8 @@ export function ProjectsDashboard({
             const data = await res.json()
             if (data.parcel) {
               // Update project with parcel data
-              setProjects(projects.map(p => 
-                p.id === selectedProject.id 
+              setProjects(projects.map(p =>
+                p.id === selectedProject.id
                   ? { ...p, parcel: data.parcel }
                   : p
               ))
@@ -71,10 +87,95 @@ export function ProjectsDashboard({
         } catch (error) {
           console.error('Failed to fetch parcel:', error)
         }
+        return;
+      }
+
+      // Case 2: Parcel exists but propertyMetadata is missing - fetch complete data
+      const hasMetadata = selectedProject.parcel.propertyMetadata &&
+                         Object.keys(selectedProject.parcel.propertyMetadata).length > 0;
+
+      if (!hasMetadata) {
+        console.log('🔄 Property metadata missing, fetching complete Regrid data...');
+        try {
+          const res = await fetch('/api/parcels/fetch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ address: selectedProject.fullAddress }),
+          })
+
+          if (res.ok) {
+            const data = await res.json()
+            if (data.success && data.parcel) {
+              console.log('✅ Complete parcel data fetched, updating project');
+              // Update project with complete parcel data
+              setProjects(projects.map(p =>
+                p.id === selectedProject.id
+                  ? { ...p, parcel: data.parcel }
+                  : p
+              ))
+            }
+          }
+        } catch (error) {
+          console.error('Failed to fetch complete parcel data:', error)
+        }
+      } else {
+        console.log('✅ Property metadata already exists');
       }
     }
     fetchParcelData()
-  }, [selectedProjectId])
+  }, [selectedProjectId, selectedProject?.parcel?.propertyMetadata])
+
+  // Auto-fetch assessor data when project loads (if not already fetched)
+  useEffect(() => {
+    const autoFetchAssessorData = async () => {
+      if (!selectedProject?.parcel?.apn || !selectedProject?.parcel?.id) {
+        console.log('⏭️  Skip auto-fetch assessor: No parcel APN');
+        return;
+      }
+
+      // Skip if already fetched (totalBuildingSF exists and is greater than 0)
+      if (selectedProject.parcel.totalBuildingSF && selectedProject.parcel.totalBuildingSF > 0) {
+        console.log('✅ Assessor data already exists:', selectedProject.parcel.totalBuildingSF, 'sq ft');
+        return;
+      }
+
+      console.log('🤖 Auto-fetching assessor data for APN:', selectedProject.parcel.apn);
+
+      try {
+        const response = await fetch('/api/parcels/scrape-assessor', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            apn: selectedProject.parcel.apn,
+            parcelId: selectedProject.parcel.id
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('✅ Auto-fetched assessor data:', data);
+
+          // Update the selected project with new parcel data
+          if (data.parcel) {
+            setProjects(projects.map(p =>
+              p.id === selectedProject.id
+                ? { ...p, parcel: data.parcel }
+                : p
+            ));
+          }
+        } else {
+          console.log('⚠️  Auto-fetch assessor failed:', response.status);
+        }
+      } catch (error) {
+        console.error('Error auto-fetching assessor data:', error);
+      }
+    };
+
+    // Small delay to let parcel data load first
+    const timeoutId = setTimeout(autoFetchAssessorData, 1000);
+    return () => clearTimeout(timeoutId);
+  }, [selectedProject?.id, selectedProject?.parcel?.totalBuildingSF]);
+
   const getProjectScope = (project: any) => {
     return project.scopeOfWork || project.description || ''
   }
@@ -144,6 +245,72 @@ export function ProjectsDashboard({
       setSortOrder('asc')
     }
   }
+
+  const fetchAssessorData = async () => {
+    // IMMEDIATE feedback - fires BEFORE anything else
+    console.log('🎯 BUTTON CLICKED! fetchAssessorData starting...');
+    console.log('🔍 fetchAssessorData called');
+    console.log('📦 selectedProject:', selectedProject);
+    console.log('📦 selectedProject?.parcel:', selectedProject?.parcel);
+
+    if (!selectedProject?.parcel?.id || !selectedProject?.parcel?.apn) {
+      console.error('❌ Missing parcel data:', {
+        hasProject: !!selectedProject,
+        hasParcel: !!selectedProject?.parcel,
+        parcelId: selectedProject?.parcel?.id,
+        apn: selectedProject?.parcel?.apn
+      });
+      alert('Missing parcel data');
+      return;
+    }
+
+    console.log('📤 Calling API with:', {
+      parcelId: selectedProject.parcel.id,
+      apn: selectedProject.parcel.apn
+    });
+
+    setAssessorLoading(true);
+
+    try {
+      const response = await fetch('/api/parcels/scrape-assessor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          parcelId: selectedProject.parcel.id,
+          apn: selectedProject.parcel.apn,
+        }),
+      });
+
+      console.log('📥 API response status:', response.status);
+
+      const data = await response.json();
+
+      console.log('📥 API response data:', data);
+
+      if (data.success) {
+        // Update the selected project with new parcel data
+        setProjects(projects.map(p =>
+          p.id === selectedProject.id
+            ? { ...p, parcel: data.parcel }
+            : p
+        ));
+
+        // Show success message with guidance
+        if (data.buildingSections && data.buildingSections.length > 0) {
+          alert(`✅ Success! Found ${data.buildingSections.length} building section(s) totaling ${data.totalBuildingSF.toLocaleString()} sq ft.\n\nClick "Property Report" to view details.`);
+        } else {
+          alert(`⚠️ Assessor data fetched, but no building information found on the county website.\n\nThe property may not have recorded building data.`);
+        }
+      } else {
+        alert(`❌ Failed to fetch assessor data:\n${data.error || 'Unknown error'}`);
+      }
+    } catch (error: any) {
+      console.error('Error fetching assessor data:', error);
+      alert(`❌ Error: ${error.message || 'Failed to connect to assessor'}`);
+    } finally {
+      setAssessorLoading(false);
+    }
+  };
 
   const handleDeleteProject = async (projectId: string, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -426,13 +593,13 @@ export function ProjectsDashboard({
             </div>
           </div>
         ) : (
-          <div className="max-w-6xl mx-auto p-8">
+          <div className="px-8 py-8">
             <div className="mb-8 bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                   <h1 className="text-3xl font-bold text-[#1e3a5f] mb-2">{selectedProject.name}</h1>
                   {getProjectScope(selectedProject) && <p className="text-gray-700 mb-4 whitespace-pre-wrap">{getProjectScope(selectedProject)}</p>}
-                  <div className="flex flex-wrap gap-3">
+                  <div className="flex flex-wrap items-center justify-between gap-4 w-full mt-3">
                     <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium ${selectedProject.status === 'active' ? 'bg-[#9caf88]/20 text-[#9caf88]' : 'bg-gray-100 text-gray-600'}`}>{selectedProject.status}</span>
                     {selectedProject.fullAddress && <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">📍 {formatAddress(selectedProject.fullAddress)}</span>}
                     {selectedProject.propertyType && <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">🏠 {selectedProject.propertyType}</span>}
@@ -443,21 +610,82 @@ export function ProjectsDashboard({
                     {selectedProject.parcel?.city && <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">🏛️ Jurisdiction: {selectedProject.parcel.city.charAt(0).toUpperCase() + selectedProject.parcel.city.slice(1)}</span>}
                   </div>
                 </div>
-                <button onClick={() => router.push(`/projects/${selectedProject.id}/edit`)} className="px-6 py-3 border-2 border-[#9caf88] text-[#9caf88] hover:bg-[#9caf88] hover:text-white rounded-xl font-medium transition-all duration-200">Edit</button>
+                <div className="flex items-center gap-3">
+                  {selectedProject.parcel && (
+                    <>
+                      <button
+                        onClick={async () => {
+                          if (!selectedProject?.parcel?.apn) {
+                            alert('Missing parcel APN');
+                            return;
+                          }
+
+                          setAssessorLoading(true);
+
+                          try {
+                            const response = await fetch(`/api/assessor/${selectedProject.parcel.apn}`);
+                            const data = await response.json();
+
+                            if (data.success) {
+                              setAssessorData(data);
+                              setShowAssessorReport(true);
+                            } else {
+                              alert(`❌ Failed to fetch assessor data: ${data.error}`);
+                            }
+                          } catch (error: any) {
+                            console.error('❌ Error fetching assessor data:', error);
+                            alert(`❌ Error: ${error.message}`);
+                          } finally {
+                            setAssessorLoading(false);
+                          }
+                        }}
+                        disabled={assessorLoading}
+                        className="px-6 py-3 bg-gradient-to-br from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white rounded-xl font-medium shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <FileText className="h-5 w-5" />
+                        {assessorLoading ? 'Loading...' : 'Assessor Report'}
+                      </button>
+                      {/* Import Buildings button - Hidden: auto-fetch handles this now */}
+                      {/* Only show if auto-fetch failed and no building data exists */}
+                      {!selectedProject.parcel.totalBuildingSF && !assessorLoading && (
+                        <button
+                          onClick={fetchAssessorData}
+                          className="px-6 py-3 bg-gradient-to-br from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-xl font-medium shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2"
+                        >
+                          <Building2 className="h-5 w-5" />
+                          Retry Import Buildings
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setShowPropertyReport(true)}
+                        className="px-6 py-3 bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl font-medium shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2"
+                      >
+                        <FileText className="h-5 w-5" />
+                        Property Report
+                      </button>
+                    </>
+                  )}
+                  <button onClick={() => router.push(`/projects/${selectedProject.id}/edit`)} className="px-6 py-3 border-2 border-[#9caf88] text-[#9caf88] hover:bg-[#9caf88] hover:text-white rounded-xl font-medium transition-all duration-200">Edit</button>
+                </div>
               </div>
             </div>
 
             {/* Property Visualization Map */}
             {selectedProject.parcel?.boundaryCoordinates && selectedProject.parcel?.latitude && selectedProject.parcel?.longitude && (
               <div className="mb-8 bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-                <div className="p-6 border-b border-gray-100">
+                <div className="px-3 py-4 border-b border-gray-100">
                   <h2 className="text-xl font-bold text-[#1e3a5f]">Property Map</h2>
                 </div>
-                <div className="p-6">
-                  <PropertyVisualization
+                <div className="px-3 py-4">
+                  <MapboxPropertyVisualization
+                    parcelId={selectedProject.parcel.id}
                     projectId={selectedProject.id}
-                    parcelData={selectedProject.parcel}
-                    buildingFootprint={null}
+                    boundaryCoords={typeof selectedProject.parcel.boundaryCoordinates === 'string'
+                      ? JSON.parse(selectedProject.parcel.boundaryCoordinates)
+                      : selectedProject.parcel.boundaryCoordinates}
+                    centerLat={selectedProject.parcel.latitude}
+                    centerLng={selectedProject.parcel.longitude}
+                    parcel={selectedProject.parcel}
                   />
                 </div>
               </div>
@@ -650,6 +878,26 @@ export function ProjectsDashboard({
             </div>
           </div>
         )}
+
+        {/* Property Report Modal */}
+        {selectedProject?.parcel && (
+          <PropertyReportModal
+            parcelData={selectedProject.parcel ? {
+              ...selectedProject.parcel,
+              ...(selectedProject.parcel.propertyMetadata as object || {}),
+              zip: selectedProject.parcel.zipCode,
+            } : null}
+            isOpen={showPropertyReport}
+            onClose={() => setShowPropertyReport(false)}
+          />
+        )}
+
+        {/* Assessor Report Modal */}
+        <AssessorReportModal
+          data={assessorData}
+          isOpen={showAssessorReport}
+          onClose={() => setShowAssessorReport(false)}
+        />
       </div>
     </div>
   )

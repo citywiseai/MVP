@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth'
 import {  PrismaClient } from '@prisma/client'
 import Anthropic from '@anthropic-ai/sdk'
 
-const prisma = new PrismaClient()
+
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
@@ -81,7 +81,7 @@ Respond with JSON only.`
     if (!org) {
       org = await prisma.org.create({
         data: {
-          name: `${session.user.name || session.user.email}'s Organization`,
+ame: `${session.user.name || session.user.email}'s Organization`,
           memberships: {
             create: {
               userId: session.user.id,
@@ -116,7 +116,7 @@ Respond with JSON only.`
     // Create project
     const project = await prisma.project.create({
       data: {
-        name: `${projectData.projectType} at ${parcelData.address}`,
+ame: `${projectData.projectType} at ${parcelData.address}`,
         fullAddress: parcelData.address,
         propertyType: 'Residential',
         projectType: projectData.projectType,
@@ -138,7 +138,7 @@ Respond with JSON only.`
         projectId: project.id,
         discipline: 'Structural',
         required: true,
-        notes: projectData.keyDetails.movingWalls 
+otes: projectData.keyDetails.movingWalls 
           ? 'Required for wall modifications and load analysis'
           : 'Required for structural analysis'
       })
@@ -149,7 +149,7 @@ Respond with JSON only.`
         projectId: project.id,
         discipline: 'Electrical',
         required: true,
-        notes: projectData.keyDetails.panelUpgrade
+otes: projectData.keyDetails.panelUpgrade
           ? 'Panel upgrade and load calculations required'
           : 'Electrical design and calculations required'
       })
@@ -160,7 +160,7 @@ Respond with JSON only.`
         projectId: project.id,
         discipline: 'Plumbing',
         required: true,
-        notes: projectData.keyDetails.plumbingRelocation
+otes: projectData.keyDetails.plumbingRelocation
           ? 'Plumbing relocations and fixture design'
           : 'Plumbing design required'
       })
@@ -171,7 +171,7 @@ Respond with JSON only.`
         projectId: project.id,
         discipline: 'Mechanical',
         required: true,
-        notes: 'HVAC design and load calculations'
+otes: 'HVAC design and load calculations'
       })
     }
 
@@ -180,7 +180,7 @@ Respond with JSON only.`
         projectId: project.id,
         discipline: 'Civil',
         required: true,
-        notes: 'Site grading and drainage design'
+otes: 'Site grading and drainage design'
       })
     }
 

@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string; shapeId: string } }
+  { params }: { params: Promise<{ id: string; shapeId: string }> }
 ) {
   try {
-    const { shapeId } = params;
+    const { shapeId } = await params;
     const body = await request.json();
 
     const shape = await prisma.drawnShape.update({
@@ -28,10 +26,10 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; shapeId: string } }
+  { params }: { params: Promise<{ id: string; shapeId: string }> }
 ) {
   try {
-    const { shapeId } = params;
+    const { shapeId } = await params;
 
     await prisma.drawnShape.delete({
       where: { id: shapeId }

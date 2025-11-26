@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';;
 import { auth } from '@/lib/auth';
 import { getRequirementsForProject, parseProjectDataToDetails } from '@/lib/requirements';
 
-const prisma = new PrismaClient();
+
 
 function parseScoutConversation(conversation: string) {
   const lines = conversation.split('\n');
@@ -240,9 +240,15 @@ export async function POST(req: NextRequest) {
       tasksCreated: true
     });
   } catch (error) {
-    console.error('Error creating project:', error);
+    console.error('❌ ERROR creating project:', error);
+    console.error('Error type:', error instanceof Error ? error.constructor.name : typeof error);
+    console.error('Error message:', error instanceof Error ? error.message : String(error));
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    if (error && typeof error === 'object') {
+      console.error('Error details:', JSON.stringify(error, null, 2));
+    }
     return NextResponse.json(
-      { error: 'Failed to create project' },
+      { error: 'Failed to create project', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }

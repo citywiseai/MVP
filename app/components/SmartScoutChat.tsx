@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { MapPin, Loader2, Send } from 'lucide-react'
+import { MapPin, Loader2, Send, MessageCircle, ChevronDown } from 'lucide-react'
 import { AddressAutocomplete } from '@/components/AddressAutocomplete'
 
 interface Message {
@@ -26,6 +26,15 @@ interface ParcelData {
 
 export default function SmartScoutChat() {
   const router = useRouter()
+
+  // Exploration mode state (general Q&A)
+  const [explorationMessages, setExplorationMessages] = useState<Message[]>([])
+  const [explorationInput, setExplorationInput] = useState('')
+  const [explorationLoading, setExplorationLoading] = useState(false)
+  const [conversationId, setConversationId] = useState<string | null>(null)
+  const explorationEndRef = useRef<HTMLDivElement>(null)
+
+  // Project mode state (existing flow)
   const [addressInput, setAddressInput] = useState('')
   const [parcelData, setParcelData] = useState<ParcelData | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
@@ -41,6 +50,53 @@ export default function SmartScoutChat() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  useEffect(() => {
+    explorationEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [explorationMessages])
+
+  // Exploration mode Q&A handlers
+  const handleExplorationSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!explorationInput.trim() || explorationLoading) return
+
+    const userMessage: Message = {
+      role: 'user',
+      content: explorationInput
+    }
+    setExplorationMessages(prev => [...prev, userMessage])
+    const input = explorationInput
+    setExplorationInput('')
+    setExplorationLoading(true)
+
+    try {
+      const response = await fetch('/api/ai-scope/explore', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: explorationMessages,
+          userInput: input,
+          conversationId
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        const assistantMessage: Message = {
+          role: 'assistant',
+          content: data.message
+        }
+        setExplorationMessages(prev => [...prev, assistantMessage])
+        if (data.conversationId && !conversationId) {
+          setConversationId(data.conversationId)
+        }
+      }
+    } catch (error) {
+      console.error('Error in exploration mode:', error)
+    } finally {
+      setExplorationLoading(false)
+    }
+  }
+
   const handleAddressSelect = (address: string) => {
     const cleanAddress = address.replace(/, USA$/, '')
     setAddressInput(cleanAddress)
@@ -52,8 +108,7 @@ export default function SmartScoutChat() {
     setLoadingAddress(true)
     try {
       const cleanAddress = addressInput.replace(/, USA$/, '')
-      
-      // Use real-address-lookup API which includes boundary data
+
       const response = await fetch('/api/real-address-lookup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -62,10 +117,7 @@ export default function SmartScoutChat() {
 
       if (response.ok) {
         const data = await response.json()
-        console.log('Full parcel data from API:', data)
-        console.log('Building SF from API:', data.buildingSqFt)
-        console.log('Geometry from API:', data.geometry)
-        
+
         const parcel = {
           apn: data.apn || 'Unknown',
           address: data.address,
@@ -80,11 +132,7 @@ export default function SmartScoutChat() {
           state: 'AZ',
           zip: data.address.match(/\d{5}$/)?.[0] || ''
         }
-        
-        console.log('Parcel object being set:', parcel)
-        console.log('Building size in parcel:', parcel.buildingSize)
-        console.log('Has boundary data:', !!parcel.boundaryCoordinates)
-        
+
         setParcelData(parcel)
 
         const greeting: Message = {
@@ -139,13 +187,13 @@ export default function SmartScoutChat() {
 
       if (response.ok) {
         const data = await response.json()
-        
+
         const assistantMessage: Message = {
           role: 'assistant',
           content: data.message
         }
         setMessages(prev => [...prev, assistantMessage])
-        
+
         if (data.buttons && data.buttons.length > 0) {
           setCurrentButtons(data.buttons)
         }
@@ -160,15 +208,15 @@ export default function SmartScoutChat() {
   const handleButtonClick = async (value: string, label: string) => {
     if (isLoading || isCreating) return
 
-    const isMultiSelect = currentButtons.length > 2 && 
-      (currentButtons.some(b => b.label.includes('multiple')) || 
+    const isMultiSelect = currentButtons.length > 2 &&
+      (currentButtons.some(b => b.label.includes('multiple')) ||
        messages[messages.length - 1]?.content.includes('select multiple'))
 
     if (value === 'create') {
       await handleCreateProject()
       return
     }
-    
+
     if (isMultiSelect) {
       setSelectedButtons(prev =>
         prev.includes(value)
@@ -177,30 +225,30 @@ export default function SmartScoutChat() {
       )
       return
     }
-    
+
     const userMessage: Message = {
       role: 'user',
       content: label
     }
     setMessages(prev => [...prev, userMessage])
-    
+
     await sendMessage(value)
   }
 
   const handleContinueMultiSelect = async () => {
     if (selectedButtons.length === 0) return
-    
+
     const labels = selectedButtons
       .map(val => currentButtons.find(b => b.value === val)?.label)
       .filter(Boolean)
       .join(', ')
-    
+
     const userMessage: Message = {
       role: 'user',
       content: labels
     }
     setMessages(prev => [...prev, userMessage])
-    
+
     await sendMessage(selectedButtons.join(','))
   }
 
@@ -215,28 +263,22 @@ export default function SmartScoutChat() {
     setMessages(prev => [...prev, userMessage])
     const message = textInput
     setTextInput('')
-    
+
     await sendMessage(message)
   }
 
   const handleCreateProject = async () => {
     setIsCreating(true)
-    
+
     const creatingMessage: Message = {
       role: 'assistant',
       content: `🚀 Your project is now being created! I'm setting up all the required permits and plans. You'll be redirected to your dashboard in a moment...`
     }
     setMessages(prev => [...prev, creatingMessage])
-    
+
     try {
       const conversation = messages.map(m => `${m.role}: ${m.content}`).join('\n')
-      
-      console.log('Sending create project request with:', {
-        fullAddress: parcelData?.address,
-        projectType: 'ADDITION',
-        conversation: conversation.substring(0, 200) + '...'
-      })
-      
+
       const response = await fetch('/api/ai-scope/create-project', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -251,8 +293,7 @@ export default function SmartScoutChat() {
       })
 
       const result = await response.json()
-      console.log('Create project response:', result)
-      
+
       if (response.ok && result.projectId) {
         setTimeout(() => {
           router.push(`/dashboard?project=${result.projectId}`)
@@ -269,74 +310,164 @@ export default function SmartScoutChat() {
     }
   }
 
-  console.log('Current parcelData:', parcelData)
-  console.log('Building size from state:', parcelData?.buildingSize)
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#1e3a5f] via-[#2c4f6f] to-[#1e3a5f] py-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-800 via-slate-900 to-blue-900 py-12">
       <div className="max-w-4xl mx-auto px-4">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">AI Scope Capture</h1>
-          <p className="text-white/80">Let Scout guide you through your project setup</p>
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-semibold text-white mb-3">AI Scope Capture</h1>
+          <p className="text-lg text-blue-100">Let Scout guide you through your project setup</p>
         </div>
 
+        {/* Exploration Mode - General Q&A Chat */}
         {!parcelData && (
-          <div className="bg-white rounded-2xl shadow-2xl p-8 mb-6">
-            <label className="block text-sm font-medium text-[#1e3a5f] mb-2">
-              Property Address
-            </label>
-            <div className="flex gap-3 items-start">
-              <div className="flex-1">
-                <AddressAutocomplete
-                  placeholder="e.g. 123 Main St, Phoenix, AZ 85001"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9caf88]"
-                  onAddressSelect={handleAddressSelect}
-                  required={false}
-                />
+          <>
+            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 mb-12">
+              <div className="mb-6">
+                <h2 className="text-2xl font-semibold text-gray-900 mb-3">Chat with Scout</h2>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  Whether you're exploring possibilities or ready to build, I'm here to help answer any questions.
+                </p>
               </div>
-              <button
-                onClick={handleAddressSubmit}
-                disabled={loadingAddress}
-                className="px-6 py-3 bg-[#9caf88] text-white rounded-lg font-medium hover:bg-[#8a9d78] transition-colors disabled:opacity-50 flex items-center gap-2 flex-shrink-0"
-              >
-                {loadingAddress ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Searching...
-                  </>
-                ) : (
-                  <>
-                    <MapPin className="w-5 h-5" />
-                    Find Property
-                  </>
-                )}
-              </button>
+
+              {/* Exploration chat messages */}
+              {explorationMessages.length > 0 && (
+                <div className="border border-gray-100 rounded-2xl p-6 mb-6 max-h-[320px] overflow-y-auto bg-gray-50/50">
+                  <div className="space-y-4">
+                    {explorationMessages.map((message, index) => (
+                      <div
+                        key={index}
+                        className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div
+                          className={`max-w-[80%] px-5 py-3 rounded-2xl ${
+                            message.role === 'user'
+                              ? 'bg-blue-500 text-white'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}
+                        >
+                          <p className="text-sm leading-relaxed">{message.content}</p>
+                        </div>
+                      </div>
+                    ))}
+                    {explorationLoading && (
+                      <div className="flex justify-start">
+                        <div className="bg-gray-100 px-5 py-3 rounded-2xl flex items-center gap-2">
+                          <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                          <span className="text-sm text-gray-600">Thinking...</span>
+                        </div>
+                      </div>
+                    )}
+                    <div ref={explorationEndRef} />
+                  </div>
+                </div>
+              )}
+
+              {/* Exploration input */}
+              <form onSubmit={handleExplorationSubmit} className="flex gap-3">
+                <input
+                  type="text"
+                  value={explorationInput}
+                  onChange={(e) => setExplorationInput(e.target.value)}
+                  placeholder="Ask about permits, costs, zoning, ADUs..."
+                  disabled={explorationLoading}
+                  className="flex-1 h-12 px-5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 text-sm placeholder:text-gray-400"
+                />
+                <button
+                  type="submit"
+                  disabled={explorationLoading || !explorationInput.trim()}
+                  className="h-12 px-6 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 flex items-center justify-center"
+                >
+                  <Send className="w-5 h-5" />
+                </button>
+              </form>
             </div>
-          </div>
+
+            {/* Divider - Elegant Glow */}
+            <div className="flex flex-col items-center justify-center py-12 space-y-3">
+              {/* Dots */}
+              <div className="flex space-x-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-white/60"></div>
+                <div className="w-1.5 h-1.5 rounded-full bg-white/60"></div>
+                <div className="w-1.5 h-1.5 rounded-full bg-white/60"></div>
+              </div>
+
+              {/* Text with glow */}
+              <p
+                className="text-white text-lg font-medium text-center px-8"
+                style={{
+                  textShadow: '0 0 20px rgba(255, 255, 255, 0.3), 0 0 10px rgba(255, 255, 255, 0.2)'
+                }}
+              >
+                When you're ready, let's look at your specific property
+              </p>
+
+              {/* Optional subtle line */}
+              <div className="w-32 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
+            </div>
+
+            {/* Project Start - Address Input */}
+            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
+              <div className="mb-6">
+                <label className="block text-base font-medium text-gray-900 mb-2">
+                  Property Address
+                </label>
+                <p className="text-sm text-gray-600">
+                  Get personalized guidance for your specific property
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <AddressAutocomplete
+                    placeholder="e.g., 123 Main St, Phoenix, AZ 85001"
+                    className="w-full h-14 px-5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    onAddressSelect={handleAddressSelect}
+                    required={false}
+                  />
+                </div>
+                <button
+                  onClick={handleAddressSubmit}
+                  disabled={loadingAddress}
+                  className="h-14 px-8 bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 flex-shrink-0"
+                >
+                  {loadingAddress ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>Searching...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Find Property</span>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </>
         )}
 
+        {/* Project Mode - Existing Conversation Flow */}
         {parcelData && (
           <>
-            <div className="bg-white rounded-2xl shadow-2xl p-6 mb-6">
-              <div className="flex items-start gap-3">
-                <MapPin className="w-5 h-5 text-[#9caf88] mt-1 flex-shrink-0" />
+            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 mb-6">
+              <div className="flex items-start gap-4">
                 <div className="flex-1">
-                  <h3 className="font-semibold text-[#1e3a5f] text-lg mb-2">{parcelData.address}</h3>
-                  <div className="grid grid-cols-3 gap-3 text-sm text-gray-600">
+                  <h3 className="font-semibold text-gray-900 text-lg mb-3">{parcelData.address}</h3>
+                  <div className="grid grid-cols-3 gap-4 text-sm text-gray-600">
                     <div>
-                      <span className="font-medium">Lot Size:</span> {parcelData.lotSize.toLocaleString()} sq ft
+                      <span className="font-medium text-gray-500">Lot Size</span>
+                      <p className="text-gray-900 mt-0.5">{parcelData.lotSize.toLocaleString()} sq ft</p>
                     </div>
                     <div>
-                      <span className="font-medium">Building SF:</span> {parcelData.buildingSize > 0 ? parcelData.buildingSize.toLocaleString() : 'N/A'} sq ft
+                      <span className="font-medium text-gray-500">Building SF</span>
+                      <p className="text-gray-900 mt-0.5">{parcelData.buildingSize > 0 ? parcelData.buildingSize.toLocaleString() : 'N/A'} sq ft</p>
                     </div>
                     <div>
-                      <span className="font-medium">Jurisdiction:</span> {parcelData.jurisdiction}
-                    </div>
-                    <div>
-                      <span className="font-medium">Zoning:</span> {parcelData.zoning}
-                    </div>
-                    <div>
-                      <span className="font-medium">APN:</span> {parcelData.apn}
+                      <span className="font-medium text-gray-500">Zoning</span>
+                      <p className="text-gray-900 mt-0.5">{parcelData.zoning}</p>
                     </div>
                   </div>
                 </div>
@@ -347,37 +478,37 @@ export default function SmartScoutChat() {
                     setCurrentButtons([])
                     setAddressInput('')
                   }}
-                  className="text-sm text-gray-500 hover:text-gray-700 px-3 py-1 rounded hover:bg-gray-100"
+                  className="text-sm text-gray-500 hover:text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors"
                 >
-                  Change Address
+                  Change
                 </button>
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
-              <div className="h-[400px] overflow-y-auto p-6 space-y-4">
+            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="h-[420px] overflow-y-auto p-8 space-y-4">
                 {messages.map((message, index) => (
                   <div
                     key={index}
                     className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`max-w-[80%] px-4 py-3 rounded-lg ${
+                      className={`max-w-[80%] px-5 py-3 rounded-2xl ${
                         message.role === 'user'
-                          ? 'bg-[#9caf88] text-white'
+                          ? 'bg-blue-500 text-white'
                           : 'bg-gray-100 text-gray-800'
                       }`}
                     >
-                      {message.content}
+                      <p className="text-sm leading-relaxed">{message.content}</p>
                     </div>
                   </div>
                 ))}
 
                 {isLoading && (
                   <div className="flex justify-start">
-                    <div className="bg-gray-100 px-4 py-3 rounded-lg flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span className="text-gray-600">Thinking...</span>
+                    <div className="bg-gray-100 px-5 py-3 rounded-2xl flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                      <span className="text-sm text-gray-600">Thinking...</span>
                     </div>
                   </div>
                 )}
@@ -386,16 +517,16 @@ export default function SmartScoutChat() {
               </div>
 
               {currentButtons.length > 0 && !isLoading && !isCreating && (
-                <div className="border-t border-gray-200 p-6 bg-gray-50 space-y-3">
-                  <div className="flex flex-wrap gap-3">
+                <div className="border-t border-gray-100 p-6 bg-gray-50/50 space-y-4">
+                  <div className="flex flex-wrap gap-2">
                     {currentButtons.map((button, index) => (
                       <button
                         key={index}
                         onClick={() => handleButtonClick(button.value, button.label)}
-                        className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                        className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
                           selectedButtons.includes(button.value)
-                            ? 'bg-[#9caf88] text-white shadow-md'
-                            : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-[#9caf88]'
+                            ? 'bg-blue-500 text-white shadow-sm'
+                            : 'bg-white border border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50'
                         }`}
                       >
                         {button.label}
@@ -406,7 +537,7 @@ export default function SmartScoutChat() {
                   {selectedButtons.length > 0 && (
                     <button
                       onClick={handleContinueMultiSelect}
-                      className="w-full px-4 py-3 bg-[#1e3a5f] text-white rounded-lg font-medium hover:bg-[#2c4f6f] transition-colors"
+                      className="w-full px-6 py-3 bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600 transition-colors"
                     >
                       Continue with: {selectedButtons.map(val => currentButtons.find(b => b.value === val)?.label).filter(Boolean).join(', ')}
                     </button>
@@ -414,20 +545,20 @@ export default function SmartScoutChat() {
                 </div>
               )}
 
-              <div className="border-t border-gray-200 p-4 bg-white">
-                <form onSubmit={handleTextSubmit} className="flex gap-2">
+              <div className="border-t border-gray-100 p-6 bg-white">
+                <form onSubmit={handleTextSubmit} className="flex gap-3">
                   <input
                     type="text"
                     value={textInput}
                     onChange={(e) => setTextInput(e.target.value)}
                     placeholder="Type a message or ask a question..."
                     disabled={isLoading || isCreating}
-                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9caf88] disabled:bg-gray-100"
+                    className="flex-1 h-12 px-5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 text-sm placeholder:text-gray-400"
                   />
                   <button
                     type="submit"
                     disabled={isLoading || isCreating || !textInput.trim()}
-                    className="px-4 py-3 bg-[#9caf88] text-white rounded-lg hover:bg-[#8a9d78] transition-colors disabled:opacity-50"
+                    className="h-12 px-6 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                   >
                     <Send className="w-5 h-5" />
                   </button>

@@ -1,29 +1,17 @@
 "use client";
 
 import React from 'react';
-import { Eye, Edit2, Ruler, ZoomIn, ZoomOut, Undo2, Redo2, PenTool } from 'lucide-react';
+import { Eye, Edit2, Ruler, PenTool } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface MapToolbarProps {
   mode: 'view' | 'edit' | 'draw' | 'measure';
   onModeChange: (mode: 'view' | 'edit' | 'draw' | 'measure') => void;
-  onZoomIn: () => void;
-  onZoomOut: () => void;
-  onUndo?: () => void;
-  onRedo?: () => void;
-  canUndo?: boolean;
-  canRedo?: boolean;
 }
 
 export default function MapToolbar({
   mode,
-  onModeChange,
-  onZoomIn,
-  onZoomOut,
-  onUndo,
-  onRedo,
-  canUndo = false,
-  canRedo = false
+  onModeChange
 }: MapToolbarProps) {
   
   const modes = [
@@ -37,11 +25,11 @@ export default function MapToolbar({
     <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-[1000]">
       <div className="bg-white rounded-2xl shadow-lg border border-gray-200 px-2 py-2 flex items-center gap-2">
         {/* Mode Buttons */}
-        <div className="flex items-center gap-1 pr-2 border-r border-gray-200">
+        <div className="flex items-center gap-1">
           {modes.map((m) => {
             const Icon = m.icon;
             const isActive = mode === m.id;
-            
+
             return (
               <button
                 key={m.id}
@@ -61,56 +49,6 @@ export default function MapToolbar({
               </button>
             );
           })}
-        </div>
-
-        {/* Zoom Controls */}
-        <div className="flex items-center gap-1 pr-2 border-r border-gray-200">
-          <button
-            onClick={onZoomIn}
-            title="Zoom In (⌘+)"
-            className="p-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
-          >
-            <ZoomIn className="w-4 h-4" />
-          </button>
-          <button
-            onClick={onZoomOut}
-            title="Zoom Out (⌘-)"
-            className="p-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
-          >
-            <ZoomOut className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Undo/Redo */}
-        <div className="flex items-center gap-1">
-          <button
-            onClick={onUndo}
-            disabled={!canUndo}
-            title="Undo (⌘Z)"
-            className={`
-              p-2 rounded-lg transition-colors
-              ${canUndo
-                ? 'text-gray-700 hover:bg-gray-100'
-                : 'text-gray-300 cursor-not-allowed'
-              }
-            `}
-          >
-            <Undo2 className="w-4 h-4" />
-          </button>
-          <button
-            onClick={onRedo}
-            disabled={!canRedo}
-            title="Redo (⌘⇧Z)"
-            className={`
-              p-2 rounded-lg transition-colors
-              ${canRedo
-                ? 'text-gray-700 hover:bg-gray-100'
-                : 'text-gray-300 cursor-not-allowed'
-              }
-            `}
-          >
-            <Redo2 className="w-4 h-4" />
-          </button>
         </div>
       </div>
     </div>

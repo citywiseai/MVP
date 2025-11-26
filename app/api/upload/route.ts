@@ -2,9 +2,9 @@ import { auth } from "@/lib/auth"
 import { NextRequest, NextResponse } from "next/server"
 import { writeFile } from "fs/promises"
 import { join } from "path"
-import { PrismaClient } from "@prisma/client"
+import { prisma } from '@/lib/prisma';
 
-const prisma = new PrismaClient()
+
 
 export async function POST(request: NextRequest) {
   try {

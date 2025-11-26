@@ -7,25 +7,16 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 
 import L from 'leaflet';
+
 import 'leaflet/dist/leaflet.css';
+
 import 'leaflet-draw';
+
 import 'leaflet-draw/dist/leaflet.draw.css';
+
 import 'leaflet-editable';
 
-import mapboxgl from 'mapbox-gl';
-
-import MapboxDraw from '@mapbox/mapbox-gl-draw';
-
-import 'mapbox-gl/dist/mapbox-gl.css';
-
-import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
-
 import * as turf from '@turf/turf';
-
-// Set Mapbox token
-if (typeof window !== 'undefined') {
-  mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
-}
 
 import { Card } from '@/components/ui/card';
 
@@ -120,21 +111,21 @@ export default function PropertyVisualization({
 
   const mapContainer = useRef<HTMLDivElement>(null);
 
-  const map = useRef<mapboxgl.Map | null>(null);
+  const map = useRef<L.Map | null>(null);
   const deleteShapeRef = useRef<((shapeId: string) => Promise<void>) | null>(null);
 
   // Local state for parcel data (allows us to update it when we fetch complete data)
   const [parcelData, setParcelData] = useState(initialParcelData);
 
-  const editablePolygon = useRef<boolean>(false); // Track if editable
+  const editablePolygon = useRef<L.Polygon | null>(null);
 
-  const displayPolygon = useRef<boolean>(false); // Track if parcel layer added
+  const displayPolygon = useRef<L.Polygon | null>(null);
 
-  const buildingLayer = useRef<boolean>(false); // Track if building layer added
+  const buildingLayer = useRef<L.GeoJSON | null>(null);
 
-  const setbackLayer = useRef<any>(null); // Track if setback layer added
+  const setbackLayer = useRef<L.LayerGroup | null>(null);
 
-  const draw = useRef<MapboxDraw | null>(null);
+  const drawLayer = useRef<L.FeatureGroup | null>(null);
 
   const drawControl = useRef<any>(null);
 
@@ -1719,7 +1710,9 @@ export default function PropertyVisualization({
 
       const minSetbackFeet = Math.min(setbacks.front, setbacks.rear, setbacks.left, setbacks.right);
 
-      const setbackPolygon = turf.buffer(parcelPolygon, -minSetbackFeet, { units: 'feet' });
+      const minSetbackMeters = minSetbackFeet * 0.3048;
+
+      const setbackPolygon = turf.buffer(parcelPolygon, -minSetbackMeters / 1000, { units: 'kilometers' });
 
 
 
@@ -2006,24 +1999,15 @@ export default function PropertyVisualization({
         setEdgeLabels(parcelData.edgeLabels);
       }
       
-      // Load saved setbacks if available (only if not currently editing)
-      if (!isEditingSetbacks && parcelData?.setbacks && typeof parcelData.setbacks === 'object') {
+      // Load saved setbacks if available
+      if (parcelData?.setbacks && typeof parcelData.setbacks === 'object') {
         const savedSetbacks = parcelData.setbacks as any;
         if (savedSetbacks.front && savedSetbacks.rear && savedSetbacks.left && savedSetbacks.right) {
-          setSetbacks(prev => {
-            // Only update if values are different to avoid unnecessary re-renders
-            if (prev.front !== savedSetbacks.front ||
-                prev.rear !== savedSetbacks.rear ||
-                prev.left !== savedSetbacks.left ||
-                prev.right !== savedSetbacks.right) {
-              return {
-                front: savedSetbacks.front,
-                rear: savedSetbacks.rear,
-                left: savedSetbacks.left,
-                right: savedSetbacks.right
-              };
-            }
-            return prev;
+          setSetbacks({
+            front: savedSetbacks.front,
+            rear: savedSetbacks.rear,
+            left: savedSetbacks.left,
+            right: savedSetbacks.right
           });
         }
       }
@@ -2797,81 +2781,37 @@ export default function PropertyVisualization({
       return;
     }
 
+    if (displayPolygon.current) {
+      map.current.removeLayer(displayPolygon.current);
+    }
+
     try {
-      // Remove existing parcel layers if they exist
-      if (displayPolygon.current) {
-        if (map.current.getLayer('parcel-boundary-line')) {
-          map.current.removeLayer('parcel-boundary-line');
-        }
-        if (map.current.getLayer('parcel-boundary-fill')) {
-          map.current.removeLayer('parcel-boundary-fill');
-        }
-        if (map.current.getSource('parcel-boundary')) {
-          map.current.removeSource('parcel-boundary');
-        }
-      }
+      // Blue solid boundary in all modes for professional CAD-like appearance
+      displayPolygon.current = L.polygon(validCoords, {
+        color: '#3b82f6',  // Blue color
+        weight: 3,
+        fillOpacity: 0,
+      }).addTo(map.current);
 
-      // Convert [lat, lng] to [lng, lat] for Mapbox
-      const mapboxCoords = validCoords.map(coord => [coord[1], coord[0]]);
-
-      // Close the polygon
-      const closedCoords = [...mapboxCoords, mapboxCoords[0]];
-
-      // Add property boundary source
-      map.current.addSource('parcel-boundary', {
-        type: 'geojson',
-        data: {
-          type: 'Feature',
-          properties: {},
-          geometry: {
-            type: 'Polygon',
-            coordinates: [closedCoords]
-          }
-        }
-      });
-
-      // Add boundary fill layer (transparent)
-      map.current.addLayer({
-        id: 'parcel-boundary-fill',
-        type: 'fill',
-        source: 'parcel-boundary',
-        paint: {
-          'fill-color': '#3b82f6',
-          'fill-opacity': 0
-        }
-      });
-
-      // Add boundary line layer (blue solid)
-      map.current.addLayer({
-        id: 'parcel-boundary-line',
-        type: 'line',
-        source: 'parcel-boundary',
-        paint: {
-          'line-color': '#3b82f6',
-          'line-width': 3
-        }
-      });
-
-      displayPolygon.current = true;
-
-      // Fit bounds to parcel
-      const bounds = new mapboxgl.LngLatBounds();
-      mapboxCoords.forEach(coord => bounds.extend(coord as [number, number]));
-
-      if (!bounds.isEmpty()) {
-        map.current.fitBounds(bounds, { padding: 50 });
+      const bounds = displayPolygon.current.getBounds();
+      
+      if (bounds.isValid()) {
+        map.current.fitBounds(bounds, { padding: [50, 50] });
+        setTimeout(() => map.current?.invalidateSize(), 100);
       } else {
         // Fallback to center if bounds invalid
         console.warn('Bounds invalid, using center point');
         if (parcelData?.latitude && parcelData?.longitude) {
-          map.current.flyTo({ center: [parcelData.longitude, parcelData.latitude], zoom: 19 });
+          map.current.setView([parcelData.latitude, parcelData.longitude], 19);
+          setTimeout(() => map.current?.invalidateSize(), 100);
         }
       }
     } catch (error) {
       console.error('Error creating parcel layer:', error);
       // Fallback to center point
+        setTimeout(() => map.current?.invalidateSize(), 100);
       if (parcelData?.latitude && parcelData?.longitude) {
-        map.current.flyTo({ center: [parcelData.longitude, parcelData.latitude], zoom: 19 });
+        map.current.setView([parcelData.latitude, parcelData.longitude], 19);
       }
     }
   };
@@ -3145,62 +3085,30 @@ export default function PropertyVisualization({
   const addBuildingLayer = (footprint: any) => {
     if (!map.current) return;
 
+    if (buildingLayer.current) {
+      map.current.removeLayer(buildingLayer.current);
+    }
+
+    buildingLayer.current = L.geoJSON(footprint, {
+      style: {
+        color: '#FF6B6B',
+        weight: 2,
+        fillColor: '#FF6B6B',
+        fillOpacity: 0.6,
+      },
+    });
+
+    buildingLayer.current.addTo(map.current);
+
+    // Calculate building area
     try {
-      // Remove existing building layers if they exist
-      if (buildingLayer.current) {
-        if (map.current.getLayer('building-fill')) {
-          map.current.removeLayer('building-fill');
-        }
-        if (map.current.getLayer('building-line')) {
-          map.current.removeLayer('building-line');
-        }
-        if (map.current.getSource('building')) {
-          map.current.removeSource('building');
-        }
-      }
-
-      // Add building footprint source
-      map.current.addSource('building', {
-        type: 'geojson',
-        data: footprint
-      });
-
-      // Add building fill layer
-      map.current.addLayer({
-        id: 'building-fill',
-        type: 'fill',
-        source: 'building',
-        paint: {
-          'fill-color': '#FF6B6B',
-          'fill-opacity': 0.6
-        }
-      });
-
-      // Add building outline layer
-      map.current.addLayer({
-        id: 'building-line',
-        type: 'line',
-        source: 'building',
-        paint: {
-          'line-color': '#FF6B6B',
-          'line-width': 2
-        }
-      });
-
-      buildingLayer.current = true;
-
-      // Calculate building area
-      try {
-        const areaMeters = turf.area(footprint);
-        const areaSqFt = areaMeters * 10.7639;
-        setBuildingArea(areaSqFt);
-        console.log('>>> Building area calculated:', areaSqFt.toFixed(0), 'sq ft');
-      } catch (error) {
-        console.error('Error calculating building area:', error);
-        setBuildingArea(0);
-      }
+      const areaMeters = turf.area(footprint);
+      const areaSqFt = areaMeters * 10.7639;
+      setBuildingArea(areaSqFt);
+      console.log('>>> Building area calculated:', areaSqFt.toFixed(0), 'sq ft');
     } catch (error) {
-      console.error('Error adding building layer:', error);
+      console.error('Error calculating building area:', error);
+      setBuildingArea(0);
     }
   };
 
@@ -3210,14 +3118,9 @@ export default function PropertyVisualization({
     edgeLabels: EdgeLabel[],
     setbacks: { front: number; rear: number; left: number; right: number }
   ) => {
-    console.log('🔴 ENTERING calculateBoundedSetbackArea', {
-      edgeLabelsCount: edgeLabels?.length,
-      boundaryCount: boundaryCoords?.length,
-      setbacks
-    });
     try {
       const offsetLines: any[] = [];
-
+      
       // Create offset line for each edge with its specific setback
       boundaryCoords.forEach((coord, index) => {
         const nextIndex = (index + 1) % boundaryCoords.length;
@@ -3225,32 +3128,17 @@ export default function PropertyVisualization({
         
         const edgeLabel = edgeLabels.find(el => el.edgeIndex === index);
         if (!edgeLabel) return;
-
-        // Map edge side to setbacks key (handle "side-left" → "left", "side-right" → "right")
-        const sideName = edgeLabel.side.replace('side-', '') as keyof typeof setbacks;
-        const setbackFeet = setbacks[sideName] || setbacks[edgeLabel.side as keyof typeof setbacks];
-        console.log(`📏 BUILDABLE AREA - Edge ${index}:`, {
-          originalSide: edgeLabel.side,
-          mappedKey: sideName,
-          setbackValue: setbackFeet,
-          allSetbacks: setbacks,
-          lookupResult: setbacks[sideName]
-        });
-
+        
+        const setbackFeet = setbacks[edgeLabel.side];
+        const setbackMeters = setbackFeet * 0.3048;
+        
         const edgeLine = turf.lineString([
           [coord[1], coord[0]],
           [nextCoord[1], nextCoord[0]]
         ]);
-
+        
         try {
-          // Offset inward using feet directly (positive = right side, negative = left side when traveling along line)
-          console.log(`🟠 Drawing setback line for edge ${index}:`, {
-            side: edgeLabel.side,
-            setbackFeet: setbackFeet,
-            offsetDistance: -setbackFeet,
-            units: 'feet'
-          });
-          const offsetLine = turf.lineOffset(edgeLine, -setbackFeet, { units: 'feet' });
+          const offsetLine = turf.lineOffset(edgeLine, -setbackMeters / 1000, { units: 'kilometers' });
           offsetLines.push({
             line: offsetLine,
             edgeIndex: index,
@@ -3303,24 +3191,7 @@ export default function PropertyVisualization({
   }, []);
 
   const calculateAndDrawSetbacks = useCallback((geometry: any) => {
-    console.log('🔴 ENTERING calculateAndDrawSetbacks', {
-      showSetbacks,
-      setbacks,
-      edgeLabelsCount: edgeLabels?.length,
-      hasMap: !!map.current,
-      hasSetbackLayer: !!setbackLayer.current
-    });
-
-    if (!map.current || !setbackLayer.current) {
-      console.log('❌ EARLY RETURN - setbackLayer missing:', {
-        hasMap: !!map.current,
-        hasSetbackLayer: !!setbackLayer.current,
-        setbackLayerValue: setbackLayer.current
-      });
-      return;
-    }
-
-    console.log('✅ setbackLayer.current type:', typeof setbackLayer.current, setbackLayer.current);
+        if (!map.current || !setbackLayer.current) return;
 
     setbackLayer.current.clearLayers();
     setbackHandles.current.forEach(marker => map.current?.removeLayer(marker));
@@ -3332,16 +3203,8 @@ export default function PropertyVisualization({
 
     try {
       const polygon = turf.polygon(geometry.coordinates);
-
-      console.log('🔍 calculateAndDrawSetbacks called:', {
-        edgeLabelsCount: edgeLabels.length,
-        boundaryCount: boundaryCoords.length,
-        edgeLabels: edgeLabels,
-        setbacks: setbacks
-      });
-
+      
       if (edgeLabels.length === boundaryCoords.length) {
-        console.log('✅ Edge labels match boundary coords - using PER-EDGE setbacks (correct)');
         // Group edges by side
         const sideGroups: { [key: string]: number[] } = {
           front: [],
@@ -3370,33 +3233,17 @@ export default function PropertyVisualization({
           
           const edgeLabel = edgeLabels.find(el => el.edgeIndex === index);
           if (!edgeLabel) return;
-
-          // Map edge side to setbacks key (handle "side-left" → "left", "side-right" → "right")
-          const sideName = edgeLabel.side.replace('side-', '') as keyof typeof setbacks;
-          const setbackFeet = setbacks[sideName] || setbacks[edgeLabel.side as keyof typeof setbacks];
-          console.log(`🎨 VISUAL LINE - Edge ${index}:`, {
-            originalSide: edgeLabel.side,
-            mappedKey: sideName,
-            setbackValue: setbackFeet,
-            allSetbacks: setbacks,
-            lookupResult: setbacks[sideName],
-            offsetDistance: `-${setbackFeet} feet`
-          });
-
+          
+          const setbackFeet = setbacks[edgeLabel.side];
+          const setbackMeters = setbackFeet * 0.3048;
+          
           const edgeLine = turf.lineString([
             [coord[1], coord[0]],
             [nextCoord[1], nextCoord[0]]
           ]);
-
+          
           try {
-            // Offset inward using feet directly (positive = right side, negative = left side when traveling along line)
-            console.log(`🟠 VISUAL LINE - Drawing offset for edge ${index}:`, {
-              side: edgeLabel.side,
-              setbackFeet: setbackFeet,
-              offsetDistance: -setbackFeet,
-              units: 'feet'
-            });
-            const offsetLine = turf.lineOffset(edgeLine, -setbackFeet, { units: 'feet' });
+            const offsetLine = turf.lineOffset(edgeLine, -setbackMeters / 1000, { units: 'kilometers' });
             offsetLinesData.push({
               line: offsetLine,
               edgeIndex: index,
@@ -3463,17 +3310,11 @@ export default function PropertyVisualization({
           setBuildableArea(Math.round(buildableAreaSqFt));
         }
       } else {
-        // Fallback: average setback when edges aren't labeled
-        console.log('❌ FALLBACK MODE - Using AVERAGE setback (BUG!)', {
-          edgeLabelsCount: edgeLabels.length,
-          boundaryCount: boundaryCoords.length,
-          reason: 'Edge labels count does not match boundary coords count'
-        });
         const avgSetbackFeet = (setbacks.front + setbacks.rear + setbacks.left + setbacks.right) / 4;
-        console.log('📊 Average setback calculated:', avgSetbackFeet, 'ft');
-
-        const buffered = turf.buffer(polygon, -avgSetbackFeet, { units: 'feet' });
-
+        const avgSetbackMeters = avgSetbackFeet * 0.3048;
+        
+        const buffered = turf.buffer(polygon, -avgSetbackMeters / 1000, { units: 'kilometers' });
+        
         if (buffered) {
           L.geoJSON(buffered, {
             style: {
@@ -3497,32 +3338,21 @@ export default function PropertyVisualization({
   }, [setbacks, showSetbacks, boundaryCoords, edgeLabels, calculateBoundedSetbackArea]);
 
   useEffect(() => {
-    console.log('⚡ SETBACKS CHANGED - useEffect triggered!', { setbacks });
-    if (!boundaryCoords || boundaryCoords.length === 0) {
-      console.log('⚠️ No boundary coords, skipping setback redraw');
-      return;
-    }
+    if (!boundaryCoords || boundaryCoords.length === 0) return;
 
     const geojson = {
       type: 'Polygon',
       coordinates: [ensureClosedPolygon(boundaryCoords.map(c => [c[1], c[0]]))]
     };
-    console.log('🔄 Redrawing setbacks with values:', setbacks);
     calculateAndDrawSetbacks(geojson);
   }, [setbacks, calculateAndDrawSetbacks, boundaryCoords, edgeLabels]);
 
   const handleSetbackChange = (side: keyof typeof setbacks, value: string) => {
     const numValue = parseInt(value) || 0;
-    console.log('🔧 handleSetbackChange called:', { side, value, numValue });
-    setSetbacks(prev => {
-      console.log('🔧 Previous setbacks:', prev);
-      const updated = {
-        ...prev,
-        [side]: numValue
-      };
-      console.log('🔧 Updated setbacks:', updated);
-      return updated;
-    });
+    setSetbacks(prev => ({
+      ...prev,
+      [side]: numValue
+    }));
   };
 
   const saveMeasurement = () => {
@@ -3750,12 +3580,6 @@ export default function PropertyVisualization({
   };
 
   const saveSetbacks = async () => {
-    console.log('🔵 SAVE SETBACKS BUTTON CLICKED', {
-      setbacks,
-      showSetbacks,
-      edgeLabelsCount: edgeLabels.length,
-      boundaryCount: boundaryCoords.length
-    });
     try {
       const response = await fetch('/api/projects/update-setbacks', {
         method: 'POST',
@@ -8159,7 +7983,7 @@ export default function PropertyVisualization({
   };
 
   return (
-    <div className="space-y-2 max-w-full overflow-x-hidden">
+    <div className="space-y-2">
       {/* CSS for selected shape glow effect */}
       <style jsx global>{`
         .selected-shape-highlight {
@@ -9253,7 +9077,7 @@ export default function PropertyVisualization({
 
       {/* Property Info - Below Map */}
       {parcelData && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 p-3 bg-gray-50 rounded-lg border">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-3 bg-gray-50 rounded-lg border">
           {parcelData.apn && (
             <div>
               <div className="text-xs text-gray-500 mb-1">APN</div>
@@ -9282,9 +9106,9 @@ export default function PropertyVisualization({
       )}
 
       {/* Setbacks, Drawn Shapes, and Measurements */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         {/* Setbacks Panel */}
-        <Card className="p-3 min-w-0">
+        <Card className="p-3">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <h3 className="font-semibold">Setback Requirements</h3>
@@ -9340,10 +9164,7 @@ export default function PropertyVisualization({
                 id="front"
                 type="number"
                 value={setbacks.front}
-                onChange={(e) => {
-                  console.log('🔴 Front input onChange:', e.target.value);
-                  handleSetbackChange('front', e.target.value);
-                }}
+                onChange={(e) => handleSetbackChange('front', e.target.value)}
                 disabled={!isEditingSetbacks}
                 className="h-9 flex-1"
               />
@@ -9357,10 +9178,7 @@ export default function PropertyVisualization({
                 id="rear"
                 type="number"
                 value={setbacks.rear}
-                onChange={(e) => {
-                  console.log('🔵 Rear input onChange:', e.target.value);
-                  handleSetbackChange('rear', e.target.value);
-                }}
+                onChange={(e) => handleSetbackChange('rear', e.target.value)}
                 disabled={!isEditingSetbacks}
                 className="h-9 flex-1"
               />
@@ -9374,10 +9192,7 @@ export default function PropertyVisualization({
                 id="left"
                 type="number"
                 value={setbacks.left}
-                onChange={(e) => {
-                  console.log('🟢 Left input onChange:', e.target.value);
-                  handleSetbackChange('left', e.target.value);
-                }}
+                onChange={(e) => handleSetbackChange('left', e.target.value)}
                 disabled={!isEditingSetbacks}
                 className="h-9 flex-1"
               />
@@ -9391,10 +9206,7 @@ export default function PropertyVisualization({
                 id="right"
                 type="number"
                 value={setbacks.right}
-                onChange={(e) => {
-                  console.log('🟠 Right input onChange:', e.target.value);
-                  handleSetbackChange('right', e.target.value);
-                }}
+                onChange={(e) => handleSetbackChange('right', e.target.value)}
                 disabled={!isEditingSetbacks}
                 className="h-9 flex-1"
               />
@@ -9413,7 +9225,7 @@ export default function PropertyVisualization({
         </Card>
 
         {/* Drawn Shapes Panel */}
-        <Card className="p-3 min-w-0">
+        <Card className="p-3">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-sm flex items-center gap-2">
               <Building2 className="h-4 w-4" />
@@ -9703,7 +9515,7 @@ export default function PropertyVisualization({
         </Card>
 
         {/* Saved Measurements Panel */}
-        <Card className="p-4 min-w-0">
+        <Card className="p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-sm flex items-center gap-2">
               📏 Measurements ({savedMeasurements.length + savedPolylines.length})

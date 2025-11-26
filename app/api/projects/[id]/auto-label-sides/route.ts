@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';;
 import * as turf from '@turf/turf';
 
-const prisma = new PrismaClient();
+
 
 interface EdgeLabel {
   edgeIndex: number;
@@ -27,6 +27,17 @@ export async function POST(
     }
 
     const parcel = project.parcel;
+
+    // Check if edge labels already exist
+    if (parcel.edgeLabels) {
+      console.log('✅ Edge labels already exist, returning saved labels');
+      return NextResponse.json({
+        success: true,
+        edgeLabels: parcel.edgeLabels as EdgeLabel[],
+        message: 'Loaded saved edge labels',
+        fromCache: true
+      });
+    }
 
     // Parse boundary coordinates
     let boundaryCoords: number[][];
@@ -111,9 +122,11 @@ export async function POST(
     await prisma.parcel.update({
       where: { id: parcel.id },
       data: {
-        zoningRules: edgeLabels as any
+        edgeLabels: edgeLabels as any
       }
     });
+
+    console.log('💾 Saved edge labels to database:', edgeLabels);
 
     return NextResponse.json({ 
       success: true, 

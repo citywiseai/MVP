@@ -4,147 +4,304 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = "postgresql://postgres:postgres@localhost:5432/rezio_dev?schema=public"
 }
 
-model EngineeringRequirement {
-  id         String   @id
-  projectId  String
-  discipline String
-  required   Boolean  @default(true)
-  status     String   @default("pending")
-  notes      String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime
-  Project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+enum UserRole {
+  HOMEOWNER
+  BUILDER
+  DEVELOPER
+  ARCHITECT
+  ENGINEER
+  REAL_ESTATE
+  OTHER
+}
+
+model User {
+  id                  String    @id @default(cuid())
+  email               String    @unique
+  name                String?
+  password            String?
+  phone               String?
+  role                UserRole?
+  companyName         String?
+  licenseNumber       String?
+  serviceArea         String?
+  businessAddress     String?
+  projectTypes        String[]  @default([])
+  challenges          String[]  @default([])
+  onboardingCompleted Boolean   @default(false)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  memberships   Membership[]
+  notes         Note[]
+  ownedProjects Project[]     @relation("ProjectOwner")
+  uploadedFiles ProjectFile[] @relation("UploadedFiles")
+  chatMessages  ChatMessage[]
+}
+
+model Org {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships Membership[]
+  projects    Project[]
 }
 
 model Membership {
-  id        String   @id
-  role      String
+  id        String   @id @default(cuid())
   userId    String
   orgId     String
+  role      String   @default("member")
   createdAt DateTime @default(now())
-  Org       Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org  Org  @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   @@unique([userId, orgId])
 }
 
+model Project {
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
+  status       String   @default("active")
+  fullAddress  String?
+  propertyType String?
+  projectType  String?
+  ownerId      String
+  orgId        String?
+  parcelId     String?  @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  owner           User                     @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  org             Org?                     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  parcel          Parcel?                  @relation(fields: [parcelId], references: [id])
+  tasks           Task[]
+  notes           Note[]
+  files           ProjectFile[]
+  engineeringReqs EngineeringRequirement[]
+  chatMessages    ChatMessage[]
+}
+
+model Parcel {
+  id                  String   @id @default(cuid())
+  apn                 String   @unique
+  address             String?
+  city                String?
+  state               String?
+  zipCode             String?
+  county              String?
+  zoning              String?
+  lotSizeSqFt         Float?
+  latitude            Float?
+  longitude           Float?
+  boundaryCoordinates Json?
+  zoningRules         Json?
+  propertyMetadata    Json?
+  existingSqFt        Float?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  project Project?
+}
+
+model Task {
+  id                String   @id @default(cuid())
+  title             String
+  description       String?
+  status            String   @default("TODO")
+  priority          String   @default("MEDIUM")
+  projectId         String
+  assignedTo        String?
+  lastStatusChange  DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
 model Note {
-  id        String   @id
+  id        String   @id @default(cuid())
   content   String
   projectId String
   authorId  String
   createdAt DateTime @default(now())
-  updatedAt DateTime
-  User      User     @relation(fields: [authorId], references: [id])
-  Project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  author  User    @relation(fields: [authorId], references: [id], onDelete: Cascade)
 }
 
-model Org {
-  id         String       @id
-  name       String
-  slug       String       @unique
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime
-  Membership Membership[]
-  Project    Project[]
-}
+model EngineeringRequirement {
+  id         String   @id @default(cuid())
+  projectId  String
+  discipline String
+  required   Boolean  @default(true)
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-model Parcel {
-  id           String       @id
-  apn          String
-  address      String
-  jurisdiction String
-  zoningCode   String
-  lotSizeSqFt  Int
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime
-  Project      Project[]
-  ZoningRule   ZoningRule[]
-
-  @@unique([apn, jurisdiction])
-}
-
-model Project {
-  id                        String                   @id
-  name                      String
-  description               String?
-  status                    String                   @default("active")
-  orgId                     String
-  parcelId                  String?
-  createdAt                 DateTime                 @default(now())
-  updatedAt                 DateTime
-  userId                    String?
-  buildingFootprintSqFt     Int?
-  fullAddress               String?
-  hillsideGrade             Boolean                  @default(false)
-  jurisdiction              String?
-  lotSizeSqFt               Int?
-  mainContact               String?
-  onSeptic                  Boolean                  @default(false)
-  outsideFootprintSf        Int?
-  projectType               String?
-  propertyType              String?
-  scopeOfWork               String?
-  totalSfModified           Int?
-  EngineeringRequirement    EngineeringRequirement[]
-  Note                      Note[]
-  Org                       Org                      @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  Parcel                    Parcel?                  @relation(fields: [parcelId], references: [id])
-  User_Project_userIdToUser User?                    @relation("Project_userIdToUser", fields: [userId], references: [id])
-  ProjectFile               ProjectFile[]
-  Task                      Task[]
-  User_UserProjects         User[]                   @relation("UserProjects")
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
 model ProjectFile {
-  id        String   @id
+  id         String   @id @default(cuid())
+  projectId  String
+  fileName   String
+  fileUrl    String
+  fileType   String?
+  uploadedBy String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  project  Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploader User    @relation("UploadedFiles", fields: [uploadedBy], references: [id])
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
   projectId String
-  filename  String
-  filepath  String
-  fileSize  Int
+  userId    String
+  role      String
+  content   String
   createdAt DateTime @default(now())
-  Project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+// ============================================
+// MUNICIPAL REQUIREMENTS DATABASE
+// ============================================
+
+enum RequirementType {
+  PERMIT
+  ENGINEERING
+  REVIEW
+  INSPECTION
+  STUDY
 }
 
-model Task {
-  id          String   @id
-  title       String
-  description String?
-  status      String   @default("TODO")
-  projectId   String
-  createdById String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime
-  User        User     @relation(fields: [createdById], references: [id])
-  Project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+enum ProjectType {
+  ADDITION
+  REMODEL
+  ADU
+  NEW_CONSTRUCTION
+  DEMOLITION
+  GARAGE_CONVERSION
+  PATIO_COVER
+  FENCE
+  POOL
+  SOLAR
 }
 
-model User {
-  id                           String       @id
-  email                        String       @unique
-  name                         String?
-  createdAt                    DateTime     @default(now())
-  updatedAt                    DateTime
-  Membership                   Membership[]
-  Note                         Note[]
-  Project_Project_userIdToUser Project[]    @relation("Project_userIdToUser")
-  Task                         Task[]
-  Project_UserProjects         Project[]    @relation("UserProjects")
+enum TriggerOperator {
+  GREATER_THAN
+  GREATER_THAN_OR_EQUAL
+  LESS_THAN
+  LESS_THAN_OR_EQUAL
+  EQUALS
+  NOT_EQUALS
+  INCLUDES
+  EXISTS
 }
 
-model ZoningRule {
-  id           String   @id
-  parcelId     String
-  jurisdiction String
-  zoningCode   String
-  field        String
-  value        String
-  unit         String?
-  sourceUrl    String?
-  notes        String?
-  createdAt    DateTime @default(now())
-  Parcel       Parcel   @relation(fields: [parcelId], references: [id], onDelete: Cascade)
+model Jurisdiction {
+  id                    String                @id @default(cuid())
+  name                  String                @unique
+  fullName              String
+  state                 String                @default("Arizona")
+  phone                 String?
+  website               String?
+  permitPortalUrl       String?
+  typicalReviewDays     Int?
+  expressPermitDays     Int?
+  zoningCodes           ZoningCode[]
+  requirements          MunicipalRequirement[]
+  rules                 RequirementRule[]
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  
+  @@index([name])
+}
+
+model ZoningCode {
+  id                    String                @id @default(cuid())
+  jurisdiction          Jurisdiction          @relation(fields: [jurisdictionId], references: [id], onDelete: Cascade)
+  jurisdictionId        String
+  code                  String
+  name                  String
+  description           String?
+  frontSetback          Float?
+  rearSetback           Float?
+  sideSetback           Float?
+  maxLotCoverage        Float?
+  maxHeight             Float?
+  rules                 RequirementRule[]
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  
+  @@unique([jurisdictionId, code])
+  @@index([jurisdictionId])
+  @@index([code])
+}
+
+model MunicipalRequirement {
+  id                    String                @id @default(cuid())
+  jurisdiction          Jurisdiction          @relation(fields: [jurisdictionId], references: [id], onDelete: Cascade)
+  jurisdictionId        String
+  name                  String
+  type                  RequirementType
+  category              String?
+  description           String                @db.Text
+  typicalCostRange      String?
+  typicalTimeframe      String?
+  providedBy            String?
+  appliesToProjectTypes ProjectType[]
+  rules                 RequirementRule[]
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  
+  @@unique([jurisdictionId, name])
+  @@index([jurisdictionId])
+  @@index([type])
+}
+
+model RequirementRule {
+  id                    String                @id @default(cuid())
+  jurisdiction          Jurisdiction          @relation(fields: [jurisdictionId], references: [id], onDelete: Cascade)
+  jurisdictionId        String
+  name                  String
+  description           String?               @db.Text
+  projectTypes          ProjectType[]
+  zoningCodes           ZoningCode[]
+  requirement           MunicipalRequirement  @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  requirementId         String
+  triggers              RuleTrigger[]
+  priority              Int                   @default(0)
+  isActive              Boolean               @default(true)
+  sourceDocument        String?
+  notes                 String?               @db.Text
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  
+  @@index([jurisdictionId])
+  @@index([requirementId])
+}
+
+model RuleTrigger {
+  id                    String                @id @default(cuid())
+  rule                  RequirementRule       @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  ruleId                String
+  fieldName             String
+  operator              TriggerOperator
+  value                 String
+  description           String?
+  createdAt             DateTime              @default(now())
+  
+  @@index([ruleId])
 }

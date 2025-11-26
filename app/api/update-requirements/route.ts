@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
-const prisma = new PrismaClient()
+
 
 export async function POST(request: NextRequest) {
   try {
@@ -62,18 +62,18 @@ export async function POST(request: NextRequest) {
         if (match) {
           discipline = match[1].trim();
           required = match[2] === 'Required';
-          notes = match[3] ? match[3].trim() : '';
+otes = match[3] ? match[3].trim() : '';
           requirement = req;
         } else {
           discipline = req.trim();
           required = false;
-          notes = '';
+otes = '';
           requirement = req;
         }
       } else {
         discipline = req.discipline;
         required = req.required;
-        notes = req.notes || '';
+otes = req.notes || '';
         requirement = req.requirement || `${discipline}: ${required ? 'Required' : 'Optional'} - ${notes}`;
       }
 
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
             projectId,
             discipline,
             required,
-            notes,
+otes,
             requirement,
             createdAt: new Date(),
             updatedAt: new Date()

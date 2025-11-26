@@ -17,6 +17,7 @@ interface ValidationRule {
 interface InspectorPanelProps {
   parcelData?: any;
   buildableArea: number | null;
+  buildingArea: number;
   setbacks: {
     front: number;
     rear: number;
@@ -36,12 +37,13 @@ interface InspectorPanelProps {
 export default function InspectorPanel({
   parcelData,
   buildableArea,
+  buildingArea,
   setbacks,
   drawnShapes,
   onSetbackChange,
   isEditingSetbacks = false
 }: InspectorPanelProps) {
-  
+
   // Calculate validation rules
   const getValidationRules = (): ValidationRule[] => {
     if (!parcelData) return [];
@@ -98,8 +100,8 @@ export default function InspectorPanel({
     });
     
     // Lot coverage validation (example: 40% max for R1-10)
-    if (parcelData.lotSizeSqFt && drawnShapes.length > 0) {
-      const totalBuilding = drawnShapes.reduce((sum, s) => sum + s.area, 0);
+    if (parcelData.lotSizeSqFt && (buildingArea > 0 || drawnShapes.length > 0)) {
+      const totalBuilding = buildingArea + drawnShapes.reduce((sum, s) => sum + s.area, 0);
       const coveragePercent = (totalBuilding / parcelData.lotSizeSqFt) * 100;
       const maxCoverage = 40;
       
@@ -165,19 +167,19 @@ export default function InspectorPanel({
                 <span className="font-semibold text-green-600">{(buildableArea / 1000).toFixed(1)}K sf</span>
               </div>
             )}
-            {drawnShapes.length > 0 && (
+            {(buildingArea > 0 || drawnShapes.length > 0) && (
               <>
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-600">Building</span>
                   <span className="font-semibold">
-                    {(drawnShapes.reduce((sum, s) => sum + s.area, 0) / 1000).toFixed(1)}K sf
+                    {((buildingArea + drawnShapes.reduce((sum, s) => sum + s.area, 0)) / 1000).toFixed(1)}K sf
                   </span>
                 </div>
                 {parcelData?.lotSizeSqFt && (
                   <div className="flex justify-between text-xs">
                     <span className="text-gray-600">Coverage</span>
                     <span className="font-semibold">
-                      {((drawnShapes.reduce((sum, s) => sum + s.area, 0) / parcelData.lotSizeSqFt) * 100).toFixed(1)}%
+                      {(((buildingArea + drawnShapes.reduce((sum, s) => sum + s.area, 0)) / parcelData.lotSizeSqFt) * 100).toFixed(1)}%
                     </span>
                   </div>
                 )}
@@ -202,7 +204,10 @@ export default function InspectorPanel({
                 id="ins-front"
                 type="number"
                 value={setbacks.front}
-                onChange={(e) => onSetbackChange?.('front', parseFloat(e.target.value))}
+                onChange={(e) => {
+                  console.log('🔴 InspectorPanel Front onChange:', e.target.value);
+                  onSetbackChange?.('front', parseFloat(e.target.value));
+                }}
                 disabled={!isEditingSetbacks}
                 className="h-7 text-xs flex-1"
               />
@@ -214,7 +219,10 @@ export default function InspectorPanel({
                 id="ins-rear"
                 type="number"
                 value={setbacks.rear}
-                onChange={(e) => onSetbackChange?.('rear', parseFloat(e.target.value))}
+                onChange={(e) => {
+                  console.log('🔵 InspectorPanel Rear onChange:', e.target.value);
+                  onSetbackChange?.('rear', parseFloat(e.target.value));
+                }}
                 disabled={!isEditingSetbacks}
                 className="h-7 text-xs flex-1"
               />
@@ -226,7 +234,10 @@ export default function InspectorPanel({
                 id="ins-left"
                 type="number"
                 value={setbacks.left}
-                onChange={(e) => onSetbackChange?.('left', parseFloat(e.target.value))}
+                onChange={(e) => {
+                  console.log('🟢 InspectorPanel Left onChange:', e.target.value);
+                  onSetbackChange?.('left', parseFloat(e.target.value));
+                }}
                 disabled={!isEditingSetbacks}
                 className="h-7 text-xs flex-1"
               />
@@ -238,7 +249,10 @@ export default function InspectorPanel({
                 id="ins-right"
                 type="number"
                 value={setbacks.right}
-                onChange={(e) => onSetbackChange?.('right', parseFloat(e.target.value))}
+                onChange={(e) => {
+                  console.log('🟠 InspectorPanel Right onChange:', e.target.value);
+                  onSetbackChange?.('right', parseFloat(e.target.value));
+                }}
                 disabled={!isEditingSetbacks}
                 className="h-7 text-xs flex-1"
               />

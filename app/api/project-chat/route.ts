@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { chatWithProjectAI } from '@/lib/ai'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth'
 
-const prisma = new PrismaClient()
+
 
 export async function POST(request: NextRequest) {
   try {

@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = "postgresql://postgres:postgres@localhost:5432/rezio_dev?schema=public"
+  url      = env("DATABASE_URL")
 }
 
 enum UserRole {
@@ -65,28 +65,31 @@ model Membership {
 }
 
 model Project {
-  id           String   @id @default(cuid())
-  name         String
-  description  String?
-  status       String   @default("active")
-  fullAddress  String?
-  propertyType String?
-  projectType  String?
-  ownerId      String
-  orgId        String?
-  parcelId     String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                String   @id @default(cuid())
+  name              String
+  description       String?
+  status            String   @default("active")
+  fullAddress       String?
+  propertyType      String?
+  projectType       String?
+  ownerId           String
+  orgId             String?
+  parcelId          String?
+  zoningDistrictId  String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   owner           User                     @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   org             Org?                     @relation(fields: [orgId], references: [id], onDelete: Cascade)
   parcel          Parcel?                  @relation(fields: [parcelId], references: [id])
+  zoningDistrict  ZoningDistrict?          @relation(fields: [zoningDistrictId], references: [id])
   tasks           Task[]
   notes           Note[]
   files           ProjectFile[]
   engineeringReqs EngineeringRequirement[]
   drawnShapes     DrawnShape[]
   chatMessages    ChatMessage[]
+  measurements    Measurement[]
 }
 
 model Parcel {
@@ -106,6 +109,12 @@ model Parcel {
   propertyMetadata    Json?
   existingSqFt        Float?
   setbacks            Json?
+  edgeLabels          Json?  // Store edge labels: [{ edgeIndex: 0, side: 'front' }, ...]
+  assessorUrl          String?
+  totalBuildingSF      Float?
+  buildingSections     Json?
+  assessorDataFetchedAt DateTime?
+  buildingSketchesImage String?  @db.Text
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
@@ -176,6 +185,78 @@ model ChatMessage {
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
+model ExplorationConversation {
+  id        String   @id @default(cuid())
+  userId    String?
+  messages  Json     // Array of {role, content}
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// ============================================
+// ZONING SYSTEM
+// ============================================
+
+model Municipality {
+  id              String           @id @default(cuid())
+  name            String
+  state           String
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  zoningDistricts ZoningDistrict[]
+
+  @@index([name])
+  @@index([state])
+}
+
+model ZoningDistrict {
+  id             String        @id @default(cuid())
+  municipalityId String
+  municipality   Municipality  @relation(fields: [municipalityId], references: [id], onDelete: Cascade)
+  code           String        // e.g., "R-1-6", "R-2"
+  name           String        // e.g., "Single-Family Residential"
+  description    String?       @db.Text
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  zoningRules    ZoningRule[]
+  projects       Project[]
+
+  @@unique([municipalityId, code])
+  @@index([municipalityId])
+  @@index([code])
+}
+
+enum RuleCategory {
+  SETBACK
+  LOT_COVERAGE
+  HEIGHT
+  PARKING
+  LOT_SIZE
+  OTHER
+}
+
+model ZoningRule {
+  id               String         @id @default(cuid())
+  zoningDistrictId String
+  zoningDistrict   ZoningDistrict @relation(fields: [zoningDistrictId], references: [id], onDelete: Cascade)
+  category         RuleCategory
+  name             String         // e.g., "Front Setback", "Maximum Height"
+  valueNumber      Float?         // numeric values like 20 for 20 feet
+  valueText        String?        // complex rules like "2 spaces per unit"
+  unit             String?        // e.g., "feet", "percent", "spaces"
+  projectTypes     String[]       // matches Project.projectType values
+  description      String?        @db.Text
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([zoningDistrictId])
+  @@index([category])
+}
+
 // ============================================
 // MUNICIPAL REQUIREMENTS DATABASE
 // ============================================
@@ -310,18 +391,90 @@ model RuleTrigger {
 
 
 model DrawnShape {
-  id          String   @id @default(cuid())
-  projectId   String
-  name        String
-  shapeType   String   // 'polygon', 'rectangle', 'circle', 'house', 'garage', 'adu'
-  coordinates Json     // GeoJSON coordinates array
-  area        Float    // Square feet
-  perimeter   Float    // Feet
-  properties  Json?    // Additional properties (stories, height, etc.)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String   @id @default(cuid())
+  projectId     String
+  name          String
+  shapeType     String   // 'polygon', 'rectangle', 'circle', 'house', 'garage', 'adu'
+  coordinates   Json     // GeoJSON coordinates array
+  area          Float    // Square feet
+  perimeter     Float    // Feet
+  rotationAngle Float    @default(0) // Rotation angle in degrees (0-360)
+  properties    Json?    // Additional properties (stories, height, etc.)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
+}
+
+model Measurement {
+  id               String   @id @default(cuid())
+  projectId        String
+  name             String   // User-provided name for the measurement
+  measurementType  String   // 'line' or 'polyline'
+  points           Json     // Array of {lat: number, lng: number}
+  totalDistance    Float    // Total distance in feet
+  segmentDistances Json?    // Array of segment distances for polylines
+  displayDistance  String?  // User override for displayed distance (e.g. "25' 6\"" or "25.5'")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+// ============================================
+// PHOENIX ZONING REQUIREMENTS
+// ============================================
+
+model PhoenixZoning {
+  id              String   @id @default(cuid())
+  jurisdiction    String   // "Phoenix, AZ"
+  zoningDistrict  String   // "RE-43", "R1-6", etc.
+  districtName    String   // Full name like "Residential Estate RE-43 District"
+
+  // Setbacks in feet
+  frontSetback    Float
+  sideSetback     Float
+  rearSetback     Float
+
+  // Lot requirements
+  lotCoverageMax  Float?   // e.g., 0.20 for 20%
+  maxHeight       Float?   // in feet
+  maxStories      Int?     // number of stories
+  minLotSize      Float?   // in square feet
+  minLotWidth     Float?   // in feet
+  minLotDepth     Float?   // in feet
+
+  // ADU regulations (Section 706)
+  aduAllowed      Boolean  @default(false)
+  maxADUs         Int?     // maximum number of ADUs allowed
+  aduMinSetback   Float?   // ADU setback from property line (typically 3-5 ft)
+  aduMaxSize      Float?   // Max sq ft for ADU
+  aduMaxHeight    Float?   // Max height for ADU (often less than primary)
+
+  // Parking requirements (Section 702)
+  parkingPerUnit  Float?   // e.g., 2.0 for 2 spaces per dwelling
+  coveredParking  Boolean? // Covered parking required?
+
+  // Design requirements
+  fenceMaxHeight  Float?   // Max fence height in front yard
+  landscapeReq    String?  // Landscaping requirements summary
+
+  // Special rules
+  permittedUses   String?  @db.Text // JSON array of main permitted uses
+  specialRules    String?  @db.Text // Any special requirements
+
+  // Context
+  description     String?  @db.Text
+  sourceUrl       String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([jurisdiction, zoningDistrict])
+  @@index([jurisdiction])
+  @@index([zoningDistrict])
 }
