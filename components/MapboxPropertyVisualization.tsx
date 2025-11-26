@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import * as turf from '@turf/turf';
 import ShapeBuilderPanel from './ShapeBuilderPanel';
 import { getTemplateById } from '@/lib/shape-templates';
+import { transformSvg } from '@/lib/svg-utils';
 
 // Check token availability
 console.log('🔑 Mapbox token:', process.env.NEXT_PUBLIC_MAPBOX_TOKEN?.substring(0, 20) + '...');
@@ -514,8 +515,12 @@ export default function MapboxPropertyVisualization({
                 if (svgOverlays.current.has(shape.id)) {
                   console.log(`⚠️ Overlay already exists for loaded shape ${shape.id}, skipping creation`);
                 } else {
-                  const template = getTemplateById(shape.properties.templateId);
-                  if (template) {
+                  // Check if AI-generated or template-based
+                  const isAiGenerated = shape.properties.aiGenerated === true;
+                  const hasCustomSvg = !!shape.properties.customSvg;
+                  const template = !isAiGenerated ? getTemplateById(shape.properties.templateId) : null;
+
+                  if (template || (isAiGenerated && hasCustomSvg)) {
                     try {
                       // Create HTML overlay div
                       const overlayDiv = document.createElement('div');
@@ -525,11 +530,30 @@ export default function MapboxPropertyVisualization({
                       overlayDiv.style.transformOrigin = 'center center';
                       overlayDiv.className = 'shape-svg-overlay';
 
-                      // Generate and insert SVG
+                      // Get dimensions and flip properties
                       const widthFt = shape.properties?.width || 20;
                       const heightFt = shape.properties?.height || shape.properties?.length || 20;
-                      const svg = template.getSvg(widthFt, heightFt);
-                      overlayDiv.innerHTML = svg;
+                      const flipH = shape.properties?.flipHorizontal || false;
+                      const flipV = shape.properties?.flipVertical || false;
+                      const isAiGenerated = shape.properties?.aiGenerated === true;
+                      const customSvg = shape.properties?.customSvg;
+
+                      // Generate and transform SVG (keeps text readable)
+                      let transformedSvg: string;
+
+                      if (isAiGenerated && customSvg) {
+                        // AI-generated shape: use custom SVG directly
+                        transformedSvg = customSvg;
+                      } else {
+                        // Template shape: generate from template and apply transforms
+                        const baseSvg = template.getSvg(widthFt, heightFt);
+                        transformedSvg = transformSvg(baseSvg, widthFt, heightFt, {
+                          flipHorizontal: flipH,
+                          flipVertical: flipV
+                        });
+                      }
+
+                      overlayDiv.innerHTML = transformedSvg;
 
                       // Find the Mapbox canvas container and append overlay
                       const canvasContainer = mapContainer.current.querySelector('.mapboxgl-canvas-container');
@@ -1051,8 +1075,12 @@ export default function MapboxPropertyVisualization({
           if (svgOverlays.current.has(savedShape.id)) {
             console.log(`⚠️ Overlay already exists for ${savedShape.id}, skipping creation`);
           } else {
-            const template = getTemplateById(feature.properties.templateId);
-            if (template) {
+            // Check if AI-generated or template-based
+            const isAiGenerated = feature.properties?.aiGenerated === true;
+            const customSvg = feature.properties?.customSvg;
+            const template = !isAiGenerated ? getTemplateById(feature.properties.templateId) : null;
+
+            if (template || (isAiGenerated && customSvg)) {
               try {
                 // Create HTML overlay div
                 const overlayDiv = document.createElement('div');
@@ -1062,12 +1090,33 @@ export default function MapboxPropertyVisualization({
                 overlayDiv.style.transformOrigin = 'center center';
                 overlayDiv.className = 'shape-svg-overlay';
 
-                // Generate and insert SVG
-                const svg = template.getSvg(
-                  feature.properties.width,
-                  feature.properties.height
-                );
-                overlayDiv.innerHTML = svg;
+                // Get flip properties
+                const flipH = feature.properties?.flipHorizontal || false;
+                const flipV = feature.properties?.flipVertical || false;
+
+                // Generate and transform SVG (keeps text readable)
+                let transformedSvg: string;
+
+                if (isAiGenerated && customSvg) {
+                  // AI-generated shape: use custom SVG directly
+                  transformedSvg = customSvg;
+                } else if (template) {
+                  // Template shape: generate from template and apply transforms
+                  const baseSvg = template.getSvg(
+                    feature.properties.width,
+                    feature.properties.height
+                  );
+                  transformedSvg = transformSvg(
+                    baseSvg,
+                    feature.properties.width,
+                    feature.properties.height,
+                    { flipHorizontal: flipH, flipVertical: flipV }
+                  );
+                } else {
+                  throw new Error('No template or custom SVG available');
+                }
+
+                overlayDiv.innerHTML = transformedSvg;
 
                 // Find the Mapbox canvas container and append overlay
                 const canvasContainer = mapContainer.current.querySelector('.mapboxgl-canvas-container');
@@ -1306,7 +1355,11 @@ export default function MapboxPropertyVisualization({
     width: number;
     height: number;
     rotation: number;
+    flipHorizontal: boolean;
+    flipVertical: boolean;
     area: number;
+    customSvg?: string; // For AI-generated shapes
+    aiGenerated?: boolean;
   }) => {
     if (!draw.current || !map.current || !mapContainer.current) {
       toast.error('Map not ready');
@@ -1355,7 +1408,9 @@ export default function MapboxPropertyVisualization({
         templateId: shape.templateId,
         width: shape.width,
         height: shape.height,
-        rotation: shape.rotation
+        rotation: shape.rotation,
+        flipHorizontal: shape.flipHorizontal,
+        flipVertical: shape.flipVertical
       },
       geometry: {
         type: 'Polygon' as const,
@@ -1388,7 +1443,11 @@ export default function MapboxPropertyVisualization({
           templateId: shape.templateId,
           width: shape.width,
           height: shape.height,
-          rotation: shape.rotation
+          rotation: shape.rotation,
+          flipHorizontal: shape.flipHorizontal,
+          flipVertical: shape.flipVertical,
+          ...(shape.customSvg && { customSvg: shape.customSvg }), // Save AI-generated SVG
+          ...(shape.aiGenerated && { aiGenerated: true })
         }
       };
 
@@ -1441,8 +1500,14 @@ export default function MapboxPropertyVisualization({
           console.log(`⚠️ Overlay already exists for ${savedShape.id}, skipping creation`);
           toast.success(`${shape.name} added to map - drag to position and resize as needed`);
         } else {
-          const template = getTemplateById(shape.templateId);
-          if (template) {
+          // Check if this is an AI-generated shape with custom SVG
+          const isAiGenerated = shape.aiGenerated === true;
+          const customSvg = shape.customSvg;
+
+          // For AI-generated shapes, use customSvg; otherwise look up template
+          const template = !isAiGenerated ? getTemplateById(shape.templateId) : null;
+
+          if (template || (isAiGenerated && customSvg)) {
             try {
               // Create HTML overlay div
               const overlayDiv = document.createElement('div');
@@ -1452,9 +1517,29 @@ export default function MapboxPropertyVisualization({
               overlayDiv.style.transformOrigin = 'center center';
               overlayDiv.className = 'shape-svg-overlay';
 
-              // Generate and insert SVG
-              const svg = template.getSvg(shape.width, shape.height);
-              overlayDiv.innerHTML = svg;
+              // Generate and transform SVG (keeps text readable)
+              let transformedSvg: string;
+
+              if (isAiGenerated && customSvg) {
+                // AI-generated shape: use custom SVG directly
+                transformedSvg = customSvg;
+              } else if (template) {
+                // Template shape: generate from template and apply transforms
+                const baseSvg = template.getSvg(shape.width, shape.height);
+                transformedSvg = transformSvg(
+                  baseSvg,
+                  shape.width,
+                  shape.height,
+                  {
+                    flipHorizontal: shape.flipHorizontal,
+                    flipVertical: shape.flipVertical
+                  }
+                );
+              } else {
+                throw new Error('No template or custom SVG available');
+              }
+
+              overlayDiv.innerHTML = transformedSvg;
 
               // Find the Mapbox canvas container and append overlay
               const canvasContainer = mapContainer.current.querySelector('.mapboxgl-canvas-container');
