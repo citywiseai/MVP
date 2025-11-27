@@ -1,31 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import {
-  getZoningByCode,
+  getZoningByJurisdiction,
+  detectJurisdiction,
   isADUAllowed,
   getProjectRequirements,
   getSmartHint,
-  type ZoningDistrict
-} from '@/lib/municipal-data/phoenix'
+  type ZoningDistrict,
+  type Jurisdiction
+} from '@/lib/municipal-data'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
 })
 
-// Helper function to fetch Phoenix-specific zoning requirements
-function getMunicipalRequirements(zoningCode: string): ZoningDistrict | null {
+// Helper function to fetch jurisdiction-specific zoning requirements
+function getMunicipalRequirements(zoningCode: string, jurisdiction: string): ZoningDistrict | null {
   try {
-    console.log('🔍 getMunicipalRequirements called with:', { zoningCode })
+    console.log('🔍 getMunicipalRequirements called with:', { zoningCode, jurisdiction })
 
-    const zoningData = getZoningByCode(zoningCode)
+    const zoningData = getZoningByJurisdiction(jurisdiction, zoningCode)
 
     if (zoningData) {
-      console.log('✅ Found Phoenix zoning data for', zoningCode)
+      console.log(`✅ Found ${jurisdiction.toUpperCase()} zoning data for`, zoningCode)
       console.log('📋 Zoning:', zoningData.name)
       console.log('📏 Setbacks:', zoningData.setbacks)
       console.log('🏠 ADU Allowed:', zoningData.adu.allowed)
     } else {
-      console.log('❌ No Phoenix zoning data found for', zoningCode)
+      console.log(`❌ No ${jurisdiction.toUpperCase()} zoning data found for`, zoningCode)
     }
 
     return zoningData
@@ -49,20 +51,27 @@ export async function POST(req: NextRequest) {
     console.log('🏗️  Existing Building:', context.existingBuilding || 'None')
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
 
-    // Fetch Phoenix-specific zoning requirements
+    // Detect jurisdiction and fetch jurisdiction-specific zoning requirements
     let zoningContext = ''
     let zoningData: ZoningDistrict | null = null
+    let jurisdiction: string = 'phoenix' // Default to Phoenix
+
+    // Detect jurisdiction from context
+    if (context.jurisdiction) {
+      jurisdiction = detectJurisdiction(context.jurisdiction)
+      console.log('🏛️  Detected jurisdiction from context:', jurisdiction)
+    }
 
     if (context.zoning) {
-      console.log('✅ Context has zoning code - fetching Phoenix zoning data...')
+      console.log(`✅ Context has zoning code - fetching ${jurisdiction.toUpperCase()} zoning data...`)
       try {
-        zoningData = getMunicipalRequirements(context.zoning)
+        zoningData = getMunicipalRequirements(context.zoning, jurisdiction)
 
         if (zoningData) {
-          console.log('✅ Phoenix zoning data found for', zoningData.code)
+          console.log(`✅ ${jurisdiction.toUpperCase()} zoning data found for`, zoningData.code)
 
           // Build comprehensive natural language zoning context
-          zoningContext = `\n\nPHOENIX ZONING REQUIREMENTS - ${zoningData.code} (${zoningData.name}):\n\n`
+          zoningContext = `\n\n${jurisdiction.toUpperCase()} ZONING REQUIREMENTS - ${zoningData.code} (${zoningData.name}):\n\n`
 
           zoningContext += `SETBACKS:\n`
           zoningContext += `- Front: ${zoningData.setbacks.front} feet\n`
@@ -120,21 +129,21 @@ export async function POST(req: NextRequest) {
           }
 
           console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-          console.log('✅ PHOENIX ZONING CONTEXT BUILT')
+          console.log(`✅ ${jurisdiction.toUpperCase()} ZONING CONTEXT BUILT`)
           console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
           console.log(zoningContext)
           console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
         } else {
-          console.log('❌ No Phoenix zoning data found for', context.zoning)
+          console.log(`❌ No ${jurisdiction.toUpperCase()} zoning data found for`, context.zoning)
         }
       } catch (error) {
-        console.error('❌ ERROR FETCHING PHOENIX ZONING:', error)
+        console.error(`❌ ERROR FETCHING ${jurisdiction.toUpperCase()} ZONING:`, error)
       }
     } else {
       console.log('⚠️ Skipping zoning fetch - missing zoning code')
     }
 
-    const systemPrompt = `You are Scout, an expert AI assistant for preconstruction planning in Phoenix, Arizona.
+    const systemPrompt = `You are Scout, an expert AI assistant for preconstruction planning in ${jurisdiction.charAt(0).toUpperCase() + jurisdiction.slice(1)}, Arizona.
 
 CONTEXT:
 - Property: ${context.address}
@@ -151,8 +160,8 @@ User input: ${userInput}
 YOUR TASK: Ask ONE question at a time to understand the project scope.
 
 ZONING GUIDANCE:
-${zoningContext ? `- You have comprehensive Phoenix zoning information available above. Use it naturally when relevant to the conversation.
-- When user mentions ADU: Reference ADU-specific rules (max size, height, setbacks, how many allowed)
+${zoningContext ? `- You have comprehensive ${jurisdiction.charAt(0).toUpperCase() + jurisdiction.slice(1)} zoning information available above. Use it naturally when relevant to the conversation.
+- When user mentions ADU: Reference ADU-specific rules (max size, height, setbacks, owner-occupancy requirements if applicable)
 - When discussing building additions: Mention setback requirements and lot coverage limits
 - When talking about parking: Cite the specific parking requirements for their zone
 - Sound like a knowledgeable local expert, not reading from a rulebook
@@ -160,7 +169,7 @@ ${zoningContext ? `- You have comprehensive Phoenix zoning information available
   * "In your ${context.zoning} zone, ADUs can be up to [size] square feet"
   * "You'll need to keep [setback] feet from the property line"
   * "Your zone allows up to [coverage]% lot coverage, so you have room to expand"
-  * "Good news - your zone permits up to [number] ADUs"
+  * "Note: ${jurisdiction.charAt(0).toUpperCase() + jurisdiction.slice(1)} requires [specific requirement]"
 - NEVER dump all zoning rules at once - only mention rules relevant to what they're planning
 - If they mention special situations, reference the special rules when applicable` : '- No zoning information available yet. Continue with project questions.'}
 
