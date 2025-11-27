@@ -1,6 +1,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { searchRegridParcel } from '@/lib/regrid'
+import { detectJurisdictionWithFallback } from '@/lib/municipal-data'
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,16 +16,28 @@ export async function POST(request: NextRequest) {
     const parcelData = await searchRegridParcel(address)
     
     if (parcelData) {
+      // Detect jurisdiction with county fallback support
+      const jurisdictionResult = detectJurisdictionWithFallback(
+        parcelData.city,
+        parcelData.county
+      )
+
       console.log('🏠 API: Found Regrid data:', {
         lotSizeSqFt: parcelData.lotSizeSqFt,
         buildingSqFt: parcelData.buildingSqFt,
-        jurisdiction: parcelData.city,
+        city: parcelData.city,
+        county: parcelData.county,
+        jurisdiction: jurisdictionResult.displayName,
+        jurisdictionType: jurisdictionResult.type,
+        jurisdictionCode: jurisdictionResult.jurisdiction,
         hasGeometry: !!parcelData.boundaryCoordinates
       })
-      
+
       return NextResponse.json({
         address: `${parcelData.address}, ${parcelData.city}, ${parcelData.zip}`,
-        jurisdiction: parcelData.city,
+        jurisdiction: jurisdictionResult.displayName,
+        jurisdictionType: jurisdictionResult.type,
+        jurisdictionCode: jurisdictionResult.jurisdiction,
         lotSizeSqFt: parcelData.lotSizeSqFt,
         buildingSqFt: parcelData.buildingSqFt,
         buildingFootprintSqFt: parcelData.buildingSqFt,

@@ -22,6 +22,8 @@ interface ParcelData {
   buildingSize: number
   zoning: string
   jurisdiction: string
+  jurisdictionType?: 'city' | 'county'
+  jurisdictionCode?: string
 }
 
 export default function SmartScoutChat() {
@@ -125,6 +127,8 @@ export default function SmartScoutChat() {
           buildingSize: data.buildingSqFt || 0,
           zoning: data.zoning || 'Unknown',
           jurisdiction: data.jurisdiction || 'Phoenix',
+          jurisdictionType: data.jurisdictionType || 'city',
+          jurisdictionCode: data.jurisdictionCode || 'phoenix',
           latitude: data.latitude,
           longitude: data.longitude,
           boundaryCoordinates: data.geometry?.coordinates ? JSON.stringify(data.geometry.coordinates) : null,
@@ -180,6 +184,8 @@ export default function SmartScoutChat() {
             lotSize: parcelData.lotSize,
             existingBuilding: parcelData.buildingSize,
             jurisdiction: parcelData.jurisdiction,
+            jurisdictionType: parcelData.jurisdictionType,
+            jurisdictionCode: parcelData.jurisdictionCode,
             zoning: parcelData.zoning
           }
         }),

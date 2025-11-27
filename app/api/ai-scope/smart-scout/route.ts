@@ -47,6 +47,8 @@ export async function POST(req: NextRequest) {
     console.log('📍 Address:', context.address)
     console.log('🏘️  Zoning Code:', context.zoning, '(type:', typeof context.zoning, ')')
     console.log('🏛️  Jurisdiction:', context.jurisdiction, '(type:', typeof context.jurisdiction, ')')
+    console.log('🏛️  Jurisdiction Type:', context.jurisdictionType || 'city')
+    console.log('🏛️  Jurisdiction Code:', context.jurisdictionCode || 'phoenix')
     console.log('📏 Lot Size:', context.lotSize)
     console.log('🏗️  Existing Building:', context.existingBuilding || 'None')
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
@@ -55,9 +57,14 @@ export async function POST(req: NextRequest) {
     let zoningContext = ''
     let zoningData: ZoningDistrict | null = null
     let jurisdiction: string = 'phoenix' // Default to Phoenix
+    const jurisdictionType = context.jurisdictionType || 'city'
+    const jurisdictionDisplayName = context.jurisdiction || 'Phoenix'
 
-    // Detect jurisdiction from context
-    if (context.jurisdiction) {
+    // Use jurisdictionCode for actual lookups, fall back to detection if not provided
+    if (context.jurisdictionCode) {
+      jurisdiction = context.jurisdictionCode
+      console.log('🏛️  Using jurisdiction code from context:', jurisdiction)
+    } else if (context.jurisdiction) {
       jurisdiction = detectJurisdiction(context.jurisdiction)
       console.log('🏛️  Detected jurisdiction from context:', jurisdiction)
     }
@@ -143,13 +150,18 @@ export async function POST(req: NextRequest) {
       console.log('⚠️ Skipping zoning fetch - missing zoning code')
     }
 
-    const systemPrompt = `You are Scout, an expert AI assistant for preconstruction planning in ${jurisdiction.charAt(0).toUpperCase() + jurisdiction.slice(1)}, Arizona.
+    // Format jurisdiction name with unincorporated area context
+    const jurisdictionName = jurisdictionType === 'county'
+      ? `${jurisdictionDisplayName} (unincorporated area)`
+      : jurisdictionDisplayName
+
+    const systemPrompt = `You are Scout, an expert AI assistant for preconstruction planning in ${jurisdictionName}, Arizona.
 
 CONTEXT:
 - Property: ${context.address}
 - Lot Size: ${context.lotSize} sq ft
 - Existing Building: ${context.existingBuilding || 'None'} sq ft
-- Jurisdiction: ${context.jurisdiction}
+- Jurisdiction: ${jurisdictionName}
 - Zoning: ${context.zoning}${zoningContext}
 
 Current conversation:
@@ -160,7 +172,7 @@ User input: ${userInput}
 YOUR TASK: Ask ONE question at a time to understand the project scope.
 
 ZONING GUIDANCE:
-${zoningContext ? `- You have comprehensive ${jurisdiction.charAt(0).toUpperCase() + jurisdiction.slice(1)} zoning information available above. Use it naturally when relevant to the conversation.
+${zoningContext ? `- You have comprehensive ${jurisdictionName} zoning information available above. Use it naturally when relevant to the conversation.
 - When user mentions ADU: Reference ADU-specific rules (max size, height, setbacks, owner-occupancy requirements if applicable)
 - When discussing building additions: Mention setback requirements and lot coverage limits
 - When talking about parking: Cite the specific parking requirements for their zone
@@ -169,7 +181,7 @@ ${zoningContext ? `- You have comprehensive ${jurisdiction.charAt(0).toUpperCase
   * "In your ${context.zoning} zone, ADUs can be up to [size] square feet"
   * "You'll need to keep [setback] feet from the property line"
   * "Your zone allows up to [coverage]% lot coverage, so you have room to expand"
-  * "Note: ${jurisdiction.charAt(0).toUpperCase() + jurisdiction.slice(1)} requires [specific requirement]"
+  * "Note: ${jurisdictionName} requires [specific requirement]"
 - NEVER dump all zoning rules at once - only mention rules relevant to what they're planning
 - If they mention special situations, reference the special rules when applicable` : '- No zoning information available yet. Continue with project questions.'}
 
