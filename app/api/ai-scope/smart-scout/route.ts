@@ -1,26 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
-import { prisma } from '@/lib/prisma'
+import {
+  getZoningByCode,
+  isADUAllowed,
+  getProjectRequirements,
+  getSmartHint,
+  type ZoningDistrict
+} from '@/lib/municipal-data/phoenix'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
 })
 
 // Helper function to fetch Phoenix-specific zoning requirements
-async function getMunicipalRequirements(address: string, zoningCode: string, jurisdiction: string = "Phoenix, AZ") {
+function getMunicipalRequirements(zoningCode: string): ZoningDistrict | null {
   try {
-    console.log('🔍 getMunicipalRequirements called with:', { address, zoningCode, jurisdiction })
+    console.log('🔍 getMunicipalRequirements called with:', { zoningCode })
 
-    // Query PhoenixZoning table for the jurisdiction and zoning code
-    const zoningData = await prisma.phoenixZoning.findFirst({
-      where: {
-        jurisdiction,
-        zoningDistrict: zoningCode
-      }
-    })
+    const zoningData = getZoningByCode(zoningCode)
 
     if (zoningData) {
       console.log('✅ Found Phoenix zoning data for', zoningCode)
+      console.log('📋 Zoning:', zoningData.name)
+      console.log('📏 Setbacks:', zoningData.setbacks)
+      console.log('🏠 ADU Allowed:', zoningData.adu.allowed)
     } else {
       console.log('❌ No Phoenix zoning data found for', zoningCode)
     }
@@ -48,77 +51,72 @@ export async function POST(req: NextRequest) {
 
     // Fetch Phoenix-specific zoning requirements
     let zoningContext = ''
-    if (context.zoning && context.jurisdiction) {
-      console.log('✅ Context has zoning and jurisdiction - fetching Phoenix zoning data...')
+    let zoningData: ZoningDistrict | null = null
+
+    if (context.zoning) {
+      console.log('✅ Context has zoning code - fetching Phoenix zoning data...')
       try {
-        const zoningData = await getMunicipalRequirements(
-          context.address,
-          context.zoning,
-          context.jurisdiction
-        )
+        zoningData = getMunicipalRequirements(context.zoning)
 
         if (zoningData) {
-          console.log('✅ Phoenix zoning data found for', zoningData.zoningDistrict)
+          console.log('✅ Phoenix zoning data found for', zoningData.code)
 
           // Build comprehensive natural language zoning context
-          zoningContext = `\n\nPHOENIX ZONING REQUIREMENTS - ${zoningData.zoningDistrict} (${zoningData.districtName}):\n\n`
+          zoningContext = `\n\nPHOENIX ZONING REQUIREMENTS - ${zoningData.code} (${zoningData.name}):\n\n`
 
           zoningContext += `SETBACKS:\n`
-          zoningContext += `- Front: ${zoningData.frontSetback} feet\n`
-          zoningContext += `- Side: ${zoningData.sideSetback} feet\n`
-          zoningContext += `- Rear: ${zoningData.rearSetback} feet\n\n`
+          zoningContext += `- Front: ${zoningData.setbacks.front} feet\n`
+          zoningContext += `- Side: ${zoningData.setbacks.side} feet\n`
+          zoningContext += `- Rear: ${zoningData.setbacks.rear} feet\n`
+          if (zoningData.setbacks.streetSide) {
+            zoningContext += `- Street side (corner lot): ${zoningData.setbacks.streetSide} feet\n`
+          }
+          zoningContext += `\n`
 
           zoningContext += `LOT REQUIREMENTS:\n`
-          if (zoningData.lotCoverageMax) {
-            zoningContext += `- Maximum lot coverage: ${(zoningData.lotCoverageMax * 100).toFixed(0)}%\n`
-          }
-          if (zoningData.maxHeight && zoningData.maxStories) {
-            zoningContext += `- Maximum height: ${zoningData.maxHeight} feet (${zoningData.maxStories} stories)\n`
-          }
-          if (zoningData.minLotSize) {
-            zoningContext += `- Minimum lot size: ${zoningData.minLotSize.toLocaleString()} sq ft\n`
-          }
-          if (zoningData.minLotWidth) {
-            zoningContext += `- Minimum lot width: ${zoningData.minLotWidth} feet\n`
-          }
-          if (zoningData.minLotDepth) {
-            zoningContext += `- Minimum lot depth: ${zoningData.minLotDepth} feet\n`
-          }
+          zoningContext += `- Minimum lot size: ${zoningData.minLotSize.toLocaleString()} sq ft\n`
+          zoningContext += `- Maximum lot coverage: ${zoningData.maxLotCoverage}%\n`
+          zoningContext += `- Maximum building height: ${zoningData.maxBuildingHeight} feet\n\n`
 
-          zoningContext += `\nADU REGULATIONS:\n`
-          if (zoningData.aduAllowed) {
-            zoningContext += `- ADUs permitted: Yes, up to ${zoningData.maxADUs}\n`
-            if (zoningData.aduMinSetback) {
-              zoningContext += `- ADU setback: ${zoningData.aduMinSetback} feet from property lines\n`
+          // Check ADU eligibility for this specific lot
+          const aduCheck = isADUAllowed(zoningData, context.lotSize)
+
+          zoningContext += `ADU REGULATIONS:\n`
+          if (aduCheck.allowed) {
+            zoningContext += `- ADUs permitted: Yes\n`
+            zoningContext += `- Maximum ADU size: ${zoningData.adu.maxSizeSqFt} sq ft\n`
+            if (zoningData.adu.maxHeight) {
+              zoningContext += `- Maximum ADU height: ${zoningData.adu.maxHeight} feet\n`
             }
-            if (zoningData.aduMaxSize) {
-              zoningContext += `- ADU max size: ${zoningData.aduMaxSize} sq ft\n`
-            }
-            if (zoningData.aduMaxHeight) {
-              zoningContext += `- ADU max height: ${zoningData.aduMaxHeight} feet\n`
+            zoningContext += `- ADU setbacks - Front: ${zoningData.adu.setbacks.front}', Rear: ${zoningData.adu.setbacks.rear}', Side: ${zoningData.adu.setbacks.side}'\n`
+            zoningContext += `- Parking required: ${zoningData.adu.parking} space(s)\n`
+            if (zoningData.adu.notes && zoningData.adu.notes.length > 0) {
+              zoningContext += `- Notes: ${zoningData.adu.notes.join('; ')}\n`
             }
           } else {
-            zoningContext += `- ADUs: Not permitted in this zone\n`
+            zoningContext += `- ADUs: ${aduCheck.reason}\n`
           }
 
-          if (zoningData.parkingPerUnit) {
-            zoningContext += `\nPARKING:\n`
-            zoningContext += `- Required: ${zoningData.parkingPerUnit} spaces per dwelling unit\n`
-            if (zoningData.coveredParking) {
-              zoningContext += `- Covered parking required\n`
-            }
+          zoningContext += `\nPOOL REQUIREMENTS:\n`
+          zoningContext += `- Setback from property line: ${zoningData.pool.setbackFromProperty} feet\n`
+          zoningContext += `- Setback from house: ${zoningData.pool.setbackFromHouse} feet\n`
+          if (zoningData.pool.requiresFence) {
+            zoningContext += `- Fence required: Yes, ${zoningData.pool.fenceHeight} feet minimum height\n`
           }
 
-          if (zoningData.fenceMaxHeight) {
-            zoningContext += `\nDESIGN REQUIREMENTS:\n`
-            zoningContext += `- Maximum fence height: ${zoningData.fenceMaxHeight} feet\n`
-            if (zoningData.landscapeReq) {
-              zoningContext += `- Landscaping: ${zoningData.landscapeReq}\n`
-            }
-          }
+          zoningContext += `\nGARAGE/ACCESSORY STRUCTURES:\n`
+          zoningContext += `- Front setback: ${zoningData.garage.setbackFront} feet\n`
+          zoningContext += `- Side setback: ${zoningData.garage.setbackSide} feet\n`
+          zoningContext += `- Rear setback: ${zoningData.garage.setbackRear} feet\n`
+          zoningContext += `- Maximum height (detached): ${zoningData.garage.maxHeightDetached} feet\n\n`
 
-          if (zoningData.specialRules) {
-            zoningContext += `\nSPECIAL RULES:\n${zoningData.specialRules}\n`
+          zoningContext += `PERMIT THRESHOLDS:\n`
+          zoningContext += `- Structures under ${zoningData.permits.buildingExemptUnder} sq ft may not require building permit\n`
+          zoningContext += `- Electrical work: ${zoningData.permits.electricalAlwaysRequired ? 'Always requires permit' : 'May be exempt for minor work'}\n`
+          zoningContext += `- Plumbing work: ${zoningData.permits.plumbingAlwaysRequired ? 'Always requires permit' : 'May be exempt for minor work'}\n`
+
+          if (zoningData.notes && zoningData.notes.length > 0) {
+            zoningContext += `\nADDITIONAL NOTES:\n${zoningData.notes.map(n => `- ${n}`).join('\n')}\n`
           }
 
           console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
@@ -133,7 +131,7 @@ export async function POST(req: NextRequest) {
         console.error('❌ ERROR FETCHING PHOENIX ZONING:', error)
       }
     } else {
-      console.log('⚠️ Skipping zoning fetch - missing zoning code or jurisdiction')
+      console.log('⚠️ Skipping zoning fetch - missing zoning code')
     }
 
     const systemPrompt = `You are Scout, an expert AI assistant for preconstruction planning in Phoenix, Arizona.
