@@ -3840,10 +3840,13 @@ export default function MapboxPropertyVisualization({
 
         {/* Smart Shape Builder Toggle */}
         <button
-          onClick={() => setShowShapeBuilder(!showShapeBuilder)}
+          onClick={() => {
+            setViewMode(viewMode === 'draw' ? 'view' : 'draw');
+            setMeasurementMode('off'); // Deactivate measurement when toggling Shape Builder
+          }}
           className="ml-auto px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium"
         >
-          {showShapeBuilder ? 'Hide' : 'Show'} Shape Builder
+          {viewMode === 'draw' ? 'Hide' : 'Show'} Shape Builder
         </button>
       </div>
 
@@ -3854,8 +3857,11 @@ export default function MapboxPropertyVisualization({
 
         {/* Professional Shape Builder Panel */}
         <ShapeBuilderPanel
-          isOpen={showShapeBuilder}
-          onClose={() => setShowShapeBuilder(false)}
+          isOpen={viewMode === 'draw'}
+          onClose={() => {
+            setViewMode('view');
+            setMeasurementMode('off'); // Deactivate measurement when closing Shape Builder
+          }}
           onAddShape={handleAddShapeFromBuilder}
           maxCoverage={propertyMetrics.buildableArea}
           currentCoverage={propertyMetrics.currentCoverage}
@@ -3863,7 +3869,7 @@ export default function MapboxPropertyVisualization({
         />
 
         {/* Measurement Tool Floating Panel (bottom-right) */}
-        {measurementMode !== 'off' && (
+        {viewMode === 'measure' && (
           <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-[1000]">
             <button
               onClick={() => setMeasurementMode('single')}
@@ -3908,7 +3914,10 @@ export default function MapboxPropertyVisualization({
           {/* View/Edit/Draw/Measure Buttons */}
           <div className="flex gap-0 bg-white rounded-lg shadow-lg overflow-hidden">
             <button
-              onClick={() => setViewMode('view')}
+              onClick={() => {
+                setViewMode('view');
+                setMeasurementMode('off'); // Deactivate measurement when switching modes
+              }}
               className={`px-6 py-2.5 text-sm font-medium whitespace-nowrap min-w-[80px] ${
                 viewMode === 'view' ? 'bg-blue-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'
               }`}
@@ -3916,7 +3925,10 @@ export default function MapboxPropertyVisualization({
               View
             </button>
             <button
-              onClick={() => setViewMode('edit')}
+              onClick={() => {
+                setViewMode('edit');
+                setMeasurementMode('off'); // Deactivate measurement when switching modes
+              }}
               className={`px-6 py-2.5 text-sm font-medium whitespace-nowrap min-w-[80px] ${
                 viewMode === 'edit' ? 'bg-blue-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'
               }`}
@@ -3924,23 +3936,26 @@ export default function MapboxPropertyVisualization({
               Edit
             </button>
             <button
-              onClick={() => setShowShapeBuilder(!showShapeBuilder)}
+              onClick={() => {
+                setViewMode('draw');
+                setMeasurementMode('off'); // Deactivate measurement when switching modes
+              }}
               className={`px-6 py-2.5 text-sm font-medium whitespace-nowrap min-w-[80px] ${
-                showShapeBuilder ? 'bg-blue-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'
+                viewMode === 'draw' ? 'bg-blue-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'
               }`}
             >
               Draw
             </button>
             <button
               onClick={() => {
-                console.log('Measure button clicked');
-                // Toggle: if off, turn on to single mode; if on, turn off
-                setMeasurementMode(measurementMode === 'off' ? 'single' : 'off');
+                console.log('✅ Measure button clicked - using unified mode');
+                setViewMode('measure');
+                setMeasurementMode('single'); // Activate single-line measurement
                 setMeasurementPoints([]);
                 setMeasurementPreview(null);
               }}
               className={`px-6 py-2.5 text-sm font-medium whitespace-nowrap min-w-[80px] ${
-                measurementMode !== 'off' ? 'bg-blue-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'
+                viewMode === 'measure' ? 'bg-blue-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'
               }`}
             >
               Measure

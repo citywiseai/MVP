@@ -176,8 +176,6 @@ export default function PropertyVisualization({
 
   const [isLabelingEdges, setIsLabelingEdges] = useState(false);
 
-  const [isDrawing, setIsDrawing] = useState(false);
-
   const [drawingTool, setDrawingTool] = useState<'rectangle' | 'polygon' | 'circle' | null>(null);
   const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
   
@@ -293,7 +291,6 @@ export default function PropertyVisualization({
   const [previousDraggingState, setPreviousDraggingState] = useState<boolean>(true);
 
   // Smart Shape Panel state
-  const [showShapePanel, setShowShapePanel] = useState(false);
   const [shapeWidth, setShapeWidth] = useState('');
   const [shapeLength, setShapeLength] = useState('');
   const [shapeLabel, setShapeLabel] = useState('');
@@ -662,11 +659,7 @@ export default function PropertyVisualization({
 
         case 'v':
 
-          // Exit precision mode when leaving draw/measure
-          if (mode === 'draw' || mode === 'measure') {
-            exitPrecisionMode();
-          }
-          setMode('view');
+          handleModeChange('view');
 
           break;
 
@@ -674,11 +667,7 @@ export default function PropertyVisualization({
 
         case 'e':
 
-          // Exit precision mode when leaving draw/measure
-          if (mode === 'draw' || mode === 'measure') {
-            exitPrecisionMode();
-          }
-          setMode('edit');
+          handleModeChange('edit');
 
           toast.info('Edit mode active. Hold Space to pan, Shift to snap', { duration: 3000 });
 
@@ -688,9 +677,7 @@ export default function PropertyVisualization({
 
         case 'd':
 
-          // Enter precision mode for drawing
-          enterPrecisionMode();
-          setMode('draw');
+          handleModeChange('draw');
 
           break;
 
@@ -698,19 +685,13 @@ export default function PropertyVisualization({
 
         case 'm':
 
-          // Enter precision mode for measuring
-          enterPrecisionMode();
-          setMode('measure');
+          handleModeChange('measure');
 
           break;
 
         case 'escape':
 
-          // Exit precision mode when leaving draw/measure
-          if (mode === 'draw' || mode === 'measure') {
-            exitPrecisionMode();
-          }
-          setMode('view');
+          handleModeChange('view');
 
           break;
 
@@ -3784,7 +3765,7 @@ export default function PropertyVisualization({
     if (!map.current || !drawLayer.current) return;
 
     // Stop any existing drawing
-    if (isDrawing) {
+    if (drawingTool !== null) {
       stopDrawing();
     }
 
@@ -4520,7 +4501,6 @@ export default function PropertyVisualization({
 
 
     setDrawingTool(tool);
-    setIsDrawing(true);
     map.current.off(L.Draw.Event.CREATED);
     map.current.on(L.Draw.Event.CREATED, async (e: any) => {
       const layer = e.layer;
@@ -4790,7 +4770,6 @@ export default function PropertyVisualization({
     
     drawControl.current.disable();
     map.current.off(L.Draw.Event.CREATED);
-    setIsDrawing(false);
     setDrawingTool(null);
   };
 
@@ -6469,7 +6448,7 @@ export default function PropertyVisualization({
   };
   // Real-time distance display while drawing polygons
   useEffect(() => {
-    if (!map.current || !isDrawing) return;
+    if (!map.current || mode !== 'draw') return;
     
     let liveDistanceLabel: L.Marker | null = null;
     let allVertices: L.LatLng[] = [];
@@ -6690,7 +6669,7 @@ export default function PropertyVisualization({
         if (map.current) map.current.removeLayer(line);
       });
     };
-  }, [isDrawing]);
+  }, [mode]);
 
   // Building Sketches Image Overlay
   useEffect(() => {
@@ -7239,6 +7218,8 @@ export default function PropertyVisualization({
 
   // Handle mode changes with precision mode
   const handleModeChange = (newMode: 'view' | 'edit' | 'draw' | 'measure') => {
+    console.log('🔄 MODE CHANGE:', newMode, 'from:', mode);
+
     // Auto-exit Edit Shapes mode when switching away from Edit/Draw
     if (newMode !== 'edit' && newMode !== 'draw' && isEditShapesMode) {
       console.log('✏️ Auto-exiting Edit Shapes mode due to mode change');
@@ -7267,7 +7248,22 @@ export default function PropertyVisualization({
       enterPrecisionMode();
     }
 
+    // Clear measurements when entering draw mode
+    if (newMode === 'draw' && mode === 'measure') {
+      console.log('🎨 Clearing measurements when entering draw mode');
+      clearMeasurements();
+    }
+
+    // Clear drawing tools when entering measure mode
+    if (newMode === 'measure' && mode === 'draw') {
+      console.log('📏 Stopping drawing when entering measure mode');
+      if (drawingTool !== null) {
+        stopDrawing();
+      }
+    }
+
     setMode(newMode);
+    console.log('✅ Mode state updated to:', newMode);
   };
 
   // Smart Shape Panel Handler Functions
@@ -8728,13 +8724,15 @@ export default function PropertyVisualization({
           )}
 
           {/* Smart Shape Panel - Scrollable Container (Draw Mode) */}
-          {mode === 'draw' && (
+          {mode === 'draw' && (() => {
+            console.log('🎨 RENDERING Shape Builder panel - mode is:', mode);
+            return (
             <div className="absolute top-4 bottom-4 right-20 w-96 bg-white rounded-lg shadow-lg z-[1000] p-6 overflow-y-auto">
               <div className="space-y-4">
                 <div className="flex items-center justify-between border-b pb-3">
                   <h3 className="font-semibold text-lg">Smart Shape Builder</h3>
                   <button
-                    onClick={() => setMode('view')}
+                    onClick={() => handleModeChange('view')}
                     className="text-gray-400 hover:text-gray-600"
                     title="Close panel"
                   >
@@ -9108,10 +9106,13 @@ export default function PropertyVisualization({
                 </div>
               </div>
             </div>
-          )}
+            );
+          })()}
 
           {/* Measure Mode Controls */}
-          {mode === 'measure' && (
+          {mode === 'measure' && (() => {
+            console.log('📏 RENDERING Measurement Mode panel - mode is:', mode);
+            return (
             <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-[1000]">
               {/* Measurement Type Toggle */}
               <div className="flex gap-2">
@@ -9231,7 +9232,8 @@ export default function PropertyVisualization({
                 </p>
               </Card>
             </div>
-          )}
+            );
+          })()}
 
 
 

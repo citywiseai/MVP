@@ -462,7 +462,7 @@ export default function SmartScoutChat() {
               <div className="flex items-start gap-4">
                 <div className="flex-1">
                   <h3 className="font-semibold text-gray-900 text-lg mb-3">{parcelData.address}</h3>
-                  <div className="grid grid-cols-3 gap-4 text-sm text-gray-600">
+                  <div className="grid grid-cols-4 gap-4 text-sm text-gray-600">
                     <div>
                       <span className="font-medium text-gray-500">Lot Size</span>
                       <p className="text-gray-900 mt-0.5">{parcelData.lotSize.toLocaleString()} sq ft</p>
@@ -474,6 +474,10 @@ export default function SmartScoutChat() {
                     <div>
                       <span className="font-medium text-gray-500">Zoning</span>
                       <p className="text-gray-900 mt-0.5">{parcelData.zoning}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-500">Jurisdiction</span>
+                      <p className="text-gray-900 mt-0.5">{parcelData.jurisdiction}</p>
                     </div>
                   </div>
                 </div>

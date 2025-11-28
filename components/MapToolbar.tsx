@@ -40,7 +40,7 @@ export default function MapToolbar({
                   transition-all duration-200
                   ${isActive
                     ? 'bg-[#007AFF] text-white shadow-md'
-                    : 'text-gray-700 hover:bg-gray-100'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }
                 `}
               >
