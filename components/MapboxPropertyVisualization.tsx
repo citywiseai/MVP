@@ -1902,14 +1902,14 @@ export default function MapboxPropertyVisualization({
           return shape;
         }));
 
-        // Save updated coordinates to database (debounced)
+        // Save coordinates to database
         saveShapeCoordinates(shapeId, overlay.coordinates);
       } else {
         console.error('❌ No overlay found for feature:', feature.id);
         console.error('Available overlays:', Array.from(svgOverlays.current.keys()));
       }
     });
-  }, [cleanupOrphanOverlays, getSnapPoints, getShapeBounds, setSnapGuideLines, updateSvgOverlayPosition, setDrawnShapes, saveShapeCoordinates]);
+  }, [cleanupOrphanOverlays, getSnapPoints, getShapeBounds, setSnapGuideLines, updateSvgOverlayPosition, setDrawnShapes, saveShapeCoordinates, drawnShapes]);
 
   // Re-register draw.update listener when handleShapeUpdate changes
   // This ensures the handler always has access to the latest drawnShapes and other state
@@ -1931,35 +1931,35 @@ export default function MapboxPropertyVisualization({
     };
   }, [handleShapeUpdate, isMapReady]);
 
-  const handleShapeDelete = async (e: any) => {
+  const handleShapeDelete = useCallback(async (e: any) => {
     const deletedFeatures = e.features;
 
     for (const feature of deletedFeatures) {
       try {
-        // Find and remove SVG overlay
-        const shapeEntry = Array.from(svgOverlays.current.entries()).find(
-          ([_, overlay]) => overlay.featureId === feature.id
-        );
+        const shapeId = feature.id;
 
-        if (shapeEntry) {
-          const [shapeId, overlay] = shapeEntry;
-          // Remove from DOM
+        // Remove from state
+        setDrawnShapes(prev => prev.filter(s => s.id !== shapeId));
+
+        // Remove from map
+        const overlay = svgOverlays.current.get(shapeId);
+        if (overlay) {
           overlay.element.remove();
-          // Remove from map
           svgOverlays.current.delete(shapeId);
         }
 
         // Delete from database
-        await fetch(`/api/projects/${projectId}/shapes/${feature.id}`, {
+        await fetch(`/api/projects/${projectId}/shapes/${shapeId}`, {
           method: 'DELETE'
         });
-        setDrawnShapes(prev => prev.filter(s => s.id !== feature.id));
+
         toast.success('Shape deleted');
       } catch (error) {
         console.error('Error deleting shape:', error);
+        toast.error('Failed to delete shape');
       }
     }
-  };
+  }, [projectId]);
 
   const handleAddShapeFromInput = () => {
     if (!shapeWidth || !shapeLength) {

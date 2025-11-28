@@ -79,6 +79,14 @@ model Project {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
+  // Project management fields
+  priority          String   @default("medium")  // "high", "medium", "low"
+  dueDate           DateTime?
+  projectNotes      String?
+  clientName        String?
+  tags              String[] @default([])
+  archivedAt        DateTime?
+
   owner           User                     @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   org             Org?                     @relation(fields: [orgId], references: [id], onDelete: Cascade)
   parcel          Parcel?                  @relation(fields: [parcelId], references: [id])

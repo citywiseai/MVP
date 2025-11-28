@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Building2, Plus, ChevronDown, ChevronUp, Trash2, Upload, FileText, MessageSquare } from 'lucide-react'
+import { Building2, Plus, ChevronDown, ChevronUp, Trash2, Upload, FileText, MessageSquare, Pencil } from 'lucide-react'
 import { SignOutButton } from './SignOutButton'
 import dynamic from 'next/dynamic'
 import DashboardEmptyState from './DashboardEmptyState'
 import PropertyReportModal from './PropertyReportModal'
 import AssessorReportModal from './AssessorReportModal'
+import EditProjectModal from './EditProjectModal'
 
 const MapboxPropertyVisualization = dynamic(() => import('./MapboxPropertyVisualization'), {
   ssr: false,
@@ -18,7 +19,7 @@ const ProjectChatWrapper = dynamic(() => import('./ProjectChatWrapper'), {
   ssr: false,
 })
 
-type SortField = 'name' | 'address' | 'createdAt' | 'status'
+type SortField = 'name' | 'address' | 'dueDate' | 'status'
 type SortOrder = 'asc' | 'desc'
 
 interface ProjectsDashboardProps {
@@ -37,8 +38,8 @@ export function ProjectsDashboard({
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     initialSelectedProject?.id || null
   )
-  const [sortField, setSortField] = useState<SortField>('createdAt')
-  const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
+  const [sortField, setSortField] = useState<SortField>('dueDate')
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
   const [expandedSections, setExpandedSections] = useState({
     engineering: true,
     tasks: true,
@@ -51,6 +52,8 @@ export function ProjectsDashboard({
   const [assessorLoading, setAssessorLoading] = useState(false)
   const [showAssessorReport, setShowAssessorReport] = useState(false)
   const [assessorData, setAssessorData] = useState<any>(null)
+  const [editingProject, setEditingProject] = useState<any>(null)
+  const [showEditModal, setShowEditModal] = useState(false)
 
   const selectedProject = projects.find(p => p.id === selectedProjectId)
 
@@ -208,24 +211,39 @@ export function ProjectsDashboard({
   }
 
   const sortedProjects = [...projects].sort((a, b) => {
-    let comparison = 0
-    
     switch (sortField) {
       case 'name':
-        comparison = a.name.localeCompare(b.name)
-        break
+        // Name sort - alphabetical A-Z
+        return (a.name || '').localeCompare(b.name || '') * (sortOrder === 'asc' ? 1 : -1)
+
       case 'address':
-        comparison = (a.fullAddress || '').localeCompare(b.fullAddress || '')
-        break
-      case 'createdAt':
-        comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-        break
+        // Address sort - alphabetical A-Z (using parcel.address)
+        return (a.parcel?.address || a.fullAddress || '').localeCompare(b.parcel?.address || b.fullAddress || '') * (sortOrder === 'asc' ? 1 : -1)
+
+      case 'dueDate':
+        // Date sort - by DUE DATE (projects without due dates go to the end)
+        const dateA = a.dueDate ? new Date(a.dueDate).getTime() : Infinity
+        const dateB = b.dueDate ? new Date(b.dueDate).getTime() : Infinity
+        return (dateA - dateB) * (sortOrder === 'asc' ? 1 : -1)
+
       case 'status':
-        comparison = a.status.localeCompare(b.status)
-        break
+        // Status sort - by status THEN by due date within each status
+        const statusOrder: { [key: string]: number } = { 'active': 1, 'on-hold': 2, 'completed': 3, 'archived': 4 }
+        const statusA = statusOrder[a.status] || 99
+        const statusB = statusOrder[b.status] || 99
+
+        // First sort by status
+        const statusDiff = statusA - statusB
+        if (statusDiff !== 0) return statusDiff * (sortOrder === 'asc' ? 1 : -1)
+
+        // Then sort by due date within same status (always earliest first)
+        const dueDateA = a.dueDate ? new Date(a.dueDate).getTime() : Infinity
+        const dueDateB = b.dueDate ? new Date(b.dueDate).getTime() : Infinity
+        return dueDateA - dueDateB
+
+      default:
+        return 0
     }
-    
-    return sortOrder === 'asc' ? comparison : -comparison
   })
 
   const sortTasksByPriority = (tasks: any[]) => {
@@ -312,9 +330,58 @@ export function ProjectsDashboard({
     }
   };
 
+  const handleEditProject = (project: any, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setEditingProject(project)
+    setShowEditModal(true)
+  }
+
+  const handleSaveProject = async (updates: Partial<any>) => {
+    console.log('🔧 handleSaveProject called')
+    console.log('   editingProject:', editingProject)
+    console.log('   updates:', updates)
+
+    if (!editingProject) {
+      console.error('❌ No editingProject!')
+      return
+    }
+
+    try {
+      console.log('📤 Sending PATCH request to:', `/api/projects/${editingProject.id}`)
+      const res = await fetch(`/api/projects/${editingProject.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      })
+
+      console.log('📥 Response status:', res.status)
+      console.log('📥 Response ok:', res.ok)
+
+      if (!res.ok) {
+        const errorData = await res.json()
+        console.error('❌ Server error:', errorData)
+        throw new Error('Failed to update project')
+      }
+
+      const updatedProject = await res.json()
+      console.log('✅ Updated project:', updatedProject)
+
+      // Update projects in state
+      setProjects(projects.map(p =>
+        p.id === editingProject.id ? updatedProject : p
+      ))
+
+      setShowEditModal(false)
+      setEditingProject(null)
+    } catch (error) {
+      console.error('❌ handleSaveProject error:', error)
+      alert('Failed to update project')
+    }
+  }
+
   const handleDeleteProject = async (projectId: string, e: React.MouseEvent) => {
     e.stopPropagation()
-    
+
     if (!confirm('Are you sure you want to delete this project?')) return
 
     try {
@@ -503,6 +570,33 @@ export function ProjectsDashboard({
     }
   }
 
+  const getProjectPriorityBadge = (priority: string) => {
+    const normalizedPriority = priority?.toLowerCase() || 'medium'
+    switch (normalizedPriority) {
+      case 'high':
+        return { emoji: '🔴', color: 'bg-red-100 text-red-700' }
+      case 'medium':
+        return { emoji: '🟡', color: 'bg-yellow-100 text-yellow-700' }
+      case 'low':
+        return { emoji: '🟢', color: 'bg-green-100 text-green-700' }
+      default:
+        return { emoji: '🟡', color: 'bg-yellow-100 text-yellow-700' }
+    }
+  }
+
+  const formatDueDate = (date: Date | string | null | undefined) => {
+    if (!date) return null
+    const d = new Date(date)
+    const now = new Date()
+    const diffDays = Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+
+    if (diffDays < 0) return `Overdue ${Math.abs(diffDays)}d`
+    if (diffDays === 0) return 'Due today'
+    if (diffDays === 1) return 'Due tomorrow'
+    if (diffDays < 7) return `Due in ${diffDays}d`
+    return d.toLocaleDateString()
+  }
+
   if (projects.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#faf8f3] via-[#faf8f3] to-[#9caf88]/10">
@@ -547,7 +641,7 @@ export function ProjectsDashboard({
             {[
               { field: 'name' as SortField, label: 'Name' },
               { field: 'address' as SortField, label: 'Address' },
-              { field: 'createdAt' as SortField, label: 'Date' },
+              { field: 'dueDate' as SortField, label: 'Date' },
               { field: 'status' as SortField, label: 'Status' },
             ].map(({ field, label }) => (
               <button key={field} onClick={() => toggleSort(field)} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${sortField === field ? 'bg-[#9caf88] text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
@@ -558,26 +652,52 @@ export function ProjectsDashboard({
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {sortedProjects.map((project) => (
-            <div key={project.id} onClick={() => { setSelectedProjectId(project.id); router.push(`/dashboard?project=${project.id}`, { scroll: false }) }} className={`p-4 cursor-pointer transition-all duration-200 border-l-4 relative group ${selectedProjectId === project.id ? 'bg-gradient-to-r from-[#9caf88]/20 to-transparent border-[#9caf88]' : 'border-transparent hover:bg-gray-50 hover:border-gray-300'}`}>
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Building2 className={`w-4 h-4 flex-shrink-0 ${selectedProjectId === project.id ? 'text-[#9caf88]' : 'text-gray-400'}`} />
-                    <h3 className="font-semibold text-[#1e3a5f] truncate text-sm">{project.name}</h3>
+          {sortedProjects.map((project) => {
+            const priorityBadge = getProjectPriorityBadge(project.priority)
+            const dueDate = formatDueDate(project.dueDate)
+
+            return (
+              <div key={project.id} onClick={() => { setSelectedProjectId(project.id); router.push(`/dashboard?project=${project.id}`, { scroll: false }) }} className={`p-4 cursor-pointer transition-all duration-200 border-l-4 relative group ${selectedProjectId === project.id ? 'bg-gradient-to-r from-[#9caf88]/20 to-transparent border-[#9caf88]' : 'border-transparent hover:bg-gray-50 hover:border-gray-300'}`}>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Building2 className={`w-4 h-4 flex-shrink-0 ${selectedProjectId === project.id ? 'text-[#9caf88]' : 'text-gray-400'}`} />
+                      <h3 className="font-semibold text-[#1e3a5f] truncate text-sm">{project.name}</h3>
+                    </div>
+                    {project.clientName && <p className="text-xs text-gray-600 ml-6 mb-1">👤 {project.clientName}</p>}
+                    {project.fullAddress && <p className="text-xs text-gray-500 truncate ml-6">{formatAddress(project.fullAddress)}</p>}
+                    {getProjectScope(project) && <p className="text-xs text-gray-600 line-clamp-2 mt-1 ml-6">{getProjectScope(project)}</p>}
+                    <div className="flex items-center gap-2 mt-2 ml-6 flex-wrap">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${priorityBadge.color}`}>
+                        {priorityBadge.emoji} {project.priority || 'medium'}
+                      </span>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                        project.status === 'active' ? 'bg-[#9caf88]/20 text-[#9caf88]' :
+                        project.status === 'on-hold' ? 'bg-orange-100 text-orange-700' :
+                        project.status === 'completed' ? 'bg-green-100 text-green-700' :
+                        'bg-gray-100 text-gray-600'
+                      }`}>{project.status}</span>
+                      {dueDate && (
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                          dueDate.includes('Overdue') ? 'bg-red-100 text-red-700' :
+                          dueDate.includes('today') || dueDate.includes('tomorrow') ? 'bg-orange-100 text-orange-700' :
+                          'bg-blue-100 text-blue-700'
+                        }`}>📅 {dueDate}</span>
+                      )}
+                    </div>
                   </div>
-                  {project.fullAddress && <p className="text-xs text-gray-500 truncate ml-6">{formatAddress(project.fullAddress)}</p>}
-                  {getProjectScope(project) && <p className="text-xs text-gray-600 line-clamp-2 mt-1 ml-6">{getProjectScope(project)}</p>}
-                  <div className="flex items-center gap-2 mt-2 ml-6">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${project.status === 'active' ? 'bg-[#9caf88]/20 text-[#9caf88]' : 'bg-gray-100 text-gray-600'}`}>{project.status}</span>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2">
+                    <button onClick={(e) => handleEditProject(project, e)} className="p-1.5 hover:bg-blue-50 rounded-lg" title="Edit">
+                      <Pencil className="w-4 h-4 text-blue-500" />
+                    </button>
+                    <button onClick={(e) => handleDeleteProject(project.id, e)} className="p-1.5 hover:bg-red-50 rounded-lg" title="Delete">
+                      <Trash2 className="w-4 h-4 text-red-500" />
+                    </button>
                   </div>
                 </div>
-                <button onClick={(e) => handleDeleteProject(project.id, e)} className="opacity-0 group-hover:opacity-100 transition-opacity ml-2 p-1.5 hover:bg-red-50 rounded-lg" title="Delete">
-                  <Trash2 className="w-4 h-4 text-red-500" />
-                </button>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
 
@@ -897,6 +1017,17 @@ export function ProjectsDashboard({
           data={assessorData}
           isOpen={showAssessorReport}
           onClose={() => setShowAssessorReport(false)}
+        />
+
+        {/* Edit Project Modal */}
+        <EditProjectModal
+          project={editingProject}
+          isOpen={showEditModal}
+          onClose={() => {
+            setShowEditModal(false)
+            setEditingProject(null)
+          }}
+          onSave={handleSaveProject}
         />
       </div>
     </div>
