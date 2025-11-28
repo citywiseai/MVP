@@ -14,6 +14,9 @@ import { transformSvg } from '@/lib/svg-utils';
 // Check token availability
 console.log('🔑 Mapbox token:', process.env.NEXT_PUBLIC_MAPBOX_TOKEN?.substring(0, 20) + '...');
 
+// Snap threshold for edge snapping (roughly 1 foot in lat/lng degrees)
+const SNAP_THRESHOLD = 0.000003;
+
 interface MapboxPropertyVisualizationProps {
   parcelId: string;
   projectId: string;
@@ -80,6 +83,13 @@ export default function MapboxPropertyVisualization({
   const [setbacksApplied, setSetbacksApplied] = useState(false); // Track if user has applied setbacks - start hidden
   const [setbackPolygon, setSetbackPolygon] = useState<any>(null); // Store buildable area polygon for violation detection
   const [shapeViolations, setShapeViolations] = useState<Set<string>>(new Set()); // Track shapes violating setbacks
+  const [shapeIntersections, setShapeIntersections] = useState<Map<string, string[]>>(new Map()); // Track shapes overlapping with each other
+
+  // Snap guide lines state
+  const [snapGuideLines, setSnapGuideLines] = useState<{ x: number | null; y: number | null }>({ x: null, y: null });
+
+  // Clipboard state for copy/paste
+  const [clipboardShape, setClipboardShape] = useState<any | null>(null);
 
   // Measurement tool state
   const [measurementMode, setMeasurementMode] = useState<'off' | 'single' | 'polyline'>('off');
@@ -950,9 +960,226 @@ export default function MapboxPropertyVisualization({
     });
   }, [savedMeasurements, isMapReady, highlightedMeasurementId]);
 
-  // Keyboard event handlers for measurement tool
+  // Paste shape function
+  const pasteShape = async () => {
+    if (!clipboardShape || !map.current || !draw.current) return;
+
+    try {
+      console.log('📋 Pasting shape:', clipboardShape.name);
+      console.log('📋 Clipboard shape type:', clipboardShape.shapeType);
+      console.log('📋 Clipboard shape coordinates format:', JSON.stringify(clipboardShape.coordinates).substring(0, 200));
+      console.log('📋 Coordinates[0] is array?:', Array.isArray(clipboardShape.coordinates[0]));
+      console.log('📋 Coordinates[0][0] is array?:', Array.isArray(clipboardShape.coordinates[0]?.[0]));
+
+      // Offset coordinates to make the pasted shape visible (roughly 30 feet)
+      const offsetLng = 0.0001; // ~30 feet east
+      const offsetLat = -0.0001; // ~30 feet south
+
+      // Handle different coordinate formats
+      // Database stores coordinates as [[lng, lat], ...] (flat array)
+      // We need to offset each coordinate point
+      let newCoordinates: any;
+
+      // Check if coordinates are already nested (from MapboxDraw format)
+      const isNested = Array.isArray(clipboardShape.coordinates[0]?.[0]);
+
+      if (isNested) {
+        // Coordinates are [[[lng, lat], ...]] - nested array (MapboxDraw format)
+        console.log('📋 Offsetting nested coordinates');
+        newCoordinates = clipboardShape.coordinates.map((ring: any[]) =>
+          ring.map((coord: [number, number]) => [
+            coord[0] + offsetLng,
+            coord[1] + offsetLat
+          ])
+        );
+      } else {
+        // Coordinates are [[lng, lat], ...] - flat array (database format)
+        console.log('📋 Offsetting flat coordinates');
+        newCoordinates = clipboardShape.coordinates.map((coord: [number, number]) => [
+          coord[0] + offsetLng,
+          coord[1] + offsetLat
+        ]);
+      }
+
+      // Create GeoJSON for area/perimeter calculation
+      // Turf.js expects Polygon coordinates as [[[lng, lat], ...]]
+      // IMPORTANT: geometry.type must be standard GeoJSON type ('Polygon'), not app-specific type ('template', 'rectangle', etc.)
+      let turfCoordinates = newCoordinates;
+      if (!isNested) {
+        // Wrap flat coordinates for Turf.js
+        turfCoordinates = [newCoordinates];
+        console.log('📋 Wrapped coordinates for Turf.js calculation');
+      }
+
+      const geoJson = {
+        type: 'Feature',
+        geometry: {
+          type: 'Polygon',  // Always 'Polygon' for GeoJSON, not clipboardShape.shapeType
+          coordinates: turfCoordinates
+        },
+        properties: {}
+      };
+
+      console.log('📋 GeoJSON for calculation:', JSON.stringify(geoJson).substring(0, 200));
+
+      // Calculate area and perimeter for new position
+      const area = turf.area(geoJson.geometry) * 10.7639; // m² to sqft
+      const perimeter = turf.length(geoJson, { units: 'feet' });
+
+      // Create new shape object
+      const newShape = {
+        name: `${clipboardShape.name} (copy)`,
+        shapeType: clipboardShape.shapeType,
+        coordinates: newCoordinates,
+        area: area,
+        perimeter: perimeter,
+        rotationAngle: clipboardShape.rotationAngle || 0,
+        properties: clipboardShape.properties || {}
+      };
+
+      // Save to database
+      const response = await fetch(`/api/projects/${projectId}/shapes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newShape)
+      });
+
+      if (response.ok) {
+        const savedShape = await response.json();
+        console.log('✅ Pasted shape saved:', savedShape.id);
+
+        // Add to drawn shapes state
+        setDrawnShapes(prev => [...prev, savedShape]);
+
+        // Add to map via draw control
+        // IMPORTANT: Ensure coordinates are in the correct format for MapboxDraw
+        // Database stores as [[lng,lat], ...] but Polygon needs [[[lng,lat], ...]]
+        // IMPORTANT: geometry.type must always be 'Polygon', not app-specific types like 'template', 'rectangle', etc.
+        let drawCoordinates = savedShape.coordinates;
+
+        // Check if we need to wrap coordinates for Polygon type
+        // If coordinates is [[lng, lat], [lng, lat]], wrap it to [[[lng, lat], [lng, lat]]]
+        if (Array.isArray(savedShape.coordinates[0]) && !Array.isArray(savedShape.coordinates[0][0])) {
+          drawCoordinates = [savedShape.coordinates];
+          console.log('📋 Wrapped coordinates for Polygon');
+        }
+
+        const feature = {
+          type: 'Feature',
+          id: savedShape.id,
+          geometry: {
+            type: 'Polygon',  // Always 'Polygon' for GeoJSON, not savedShape.shapeType
+            coordinates: drawCoordinates
+          },
+          properties: {
+            id: savedShape.id,
+            name: savedShape.name,
+            shapeType: savedShape.shapeType,  // Store app-specific type in properties
+            ...savedShape.properties
+          }
+        };
+
+        console.log('📋 Feature to add to MapboxDraw:', JSON.stringify(feature, null, 2));
+        draw.current.add(feature);
+
+        // If original shape had an SVG overlay (templateId), create one for the copy
+        if (savedShape.properties?.templateId) {
+          const template = getTemplateById(savedShape.properties.templateId);
+          if (template?.svg) {
+            // Transform and position SVG overlay
+            const transformedSvg = transformSvg(
+              template.svg,
+              savedShape.properties.width || 50,
+              savedShape.properties.height || 50,
+              savedShape.properties.rotation || 0
+            );
+
+            // Create SVG overlay element
+            const overlayDiv = document.createElement('div');
+            overlayDiv.innerHTML = transformedSvg;
+            overlayDiv.style.position = 'absolute';
+            overlayDiv.style.pointerEvents = 'none';
+            overlayDiv.style.zIndex = '10';
+
+            // Store overlay
+            svgOverlays.current.set(savedShape.id, {
+              element: overlayDiv,
+              featureId: savedShape.id,
+              coordinates: savedShape.coordinates[0],
+              properties: savedShape.properties
+            });
+
+            // Add to map
+            map.current.getCanvasContainer().appendChild(overlayDiv);
+
+            // Update position
+            updateSvgOverlayPosition(savedShape.id);
+          }
+        }
+
+        toast.success(`Pasted: ${savedShape.name}`);
+
+        // Expand the newly pasted shape
+        setExpandedShapeId(savedShape.id);
+      } else {
+        toast.error('Failed to paste shape');
+      }
+    } catch (error) {
+      console.error('Error pasting shape:', error);
+      toast.error('Error pasting shape');
+    }
+  };
+
+  // Keyboard event handlers for measurement tool and copy/paste
   useEffect(() => {
+    console.log('🎯 Keyboard event listener useEffect running');
+    console.log('🎯 Current state - expandedShapeId:', expandedShapeId, 'clipboardShape:', clipboardShape, 'drawnShapes:', drawnShapes.length);
+
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Debug: Log every key press
+      console.log('⌨️ Key pressed:', e.key, 'metaKey:', e.metaKey, 'ctrlKey:', e.ctrlKey, 'shiftKey:', e.shiftKey);
+
+      // Handle copy/paste for shapes (works in any mode)
+      // Copy: Cmd+C or Ctrl+C
+      if ((e.metaKey || e.ctrlKey) && e.key === 'c' && !e.shiftKey) {
+        console.log('📋 Copy triggered');
+        console.log('📋 expandedShapeId:', expandedShapeId);
+        console.log('📋 drawnShapes count:', drawnShapes.length);
+        console.log('📋 drawnShapes:', drawnShapes);
+
+        if (expandedShapeId) {
+          const shapeToCopy = drawnShapes.find(s => s.id === expandedShapeId);
+          console.log('📋 shapeToCopy found:', shapeToCopy);
+          if (shapeToCopy) {
+            setClipboardShape(shapeToCopy);
+            console.log('📋 Copied shape to clipboard:', shapeToCopy.name);
+            toast.success(`Copied: ${shapeToCopy.name}`);
+            e.preventDefault();
+          } else {
+            console.log('❌ Shape not found in drawnShapes');
+          }
+        } else {
+          console.log('❌ No expandedShapeId - no shape selected');
+        }
+        return;
+      }
+
+      // Paste: Cmd+V or Ctrl+V
+      if ((e.metaKey || e.ctrlKey) && e.key === 'v' && !e.shiftKey) {
+        console.log('📋 Paste triggered');
+        console.log('📋 clipboardShape:', clipboardShape);
+
+        if (clipboardShape) {
+          console.log('📋 Calling pasteShape()');
+          e.preventDefault();
+          pasteShape();
+        } else {
+          console.log('❌ No clipboardShape - nothing to paste');
+        }
+        return;
+      }
+
+      // Measurement tool handlers
       if (measurementMode === 'off') return;
 
       if (e.key === 'Escape') {
@@ -971,9 +1198,14 @@ export default function MapboxPropertyVisualization({
       }
     };
 
+    console.log('🎯 Attaching keydown listener to window');
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [measurementMode, measurementPoints]);
+
+    return () => {
+      console.log('🎯 Removing keydown listener from window');
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [measurementMode, measurementPoints, expandedShapeId, drawnShapes, clipboardShape]);
 
   // Setback violation detection functions
   const checkShapeSetbackViolation = useCallback((shape: any): boolean => {
@@ -1056,6 +1288,231 @@ export default function MapboxPropertyVisualization({
       console.log(`✅ All ${drawnShapes.length} shape(s) are within buildable area`);
     }
   }, [setbackPolygon, drawnShapes, checkShapeSetbackViolation]);
+
+  // Check for shape intersections (shapes overlapping each other)
+  const checkAllShapesForIntersections = useCallback(() => {
+    console.log('🔍 checkAllShapesForIntersections called');
+    console.log('🔍 Number of shapes:', drawnShapes?.length || 0);
+
+    if (!drawnShapes || drawnShapes.length < 2) {
+      console.log('⚠️ Skipping intersection check - need at least 2 shapes');
+      setShapeIntersections(new Map());
+      return;
+    }
+
+    console.log('🔍 Starting intersection checks for', drawnShapes.length, 'shapes');
+
+    const intersections = new Map<string, string[]>();
+
+    // Compare each shape with every other shape
+    for (let i = 0; i < drawnShapes.length; i++) {
+      for (let j = i + 1; j < drawnShapes.length; j++) {
+        const shape1 = drawnShapes[i];
+        const shape2 = drawnShapes[j];
+
+        try {
+          // Create polygons from shape coordinates
+          const coords1 = Array.isArray(shape1.coordinates[0][0])
+            ? shape1.coordinates[0]
+            : shape1.coordinates;
+
+          const coords2 = Array.isArray(shape2.coordinates[0][0])
+            ? shape2.coordinates[0]
+            : shape2.coordinates;
+
+          // Ensure polygons are closed
+          const closedCoords1 = [...coords1];
+          if (JSON.stringify(closedCoords1[0]) !== JSON.stringify(closedCoords1[closedCoords1.length - 1])) {
+            closedCoords1.push(closedCoords1[0]);
+          }
+
+          const closedCoords2 = [...coords2];
+          if (JSON.stringify(closedCoords2[0]) !== JSON.stringify(closedCoords2[closedCoords2.length - 1])) {
+            closedCoords2.push(closedCoords2[0]);
+          }
+
+          const poly1 = turf.polygon([closedCoords1]);
+          const poly2 = turf.polygon([closedCoords2]);
+
+          // Check if shapes actually overlap (share interior area)
+          // Use turf.intersect to get intersection geometry and check if area > 1 sq ft
+          try {
+            const intersection = turf.intersect(turf.featureCollection([poly1, poly2]));
+
+            if (intersection) {
+              const intersectionArea = turf.area(intersection); // Returns area in square meters
+
+              // Only count as overlap if intersection area is more than 1 square foot (~0.1 sq meters)
+              // This filters out edge-touching scenarios which have zero or negligible area
+              if (intersectionArea > 0.1) {
+                console.log(`⚠️ REAL OVERLAP: ${shape1.name} and ${shape2.name}, area: ${intersectionArea.toFixed(4)} m² (${(intersectionArea * 10.7639).toFixed(2)} sq ft)`);
+
+                // Add to intersections map for both shapes
+                const existing1 = intersections.get(shape1.id) || [];
+                const existing2 = intersections.get(shape2.id) || [];
+
+                intersections.set(shape1.id, [...existing1, shape2.id]);
+                intersections.set(shape2.id, [...existing2, shape1.id]);
+              } else {
+                console.log(`✅ ${shape1.name} and ${shape2.name} touching edges only (area: ${(intersectionArea * 10.7639).toFixed(4)} sq ft) - OK`);
+              }
+            } else {
+              console.log(`✅ ${shape1.name} and ${shape2.name} do not intersect`);
+            }
+          } catch (e) {
+            // No intersection or error computing intersection
+            console.log(`✅ ${shape1.name} and ${shape2.name} do not overlap`);
+          }
+        } catch (error) {
+          console.error('Error checking intersection between shapes:', shape1.name, shape2.name, error);
+        }
+      }
+    }
+
+    setShapeIntersections(intersections);
+
+    if (intersections.size > 0) {
+      console.log(`🚨 Found ${intersections.size} shape(s) with intersections:`, Object.fromEntries(intersections));
+    } else {
+      console.log(`✅ No shape intersections detected`);
+    }
+  }, [drawnShapes]);
+
+  // Helper function to get shape bounding box
+  const getShapeBounds = useCallback((coordinates: any) => {
+    // Handle different coordinate formats
+    const coords = Array.isArray(coordinates[0]?.[0])
+      ? coordinates[0] // Nested format [[[lng, lat], ...]]
+      : coordinates;    // Flat format [[lng, lat], ...]
+
+    let minX = Infinity, maxX = -Infinity;
+    let minY = Infinity, maxY = -Infinity;
+
+    coords.forEach((coord: [number, number]) => {
+      const [lng, lat] = coord;
+      minX = Math.min(minX, lng);
+      maxX = Math.max(maxX, lng);
+      minY = Math.min(minY, lat);
+      maxY = Math.max(maxY, lat);
+    });
+
+    return { minX, maxX, minY, maxY };
+  }, []);
+
+  // Helper function to find snap points for a moving shape
+  const getSnapPoints = useCallback((movingShapeCoords: any, movingShapeId: string) => {
+    console.log('🧲 ========== getSnapPoints CALLED ==========');
+    console.log('🧲 movingShapeId:', movingShapeId);
+    console.log('🧲 drawnShapes count:', drawnShapes?.length || 0);
+    console.log('🧲 SNAP_THRESHOLD:', SNAP_THRESHOLD);
+
+    if (!drawnShapes || drawnShapes.length < 2) {
+      console.log('⚠️ Not enough shapes for snapping (need at least 2)');
+      return { snapX: null, snapY: null, snapInfo: null };
+    }
+
+    const movingBounds = getShapeBounds(movingShapeCoords);
+    let snapX: number | null = null;
+    let snapY: number | null = null;
+    let snapInfo: { type: string; otherShapeName: string } | null = null;
+
+    console.log('🧲 Moving shape bounds:', movingBounds);
+    console.log('🧲 Checking against', drawnShapes.length - 1, 'other shapes');
+
+    for (const otherShape of drawnShapes) {
+      // Skip the shape being moved
+      if (otherShape.id === movingShapeId) {
+        console.log(`  ⏭️ Skipping self: ${otherShape.name}`);
+        continue;
+      }
+
+      const otherBounds = getShapeBounds(otherShape.coordinates);
+      console.log(`  🔍 Comparing with ${otherShape.name}:`, otherBounds);
+
+      // Check horizontal edges (left/right alignment)
+      // Snap moving shape's left edge to other's right edge (shapes touch, no overlap)
+      const leftToRightDist = Math.abs(movingBounds.minX - otherBounds.maxX);
+      console.log(`  📏 Left-to-right distance: ${leftToRightDist} (threshold: ${SNAP_THRESHOLD})`);
+      if (leftToRightDist < SNAP_THRESHOLD) {
+        snapX = otherBounds.maxX;
+        snapInfo = { type: 'left-to-right', otherShapeName: otherShape.name };
+        console.log(`  ✅ SNAP: Left edge to ${otherShape.name}'s right edge`);
+      }
+
+      // Snap moving shape's right edge to other's left edge
+      const rightToLeftDist = Math.abs(movingBounds.maxX - otherBounds.minX);
+      if (rightToLeftDist < SNAP_THRESHOLD) {
+        const shapeWidth = movingBounds.maxX - movingBounds.minX;
+        snapX = otherBounds.minX - shapeWidth;
+        snapInfo = { type: 'right-to-left', otherShapeName: otherShape.name };
+        console.log(`  ✅ SNAP: Right edge to ${otherShape.name}'s left edge`);
+      }
+
+      // Snap left edges to align
+      const leftToLeftDist = Math.abs(movingBounds.minX - otherBounds.minX);
+      if (leftToLeftDist < SNAP_THRESHOLD) {
+        snapX = otherBounds.minX;
+        snapInfo = { type: 'left-align', otherShapeName: otherShape.name };
+        console.log(`  ✅ SNAP: Left edges align with ${otherShape.name}`);
+      }
+
+      // Snap right edges to align
+      const rightToRightDist = Math.abs(movingBounds.maxX - otherBounds.maxX);
+      if (rightToRightDist < SNAP_THRESHOLD) {
+        const shapeWidth = movingBounds.maxX - movingBounds.minX;
+        snapX = otherBounds.maxX - shapeWidth;
+        snapInfo = { type: 'right-align', otherShapeName: otherShape.name };
+        console.log(`  ✅ SNAP: Right edges align with ${otherShape.name}`);
+      }
+
+      // Check vertical edges (top/bottom alignment)
+      // Snap moving shape's top to other's bottom
+      const topToBottomDist = Math.abs(movingBounds.maxY - otherBounds.minY);
+      if (topToBottomDist < SNAP_THRESHOLD) {
+        const shapeHeight = movingBounds.maxY - movingBounds.minY;
+        snapY = otherBounds.minY - shapeHeight;
+        snapInfo = { type: 'top-to-bottom', otherShapeName: otherShape.name };
+        console.log(`  ✅ SNAP: Top edge to ${otherShape.name}'s bottom edge`);
+      }
+
+      // Snap moving shape's bottom to other's top
+      const bottomToTopDist = Math.abs(movingBounds.minY - otherBounds.maxY);
+      if (bottomToTopDist < SNAP_THRESHOLD) {
+        snapY = otherBounds.maxY;
+        snapInfo = { type: 'bottom-to-top', otherShapeName: otherShape.name };
+        console.log(`  ✅ SNAP: Bottom edge to ${otherShape.name}'s top edge`);
+      }
+
+      // Snap top edges to align
+      const topToTopDist = Math.abs(movingBounds.maxY - otherBounds.maxY);
+      if (topToTopDist < SNAP_THRESHOLD) {
+        const shapeHeight = movingBounds.maxY - movingBounds.minY;
+        snapY = otherBounds.maxY - shapeHeight;
+        snapInfo = { type: 'top-align', otherShapeName: otherShape.name };
+        console.log(`  ✅ SNAP: Top edges align with ${otherShape.name}`);
+      }
+
+      // Snap bottom edges to align
+      const bottomToBottomDist = Math.abs(movingBounds.minY - otherBounds.minY);
+      if (bottomToBottomDist < SNAP_THRESHOLD) {
+        snapY = otherBounds.minY;
+        snapInfo = { type: 'bottom-align', otherShapeName: otherShape.name };
+        console.log(`  ✅ SNAP: Bottom edges align with ${otherShape.name}`);
+      }
+
+      // If we found a snap, we can return early
+      if (snapX !== null || snapY !== null) {
+        console.log('🧲 Snap points found:', { snapX, snapY, snapInfo });
+        break;
+      }
+    }
+
+    if (snapX === null && snapY === null) {
+      console.log('🧲 No snap points found');
+    }
+
+    return { snapX, snapY, snapInfo };
+  }, [drawnShapes, getShapeBounds]);
 
   // Function to update SVG overlay position based on stored coordinates
   const updateSvgOverlayPosition = useCallback((shapeId: string) => {
@@ -1299,11 +1756,106 @@ export default function MapboxPropertyVisualization({
     }
   }, []);
 
-  const handleShapeUpdate = (e: any) => {
+  // Debounce timer for saving shape coordinates
+  const saveTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
+
+  // Save shape coordinates to database (debounced to avoid excessive API calls)
+  const saveShapeCoordinates = useCallback(async (shapeId: string, coordinates: [number, number][]) => {
+    // Clear existing timer for this shape
+    const existingTimer = saveTimers.current.get(shapeId);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+
+    // Set new timer to save after 1 second of inactivity
+    const timer = setTimeout(async () => {
+      console.log('💾 Saving shape coordinates to database:', shapeId);
+      try {
+        const response = await fetch(`/api/projects/${projectId}/shapes/${shapeId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ coordinates })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to save shape coordinates');
+        }
+
+        console.log('✅ Shape coordinates saved successfully:', shapeId);
+        saveTimers.current.delete(shapeId);
+      } catch (error) {
+        console.error('❌ Error saving shape coordinates:', error);
+        toast.error('Failed to save shape position');
+      }
+    }, 1000); // 1 second debounce
+
+    saveTimers.current.set(shapeId, timer);
+  }, [projectId]);
+
+  const handleShapeUpdate = useCallback((e: any) => {
     console.log('🔄 Shape updated, features:', e.features?.length);
 
     // Clean up any orphan overlays before updating
     cleanupOrphanOverlays();
+
+    // Apply snapping to moving shapes
+    e.features?.forEach((feature: any) => {
+      if (!feature.geometry || !draw.current) return;
+
+      const coords = feature.geometry.coordinates[0];
+
+      // Find the shape ID for this feature
+      const shapeEntry = Array.from(svgOverlays.current.entries()).find(
+        ([_, overlay]) => overlay.featureId === feature.id
+      );
+      const movingShapeId = shapeEntry ? shapeEntry[0] : feature.id;
+
+      // Get snap points for this shape
+      const { snapX, snapY, snapInfo } = getSnapPoints(coords, movingShapeId);
+
+      // If we have snap points, adjust the coordinates
+      if (snapX !== null || snapY !== null) {
+        console.log('🧲 Snapping active!', { snapX, snapY, snapInfo });
+
+        // Get current bounds
+        const currentBounds = getShapeBounds(coords);
+
+        // Calculate offset to apply
+        const offsetX = snapX !== null ? snapX - currentBounds.minX : 0;
+        const offsetY = snapY !== null ? snapY - currentBounds.minY : 0;
+
+        // Apply offset to all coordinates
+        const snappedCoords = coords.map((coord: [number, number]) => [
+          coord[0] + offsetX,
+          coord[1] + offsetY
+        ]);
+
+        // Update the feature's coordinates with snapped version
+        feature.geometry.coordinates[0] = snappedCoords;
+
+        // Update the feature in MapboxDraw
+        const allFeatures = draw.current.getAll();
+        const featureToUpdate = allFeatures.features.find((f: any) => f.id === feature.id);
+        if (featureToUpdate) {
+          featureToUpdate.geometry.coordinates[0] = snappedCoords;
+          draw.current.set(allFeatures);
+        }
+
+        // Update snap guide lines
+        setSnapGuideLines({
+          x: snapX,
+          y: snapY
+        });
+
+        // Show toast with snap info
+        if (snapInfo) {
+          toast.info(`Snapped to ${snapInfo.otherShapeName}`, { duration: 500 });
+        }
+      } else {
+        // Clear snap guide lines if no snapping
+        setSnapGuideLines({ x: null, y: null });
+      }
+    });
 
     // Update SVG overlays for updated shapes
     e.features?.forEach((feature: any) => {
@@ -1349,12 +1901,35 @@ export default function MapboxPropertyVisualization({
           }
           return shape;
         }));
+
+        // Save updated coordinates to database (debounced)
+        saveShapeCoordinates(shapeId, overlay.coordinates);
       } else {
         console.error('❌ No overlay found for feature:', feature.id);
         console.error('Available overlays:', Array.from(svgOverlays.current.keys()));
       }
     });
-  };
+  }, [cleanupOrphanOverlays, getSnapPoints, getShapeBounds, setSnapGuideLines, updateSvgOverlayPosition, setDrawnShapes, saveShapeCoordinates]);
+
+  // Re-register draw.update listener when handleShapeUpdate changes
+  // This ensures the handler always has access to the latest drawnShapes and other state
+  useEffect(() => {
+    if (!map.current || !isMapReady) return;
+
+    console.log('🔄 Re-registering draw.update event listener with updated handler');
+
+    // Remove old listener
+    map.current.off('draw.update', handleShapeUpdate);
+
+    // Add new listener with updated handler
+    map.current.on('draw.update', handleShapeUpdate);
+
+    return () => {
+      if (map.current) {
+        map.current.off('draw.update', handleShapeUpdate);
+      }
+    };
+  }, [handleShapeUpdate, isMapReady]);
 
   const handleShapeDelete = async (e: any) => {
     const deletedFeatures = e.features;
@@ -3765,6 +4340,19 @@ export default function MapboxPropertyVisualization({
     }
   }, [setbackPolygon, drawnShapes, checkAllShapesForViolations]);
 
+  // Check for shape intersections whenever shapes change
+  useEffect(() => {
+    console.log('🔍 Intersection check useEffect triggered');
+    console.log('🔍 drawnShapes:', drawnShapes?.length || 0);
+
+    if (drawnShapes && drawnShapes.length >= 2) {
+      console.log('🔍 Calling checkAllShapesForIntersections...');
+      checkAllShapesForIntersections();
+    } else {
+      console.log('⚠️ Not checking intersections - need at least 2 shapes');
+    }
+  }, [drawnShapes, checkAllShapesForIntersections]);
+
   // Visualize setback violations with red borders
   useEffect(() => {
     console.log('🔴 Visualization useEffect triggered');
@@ -3831,6 +4419,184 @@ export default function MapboxPropertyVisualization({
 
     console.log(`🔴 Visualized ${violatedShapes.length} violated shape(s) with red borders`);
   }, [shapeViolations, drawnShapes, isMapReady]);
+
+  // Visualize shape intersections with orange/yellow borders
+  useEffect(() => {
+    console.log('🟠 Intersection visualization useEffect triggered');
+    console.log('🟠 shapeIntersections.size:', shapeIntersections.size);
+    console.log('🟠 Intersections:', Object.fromEntries(shapeIntersections));
+
+    if (!map.current || !isMapReady) {
+      console.log('⚠️ Map not ready for intersection visualization');
+      return;
+    }
+
+    // Remove existing intersection layer if it exists
+    if (map.current.getLayer('shape-intersections-line')) {
+      map.current.removeLayer('shape-intersections-line');
+      console.log('🟠 Removed existing intersection layer');
+    }
+    if (map.current.getSource('shape-intersections')) {
+      map.current.removeSource('shape-intersections');
+      console.log('🟠 Removed existing intersection source');
+    }
+
+    // Only add layer if there are intersections
+    if (shapeIntersections.size === 0) {
+      console.log('✅ No intersections to visualize');
+      return;
+    }
+
+    // Get shapes that have intersections
+    const intersectingShapeIds = Array.from(shapeIntersections.keys());
+    const intersectingShapes = drawnShapes.filter(shape => intersectingShapeIds.includes(shape.id));
+
+    if (intersectingShapes.length === 0) return;
+
+    // Create GeoJSON for intersecting shapes
+    const intersectionFeatures = intersectingShapes.map(shape => ({
+      type: 'Feature' as const,
+      properties: { id: shape.id, name: shape.name },
+      geometry: {
+        type: 'Polygon' as const,
+        coordinates: shape.coordinates
+      }
+    }));
+
+    const intersectionGeoJSON = {
+      type: 'FeatureCollection' as const,
+      features: intersectionFeatures
+    };
+
+    // Add source and layer for intersections
+    map.current.addSource('shape-intersections', {
+      type: 'geojson',
+      data: intersectionGeoJSON
+    });
+
+    map.current.addLayer({
+      id: 'shape-intersections-line',
+      type: 'line',
+      source: 'shape-intersections',
+      paint: {
+        'line-color': '#f59e0b', // Orange/amber border
+        'line-width': 3,
+        'line-dasharray': [4, 2] // Dashed line (different pattern from violations)
+      }
+    });
+
+    console.log(`🟠 Visualized ${intersectingShapes.length} intersecting shape(s) with orange borders`);
+  }, [shapeIntersections, drawnShapes, isMapReady]);
+
+  // Visualize snap guide lines with cyan lines
+  useEffect(() => {
+    console.log('🧲 Snap guide lines useEffect triggered');
+    console.log('🧲 snapGuideLines:', snapGuideLines);
+
+    if (!map.current || !isMapReady) {
+      console.log('⚠️ Map not ready for snap guide visualization');
+      return;
+    }
+
+    // Remove existing snap guide layers if they exist
+    if (map.current.getLayer('snap-guide-x')) {
+      map.current.removeLayer('snap-guide-x');
+    }
+    if (map.current.getLayer('snap-guide-y')) {
+      map.current.removeLayer('snap-guide-y');
+    }
+    if (map.current.getSource('snap-guide-x')) {
+      map.current.removeSource('snap-guide-x');
+    }
+    if (map.current.getSource('snap-guide-y')) {
+      map.current.removeSource('snap-guide-y');
+    }
+
+    // Get map bounds to draw lines across the entire viewport
+    const bounds = map.current.getBounds();
+    const north = bounds.getNorth();
+    const south = bounds.getSouth();
+    const east = bounds.getEast();
+    const west = bounds.getWest();
+
+    // Add vertical guide line (X coordinate)
+    if (snapGuideLines.x !== null) {
+      const verticalLine = {
+        type: 'FeatureCollection' as const,
+        features: [{
+          type: 'Feature' as const,
+          properties: {},
+          geometry: {
+            type: 'LineString' as const,
+            coordinates: [
+              [snapGuideLines.x, south],
+              [snapGuideLines.x, north]
+            ]
+          }
+        }]
+      };
+
+      map.current.addSource('snap-guide-x', {
+        type: 'geojson',
+        data: verticalLine
+      });
+
+      map.current.addLayer({
+        id: 'snap-guide-x',
+        type: 'line',
+        source: 'snap-guide-x',
+        paint: {
+          'line-color': '#00d9ff', // Cyan color
+          'line-width': 2,
+          'line-dasharray': [2, 4], // Dashed line
+          'line-opacity': 0.8
+        }
+      });
+
+      console.log('🧲 Added vertical snap guide at X:', snapGuideLines.x);
+    }
+
+    // Add horizontal guide line (Y coordinate)
+    if (snapGuideLines.y !== null) {
+      const horizontalLine = {
+        type: 'FeatureCollection' as const,
+        features: [{
+          type: 'Feature' as const,
+          properties: {},
+          geometry: {
+            type: 'LineString' as const,
+            coordinates: [
+              [west, snapGuideLines.y],
+              [east, snapGuideLines.y]
+            ]
+          }
+        }]
+      };
+
+      map.current.addSource('snap-guide-y', {
+        type: 'geojson',
+        data: horizontalLine
+      });
+
+      map.current.addLayer({
+        id: 'snap-guide-y',
+        type: 'line',
+        source: 'snap-guide-y',
+        paint: {
+          'line-color': '#00d9ff', // Cyan color
+          'line-width': 2,
+          'line-dasharray': [2, 4], // Dashed line
+          'line-opacity': 0.8
+        }
+      });
+
+      console.log('🧲 Added horizontal snap guide at Y:', snapGuideLines.y);
+    }
+
+    if (snapGuideLines.x === null && snapGuideLines.y === null) {
+      console.log('✅ No snap guides to visualize');
+    }
+  }, [snapGuideLines, isMapReady]);
 
   // Save shape edits (dimensions, name)
   const saveShapeEdits = async (shapeId: string) => {
@@ -4427,6 +5193,14 @@ export default function MapboxPropertyVisualization({
                           Setback Violation
                         </span>
                       )}
+                      {shapeIntersections.has(shape.id) && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                          <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                          Shape Overlap
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       {/* Chevron icon */}
@@ -4902,28 +5676,60 @@ export default function MapboxPropertyVisualization({
           {/* Overall Status */}
           <div>
             <div className="text-xs font-medium text-gray-600 mb-2">Overall Status</div>
-            {shapeViolations.size === 0 ? (
+            {shapeViolations.size === 0 && shapeIntersections.size === 0 ? (
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-green-500"></div>
                 <span className="text-sm font-medium">All Pass</span>
               </div>
             ) : (
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse"></div>
-                  <span className="text-sm font-medium text-red-600">Setback Violation</span>
-                </div>
-                <div className="text-xs text-red-600 bg-red-50 p-2 rounded">
-                  {shapeViolations.size} shape{shapeViolations.size > 1 ? 's' : ''} violating setbacks:
-                  <ul className="mt-1 ml-2 list-disc list-inside">
-                    {drawnShapes
-                      .filter(shape => shapeViolations.has(shape.id))
-                      .map(shape => (
-                        <li key={shape.id}>{shape.name || 'Unnamed'}</li>
-                      ))
-                    }
-                  </ul>
-                </div>
+              <div className="space-y-2">
+                {/* Setback Violations */}
+                {shapeViolations.size > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse"></div>
+                      <span className="text-sm font-medium text-red-600">Setback Violation</span>
+                    </div>
+                    <div className="text-xs text-red-600 bg-red-50 p-2 rounded">
+                      {shapeViolations.size} shape{shapeViolations.size > 1 ? 's' : ''} violating setbacks:
+                      <ul className="mt-1 ml-2 list-disc list-inside">
+                        {drawnShapes
+                          .filter(shape => shapeViolations.has(shape.id))
+                          .map(shape => (
+                            <li key={shape.id}>{shape.name || 'Unnamed'}</li>
+                          ))
+                        }
+                      </ul>
+                    </div>
+                  </div>
+                )}
+
+                {/* Shape Intersections */}
+                {shapeIntersections.size > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-3 h-3 rounded-full bg-amber-500 animate-pulse"></div>
+                      <span className="text-sm font-medium text-amber-600">Shape Overlap</span>
+                    </div>
+                    <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
+                      {shapeIntersections.size} shape{shapeIntersections.size > 1 ? 's' : ''} overlapping:
+                      <ul className="mt-1 ml-2 list-disc list-inside">
+                        {Array.from(shapeIntersections.keys()).map(shapeId => {
+                          const shape = drawnShapes.find(s => s.id === shapeId);
+                          const overlappingShapes = shapeIntersections.get(shapeId) || [];
+                          const overlappingNames = overlappingShapes
+                            .map(id => drawnShapes.find(s => s.id === id)?.name || 'Unnamed')
+                            .join(', ');
+                          return (
+                            <li key={shapeId}>
+                              {shape?.name || 'Unnamed'} → {overlappingNames}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
