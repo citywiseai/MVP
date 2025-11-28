@@ -78,6 +78,8 @@ export default function MapboxPropertyVisualization({
     sideRight: 5
   });
   const [setbacksApplied, setSetbacksApplied] = useState(false); // Track if user has applied setbacks - start hidden
+  const [setbackPolygon, setSetbackPolygon] = useState<any>(null); // Store buildable area polygon for violation detection
+  const [shapeViolations, setShapeViolations] = useState<Set<string>>(new Set()); // Track shapes violating setbacks
 
   // Measurement tool state
   const [measurementMode, setMeasurementMode] = useState<'off' | 'single' | 'polyline'>('off');
@@ -973,6 +975,88 @@ export default function MapboxPropertyVisualization({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [measurementMode, measurementPoints]);
 
+  // Setback violation detection functions
+  const checkShapeSetbackViolation = useCallback((shape: any): boolean => {
+    console.log('🔍 Checking shape for violation:', shape.id, shape.name);
+    console.log('🔍 Setback polygon exists:', !!setbackPolygon);
+    console.log('🔍 Shape coordinates:', shape.coordinates);
+
+    if (!setbackPolygon || !shape.coordinates) {
+      console.log('⚠️ Skipping violation check - missing setback polygon or coordinates');
+      return false; // No violation if no setback polygon or coordinates
+    }
+
+    try {
+      // Create polygon from shape coordinates
+      const shapeCoords = Array.isArray(shape.coordinates[0][0])
+        ? shape.coordinates[0] // Already in correct format [[lng, lat], ...]
+        : shape.coordinates; // Convert if needed
+
+      console.log('🔍 Shape coords format:', shapeCoords.slice(0, 2));
+
+      // Ensure polygon is closed
+      const closedCoords = [...shapeCoords];
+      if (JSON.stringify(closedCoords[0]) !== JSON.stringify(closedCoords[closedCoords.length - 1])) {
+        closedCoords.push(closedCoords[0]);
+      }
+
+      const shapePolygon = turf.polygon([closedCoords]);
+
+      console.log('🔍 Shape polygon created:', shapePolygon.geometry.type);
+      console.log('🔍 Setback polygon type:', setbackPolygon.geometry?.type || setbackPolygon.type);
+
+      // Check if shape is completely within buildable area
+      // A violation occurs if shape extends outside the buildable area
+      const isWithin = turf.booleanWithin(shapePolygon, setbackPolygon);
+      const isViolation = !isWithin;
+
+      console.log('🔍 Is shape within buildable area?', isWithin);
+      console.log('🔍 Is violation?', isViolation);
+
+      if (isViolation) {
+        console.log(`⚠️ Setback violation detected for shape ${shape.id} (${shape.name})`);
+      } else {
+        console.log(`✅ Shape ${shape.id} (${shape.name}) is within buildable area`);
+      }
+
+      return isViolation;
+    } catch (error) {
+      console.error('Error checking setback violation:', error, shape);
+      return false;
+    }
+  }, [setbackPolygon]);
+
+  const checkAllShapesForViolations = useCallback(() => {
+    console.log('🔍 checkAllShapesForViolations called');
+    console.log('🔍 Number of shapes:', drawnShapes?.length || 0);
+    console.log('🔍 Setback polygon exists:', !!setbackPolygon);
+    console.log('🔍 Setback polygon:', setbackPolygon);
+
+    if (!setbackPolygon || !drawnShapes || drawnShapes.length === 0) {
+      console.log('⚠️ Skipping violation check - missing data');
+      setShapeViolations(new Set());
+      return;
+    }
+
+    console.log('🔍 Starting violation checks for', drawnShapes.length, 'shapes');
+
+    const violations = new Set<string>();
+    drawnShapes.forEach(shape => {
+      console.log('🔍 Checking shape:', shape.name, shape.id);
+      if (checkShapeSetbackViolation(shape)) {
+        violations.add(shape.id);
+      }
+    });
+
+    setShapeViolations(violations);
+
+    if (violations.size > 0) {
+      console.log(`🚨 Found ${violations.size} shape(s) violating setbacks:`, Array.from(violations));
+    } else {
+      console.log(`✅ All ${drawnShapes.length} shape(s) are within buildable area`);
+    }
+  }, [setbackPolygon, drawnShapes, checkShapeSetbackViolation]);
+
   // Function to update SVG overlay position based on stored coordinates
   const updateSvgOverlayPosition = useCallback((shapeId: string) => {
     if (!map.current) return;
@@ -1569,7 +1653,7 @@ export default function MapboxPropertyVisualization({
                 console.log(`✨ Added SVG overlay for ${shape.name}`, {
                   shapeId: savedShape.id,
                   featureId: savedShape.id,
-                  svgLength: svg.length,
+                  svgLength: transformedSvg.length,
                   overlayElement: overlayDiv,
                   appendedTo: canvasContainer ? 'canvas-container' : 'map-container',
                   properties: shapeData.properties
@@ -1927,6 +2011,35 @@ export default function MapboxPropertyVisualization({
           features: lineSegments
         };
 
+        // Create buildable area polygon from line segments for violation detection
+        try {
+          const polygonCoords: any[] = [];
+
+          // Extract coordinates from each line segment in order
+          lineSegments.forEach((segment, index) => {
+            // Add the start point of each segment
+            polygonCoords.push(segment.geometry.coordinates[0]);
+          });
+
+          // Close the polygon by adding the first point at the end
+          if (polygonCoords.length > 0) {
+            polygonCoords.push(polygonCoords[0]);
+          }
+
+          // Create GeoJSON polygon for Turf.js violation detection
+          const buildableAreaPolygon = turf.polygon([polygonCoords]);
+
+          console.log('📐 Storing PER-EDGE buildable area polygon for violation detection');
+          console.log('📐 Polygon type:', buildableAreaPolygon.type, buildableAreaPolygon.geometry.type);
+          console.log('📐 Polygon coordinates (first 3):', buildableAreaPolygon.geometry.coordinates[0].slice(0, 3));
+          console.log('📐 Total vertices:', polygonCoords.length);
+
+          // Store the buildable area polygon in state
+          setSetbackPolygon(buildableAreaPolygon);
+        } catch (error) {
+          console.error('❌ Error creating buildable area polygon from line segments:', error);
+        }
+
         // Add to map
         map.current.addSource('setback', {
           type: 'geojson',
@@ -1960,12 +2073,18 @@ export default function MapboxPropertyVisualization({
 
         const avgSetbackFeet = (setbacks.front + setbacks.rear + setbacks.sideLeft + setbacks.sideRight) / 4;
         const avgSetbackMiles = avgSetbackFeet / 5280;
-        const setbackPolygon = turf.buffer(boundaryPolygon, -avgSetbackMiles, { units: 'miles' });
+        const calculatedSetbackPolygon = turf.buffer(boundaryPolygon, -avgSetbackMiles, { units: 'miles' });
 
-        if (setbackPolygon) {
+        if (calculatedSetbackPolygon) {
+          // Store setback polygon in state for violation detection
+          console.log('📐 Storing setback polygon for violation detection');
+          console.log('📐 Setback polygon type:', calculatedSetbackPolygon.type, calculatedSetbackPolygon.geometry?.type);
+          console.log('📐 Setback polygon coordinates:', calculatedSetbackPolygon.geometry?.coordinates?.[0]?.slice(0, 3));
+          setSetbackPolygon(calculatedSetbackPolygon);
+
           map.current.addSource('setback', {
             type: 'geojson',
-            data: setbackPolygon
+            data: calculatedSetbackPolygon
           });
 
           map.current.addLayer({
@@ -3632,6 +3751,87 @@ export default function MapboxPropertyVisualization({
     loadMeasurements();
   }, [projectId, isMapReady]);
 
+  // Check for setback violations whenever shapes or setback polygon changes
+  useEffect(() => {
+    console.log('🔍 Violation check useEffect triggered');
+    console.log('🔍 setbackPolygon:', !!setbackPolygon);
+    console.log('🔍 drawnShapes:', drawnShapes?.length || 0);
+
+    if (setbackPolygon && drawnShapes && drawnShapes.length > 0) {
+      console.log('🔍 Calling checkAllShapesForViolations...');
+      checkAllShapesForViolations();
+    } else {
+      console.log('⚠️ Not checking violations - conditions not met');
+    }
+  }, [setbackPolygon, drawnShapes, checkAllShapesForViolations]);
+
+  // Visualize setback violations with red borders
+  useEffect(() => {
+    console.log('🔴 Visualization useEffect triggered');
+    console.log('🔴 shapeViolations.size:', shapeViolations.size);
+    console.log('🔴 Violations:', Array.from(shapeViolations));
+
+    if (!map.current || !isMapReady) {
+      console.log('⚠️ Map not ready for visualization');
+      return;
+    }
+
+    // Remove existing violation layer if it exists
+    if (map.current.getLayer('shape-violations-line')) {
+      map.current.removeLayer('shape-violations-line');
+      console.log('🔴 Removed existing violation layer');
+    }
+    if (map.current.getSource('shape-violations')) {
+      map.current.removeSource('shape-violations');
+      console.log('🔴 Removed existing violation source');
+    }
+
+    // Only add layer if there are violations
+    if (shapeViolations.size === 0) {
+      console.log('✅ No violations to visualize');
+      return;
+    }
+
+    // Get violated shape geometries
+    const violatedShapes = drawnShapes.filter(shape => shapeViolations.has(shape.id));
+
+    if (violatedShapes.length === 0) return;
+
+    // Create GeoJSON for violated shapes
+    const violationFeatures = violatedShapes.map(shape => ({
+      type: 'Feature' as const,
+      properties: { id: shape.id, name: shape.name },
+      geometry: {
+        type: 'Polygon' as const,
+        coordinates: shape.coordinates
+      }
+    }));
+
+    const violationGeoJSON = {
+      type: 'FeatureCollection' as const,
+      features: violationFeatures
+    };
+
+    // Add source and layer for violations
+    map.current.addSource('shape-violations', {
+      type: 'geojson',
+      data: violationGeoJSON
+    });
+
+    map.current.addLayer({
+      id: 'shape-violations-line',
+      type: 'line',
+      source: 'shape-violations',
+      paint: {
+        'line-color': '#ef4444', // Red border
+        'line-width': 3,
+        'line-dasharray': [2, 2] // Dashed line to distinguish from normal borders
+      }
+    });
+
+    console.log(`🔴 Visualized ${violatedShapes.length} violated shape(s) with red borders`);
+  }, [shapeViolations, drawnShapes, isMapReady]);
+
   // Save shape edits (dimensions, name)
   const saveShapeEdits = async (shapeId: string) => {
     if (!editingShapeData || !map.current || !draw.current) return;
@@ -4219,6 +4419,14 @@ export default function MapboxPropertyVisualization({
                       <div className="text-xs text-gray-500">
                         {Math.round(shape.area || 0).toLocaleString()} sq ft
                       </div>
+                      {shapeViolations.has(shape.id) && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                          <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                          Setback Violation
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       {/* Chevron icon */}
@@ -4694,10 +4902,30 @@ export default function MapboxPropertyVisualization({
           {/* Overall Status */}
           <div>
             <div className="text-xs font-medium text-gray-600 mb-2">Overall Status</div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-green-500"></div>
-              <span className="text-sm font-medium">All Pass</span>
-            </div>
+            {shapeViolations.size === 0 ? (
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                <span className="text-sm font-medium">All Pass</span>
+              </div>
+            ) : (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse"></div>
+                  <span className="text-sm font-medium text-red-600">Setback Violation</span>
+                </div>
+                <div className="text-xs text-red-600 bg-red-50 p-2 rounded">
+                  {shapeViolations.size} shape{shapeViolations.size > 1 ? 's' : ''} violating setbacks:
+                  <ul className="mt-1 ml-2 list-disc list-inside">
+                    {drawnShapes
+                      .filter(shape => shapeViolations.has(shape.id))
+                      .map(shape => (
+                        <li key={shape.id}>{shape.name || 'Unnamed'}</li>
+                      ))
+                    }
+                  </ul>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Property Stats */}
