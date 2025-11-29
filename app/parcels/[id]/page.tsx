@@ -28,22 +28,26 @@ async function runAnalysis(formData: FormData) {
   
   // Still need to use redirect for now since server actions in forms must return void
   redirect(`/parcels/${parcelId}?analysis=${encodeURIComponent(analysis)}`)
-}export default async function ParcelDetailPage({
+}
+
+export default async function ParcelDetailPage({
   params,
   searchParams,
 }: {
-  params: { id: string }
-  searchParams: { analysis?: string }
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ analysis?: string }>
 }) {
   const session = await auth()
   if (!session?.user) {
     redirect('/login')
   }
 
-  const analysis = searchParams?.analysis ? decodeURIComponent(searchParams.analysis) : null
+  const { id } = await params
+  const { analysis: analysisParam } = await searchParams
+  const analysis = analysisParam ? decodeURIComponent(analysisParam) : null
 
   const parcel = await prisma.parcel.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       zoningRules: true,
       projects: {
