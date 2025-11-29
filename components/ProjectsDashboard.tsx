@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Building2, Plus, ChevronDown, ChevronUp, Trash2, Upload, FileText, MessageSquare, Pencil, FileDown, Search } from 'lucide-react'
+import { Building2, Plus, ChevronDown, ChevronUp, Trash2, Upload, FileText, MessageSquare, Pencil, FileDown, Search, Archive, ArchiveRestore } from 'lucide-react'
 import { SignOutButton } from './SignOutButton'
 import dynamic from 'next/dynamic'
 import DashboardEmptyState from './DashboardEmptyState'
@@ -66,6 +66,7 @@ export function ProjectsDashboard({
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [priorityFilter, setPriorityFilter] = useState<string>('all')
   const [tagFilter, setTagFilter] = useState<string>('all')
+  const [showArchived, setShowArchived] = useState(false)
 
   const selectedProject = projects.find(p => p.id === selectedProjectId)
 
@@ -247,6 +248,10 @@ export function ProjectsDashboard({
 
     // First, filter projects
     const filtered = projects.filter(project => {
+      // Archive filter - hide archived unless showArchived is true
+      const isArchived = !!project.archivedAt
+      if (isArchived && !showArchived) return false
+
       // Search filter - check name, address, client name
       const searchLower = searchQuery.toLowerCase()
       const matchesSearch = !searchQuery ||
@@ -307,7 +312,7 @@ export function ProjectsDashboard({
           return 0
       }
     })
-  }, [projects, searchQuery, statusFilter, priorityFilter, tagFilter, sortField, sortOrder])
+  }, [projects, searchQuery, statusFilter, priorityFilter, tagFilter, showArchived, sortField, sortOrder])
 
   const sortTasksByPriority = (tasks: any[]) => {
     const priorityOrder = { 'HIGH': 0, 'MEDIUM': 1, 'LOW': 2 }
@@ -455,6 +460,33 @@ export function ProjectsDashboard({
     } catch (error) {
       console.error(error)
       alert('Failed to delete project')
+    }
+  }
+
+  const handleArchiveProject = async (projectId: string, archive: boolean, e: React.MouseEvent) => {
+    e.stopPropagation()
+
+    try {
+      const res = await fetch(`/api/projects/${projectId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          archivedAt: archive ? new Date().toISOString() : null
+        }),
+      })
+
+      if (!res.ok) throw new Error('Failed to archive/restore project')
+
+      const updatedProject = await res.json()
+      setProjects(projects.map(p => p.id === projectId ? updatedProject : p))
+
+      // If archiving the currently selected project and not showing archived, deselect it
+      if (archive && selectedProjectId === projectId && !showArchived) {
+        setSelectedProjectId(null)
+      }
+    } catch (error) {
+      console.error(error)
+      alert(`Failed to ${archive ? 'archive' : 'restore'} project`)
     }
   }
 
@@ -768,6 +800,17 @@ export function ProjectsDashboard({
             </select>
           </div>
 
+          {/* Show Archived Checkbox */}
+          <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:text-gray-900 transition-colors">
+            <input
+              type="checkbox"
+              checked={showArchived}
+              onChange={(e) => setShowArchived(e.target.checked)}
+              className="rounded border-gray-300 text-[#9caf88] focus:ring-[#9caf88] cursor-pointer"
+            />
+            <span>Show archived projects</span>
+          </label>
+
           {/* Sort Buttons */}
           <div className="flex gap-2 flex-wrap">
             {[
@@ -795,7 +838,7 @@ export function ProjectsDashboard({
             const dueDate = formatDueDate(project.dueDate)
 
             return (
-              <div key={project.id} onClick={() => { setSelectedProjectId(project.id); router.push(`/dashboard?project=${project.id}`, { scroll: false }) }} className={`p-4 cursor-pointer transition-all duration-200 border-l-4 relative group ${selectedProjectId === project.id ? 'bg-gradient-to-r from-[#9caf88]/20 to-transparent border-[#9caf88]' : 'border-transparent hover:bg-gray-50 hover:border-gray-300'}`}>
+              <div key={project.id} onClick={() => { setSelectedProjectId(project.id); router.push(`/dashboard?project=${project.id}`, { scroll: false }) }} className={`p-4 cursor-pointer transition-all duration-200 border-l-4 relative group ${project.archivedAt ? 'opacity-60' : ''} ${selectedProjectId === project.id ? 'bg-gradient-to-r from-[#9caf88]/20 to-transparent border-[#9caf88]' : 'border-transparent hover:bg-gray-50 hover:border-gray-300'}`}>
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
@@ -822,6 +865,11 @@ export function ProjectsDashboard({
                           'bg-blue-100 text-blue-700'
                         }`}>📅 {dueDate}</span>
                       )}
+                      {project.archivedAt && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-500">
+                          📦 Archived
+                        </span>
+                      )}
                     </div>
                     {/* Tags */}
                     {project.tags && project.tags.length > 0 && (
@@ -841,6 +889,15 @@ export function ProjectsDashboard({
                     <button onClick={(e) => handleEditProject(project, e)} className="p-1.5 hover:bg-blue-50 rounded-lg" title="Edit">
                       <Pencil className="w-4 h-4 text-blue-500" />
                     </button>
+                    {project.archivedAt ? (
+                      <button onClick={(e) => handleArchiveProject(project.id, false, e)} className="p-1.5 hover:bg-green-50 rounded-lg" title="Restore">
+                        <ArchiveRestore className="w-4 h-4 text-green-600" />
+                      </button>
+                    ) : (
+                      <button onClick={(e) => handleArchiveProject(project.id, true, e)} className="p-1.5 hover:bg-gray-100 rounded-lg" title="Archive">
+                        <Archive className="w-4 h-4 text-gray-600" />
+                      </button>
+                    )}
                     <button onClick={(e) => handleDeleteProject(project.id, e)} className="p-1.5 hover:bg-red-50 rounded-lg" title="Delete">
                       <Trash2 className="w-4 h-4 text-red-500" />
                     </button>
