@@ -25,6 +25,27 @@ export default function EditProjectModal({
     projectNotes: '',
   })
 
+  // Tags state
+  const [tagInput, setTagInput] = useState('')
+  const [tags, setTags] = useState<string[]>([])
+
+  // Predefined common tags
+  const suggestedTags = ['ADU', 'Pool', 'Remodel', 'Addition', 'New Build', 'Garage', 'Kitchen', 'Bathroom']
+
+  // Add tag function
+  const addTag = (tag: string) => {
+    const normalizedTag = tag.trim().toLowerCase()
+    if (normalizedTag && !tags.includes(normalizedTag)) {
+      setTags([...tags, normalizedTag])
+    }
+    setTagInput('')
+  }
+
+  // Remove tag function
+  const removeTag = (tagToRemove: string) => {
+    setTags(tags.filter(t => t !== tagToRemove))
+  }
+
   // Update form when project changes
   useEffect(() => {
     if (project) {
@@ -36,6 +57,7 @@ export default function EditProjectModal({
         clientName: project.clientName || '',
         projectNotes: project.projectNotes || '',
       })
+      setTags(project.tags || [])
     }
   }, [project])
 
@@ -49,6 +71,7 @@ export default function EditProjectModal({
       clientName: formData.clientName || null,
       projectNotes: formData.projectNotes || null,
       dueDate: formData.dueDate || null,
+      tags: tags,
     }
 
     onSave(updates)
@@ -150,6 +173,70 @@ export default function EditProjectModal({
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9caf88] focus:border-transparent"
                 placeholder="John Doe"
               />
+            </div>
+          </div>
+
+          {/* Tags */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Tags
+            </label>
+
+            {/* Current tags */}
+            <div className="flex flex-wrap gap-2 mb-2">
+              {tags.map(tag => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium"
+                >
+                  {tag}
+                  <button
+                    type="button"
+                    onClick={() => removeTag(tag)}
+                    className="hover:text-blue-600 transition-colors"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+
+            {/* Tag input */}
+            <div className="flex gap-2 mb-2">
+              <input
+                type="text"
+                placeholder="Add tag..."
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    addTag(tagInput)
+                  }
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9caf88] focus:border-transparent"
+              />
+              <button
+                type="button"
+                onClick={() => addTag(tagInput)}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium transition-colors"
+              >
+                Add
+              </button>
+            </div>
+
+            {/* Suggested tags */}
+            <div className="flex flex-wrap gap-1">
+              {suggestedTags.filter(t => !tags.includes(t.toLowerCase())).map(tag => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => addTag(tag)}
+                  className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full transition-colors"
+                >
+                  + {tag}
+                </button>
+              ))}
             </div>
           </div>
 

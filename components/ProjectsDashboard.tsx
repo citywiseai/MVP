@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Building2, Plus, ChevronDown, ChevronUp, Trash2, Upload, FileText, MessageSquare, Pencil, FileDown } from 'lucide-react'
+import { Building2, Plus, ChevronDown, ChevronUp, Trash2, Upload, FileText, MessageSquare, Pencil, FileDown, Search } from 'lucide-react'
 import { SignOutButton } from './SignOutButton'
 import dynamic from 'next/dynamic'
 import DashboardEmptyState from './DashboardEmptyState'
@@ -62,9 +62,17 @@ export function ProjectsDashboard({
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null)
   const [pdfFileName, setPdfFileName] = useState<string>('')
   const [pdfInstance, setPdfInstance] = useState<any>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [priorityFilter, setPriorityFilter] = useState<string>('all')
+  const [tagFilter, setTagFilter] = useState<string>('all')
 
   const selectedProject = projects.find(p => p.id === selectedProjectId)
 
+  // Debug initial projects on mount
+  useEffect(() => {
+    console.log('🏷️ Initial projects:', initialProjects.map(p => ({ name: p.name, tags: p.tags })));
+  }, [])
 
   // Auto-fetch parcel data if project has address but no parcel
   // Also fetch complete Regrid data if propertyMetadata is missing
@@ -218,41 +226,88 @@ export function ProjectsDashboard({
     return then.toLocaleDateString()
   }
 
-  const sortedProjects = [...projects].sort((a, b) => {
-    switch (sortField) {
-      case 'name':
-        // Name sort - alphabetical A-Z
-        return (a.name || '').localeCompare(b.name || '') * (sortOrder === 'asc' ? 1 : -1)
+  // Get all unique tags from projects
+  const allTags = useMemo(() => {
+    console.log('🏷️ Computing allTags from', projects.length, 'projects');
+    const tagSet = new Set<string>()
+    projects.forEach(p => {
+      console.log('🏷️ Project:', p.name, 'has tags:', p.tags);
+      p.tags?.forEach(t => tagSet.add(t))
+    })
+    const uniqueTags = Array.from(tagSet).sort()
+    console.log('🏷️ All unique tags:', uniqueTags);
+    return uniqueTags
+  }, [projects])
 
-      case 'address':
-        // Address sort - alphabetical A-Z (using parcel.address)
-        return (a.parcel?.address || a.fullAddress || '').localeCompare(b.parcel?.address || b.fullAddress || '') * (sortOrder === 'asc' ? 1 : -1)
+  // Filter and sort projects
+  const filteredProjects = useMemo(() => {
+    console.log('🏷️ Filtering projects with tagFilter:', tagFilter);
+    console.log('🏷️ tagFilter === "all":', tagFilter === 'all');
+    console.log('🏷️ typeof tagFilter:', typeof tagFilter);
 
-      case 'dueDate':
-        // Date sort - by DUE DATE (projects without due dates go to the end)
-        const dateA = a.dueDate ? new Date(a.dueDate).getTime() : Infinity
-        const dateB = b.dueDate ? new Date(b.dueDate).getTime() : Infinity
-        return (dateA - dateB) * (sortOrder === 'asc' ? 1 : -1)
+    // First, filter projects
+    const filtered = projects.filter(project => {
+      // Search filter - check name, address, client name
+      const searchLower = searchQuery.toLowerCase()
+      const matchesSearch = !searchQuery ||
+        project.name?.toLowerCase().includes(searchLower) ||
+        project.parcel?.address?.toLowerCase().includes(searchLower) ||
+        project.fullAddress?.toLowerCase().includes(searchLower) ||
+        project.clientName?.toLowerCase().includes(searchLower)
 
-      case 'status':
-        // Status sort - by status THEN by due date within each status
-        const statusOrder: { [key: string]: number } = { 'active': 1, 'on-hold': 2, 'completed': 3, 'archived': 4 }
-        const statusA = statusOrder[a.status] || 99
-        const statusB = statusOrder[b.status] || 99
+      // Status filter
+      const matchesStatus = statusFilter === 'all' || project.status === statusFilter
 
-        // First sort by status
-        const statusDiff = statusA - statusB
-        if (statusDiff !== 0) return statusDiff * (sortOrder === 'asc' ? 1 : -1)
+      // Priority filter
+      const matchesPriority = priorityFilter === 'all' || project.priority === priorityFilter
 
-        // Then sort by due date within same status (always earliest first)
-        const dueDateA = a.dueDate ? new Date(a.dueDate).getTime() : Infinity
-        const dueDateB = b.dueDate ? new Date(b.dueDate).getTime() : Infinity
-        return dueDateA - dueDateB
+      // Tag filter - more defensive logic
+      const matchesTag = !tagFilter || tagFilter === 'all' || (project.tags && project.tags.includes(tagFilter))
 
-      default:
-        return 0
-    }
-  })
+      console.log('🏷️ Project:', project.name, '| tags:', project.tags, '| tagFilter:', tagFilter, '| matchesTag:', matchesTag);
+
+      return matchesSearch && matchesStatus && matchesPriority && matchesTag
+    })
+
+    console.log('🏷️ Filtered', filtered.length, 'of', projects.length, 'projects');
+
+    // Then, sort the filtered results
+    return [...filtered].sort((a, b) => {
+      switch (sortField) {
+        case 'name':
+          // Name sort - alphabetical A-Z
+          return (a.name || '').localeCompare(b.name || '') * (sortOrder === 'asc' ? 1 : -1)
+
+        case 'address':
+          // Address sort - alphabetical A-Z (using parcel.address)
+          return (a.parcel?.address || a.fullAddress || '').localeCompare(b.parcel?.address || b.fullAddress || '') * (sortOrder === 'asc' ? 1 : -1)
+
+        case 'dueDate':
+          // Date sort - by DUE DATE (projects without due dates go to the end)
+          const dateA = a.dueDate ? new Date(a.dueDate).getTime() : Infinity
+          const dateB = b.dueDate ? new Date(b.dueDate).getTime() : Infinity
+          return (dateA - dateB) * (sortOrder === 'asc' ? 1 : -1)
+
+        case 'status':
+          // Status sort - by status THEN by due date within each status
+          const statusOrder: { [key: string]: number } = { 'active': 1, 'on-hold': 2, 'completed': 3, 'archived': 4 }
+          const statusA = statusOrder[a.status] || 99
+          const statusB = statusOrder[b.status] || 99
+
+          // First sort by status
+          const statusDiff = statusA - statusB
+          if (statusDiff !== 0) return statusDiff * (sortOrder === 'asc' ? 1 : -1)
+
+          // Then sort by due date within same status (always earliest first)
+          const dueDateA = a.dueDate ? new Date(a.dueDate).getTime() : Infinity
+          const dueDateB = b.dueDate ? new Date(b.dueDate).getTime() : Infinity
+          return dueDateA - dueDateB
+
+        default:
+          return 0
+      }
+    })
+  }, [projects, searchQuery, statusFilter, priorityFilter, tagFilter, sortField, sortOrder])
 
   const sortTasksByPriority = (tasks: any[]) => {
     const priorityOrder = { 'HIGH': 0, 'MEDIUM': 1, 'LOW': 2 }
@@ -640,7 +695,7 @@ export function ProjectsDashboard({
 
   return (
     <div className="flex h-screen bg-[#faf8f3]">
-      <div className="w-80 border-r border-gray-200 flex flex-col bg-white shadow-lg">
+      <div className="w-96 border-r border-gray-200 flex flex-col bg-white shadow-lg">
         <div className="p-6 bg-gradient-to-br from-[#1e3a5f] to-[#2c4f6f] text-white">
           <div className="flex items-center gap-3 mb-4">
             <Building2 className="w-8 h-8" />
@@ -661,6 +716,59 @@ export function ProjectsDashboard({
             </button>
           </div>
 
+          {/* Search Input */}
+          <div className="relative mb-3">
+            <input
+              type="text"
+              placeholder="Search projects..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#9caf88] focus:border-[#9caf88] text-sm"
+            />
+            <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+          </div>
+
+          {/* Filter Dropdowns */}
+          <div className="flex gap-2 mb-3">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#9caf88] focus:border-[#9caf88]"
+            >
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="on-hold">On Hold</option>
+              <option value="completed">Completed</option>
+            </select>
+
+            <select
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value)}
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#9caf88] focus:border-[#9caf88]"
+            >
+              <option value="all">All Priority</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+
+            <select
+              value={tagFilter}
+              onChange={(e) => {
+                console.log('🏷️ Tag filter changed to:', e.target.value);
+                console.log('🏷️ e.target.value === "all":', e.target.value === 'all');
+                setTagFilter(e.target.value);
+              }}
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#9caf88] focus:border-[#9caf88]"
+            >
+              <option value="all">All Tags</option>
+              {allTags.map(tag => (
+                <option key={tag} value={tag}>{tag}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Sort Buttons */}
           <div className="flex gap-2 flex-wrap">
             {[
               { field: 'name' as SortField, label: 'Name' },
@@ -673,10 +781,16 @@ export function ProjectsDashboard({
               </button>
             ))}
           </div>
+
+          {/* Result Count */}
+          <p className="text-sm text-gray-500 mt-3 mb-2">
+            {filteredProjects.length} of {projects.length} projects
+          </p>
         </div>
 
+        {/* Project List - Scrollable */}
         <div className="flex-1 overflow-y-auto">
-          {sortedProjects.map((project) => {
+          {filteredProjects.map((project) => {
             const priorityBadge = getProjectPriorityBadge(project.priority)
             const dueDate = formatDueDate(project.dueDate)
 
@@ -709,6 +823,19 @@ export function ProjectsDashboard({
                         }`}>📅 {dueDate}</span>
                       )}
                     </div>
+                    {/* Tags */}
+                    {project.tags && project.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2 ml-6">
+                        {project.tags.map(tag => (
+                          <span
+                            key={tag}
+                            className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs font-medium"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2">
                     <button onClick={(e) => handleEditProject(project, e)} className="p-1.5 hover:bg-blue-50 rounded-lg" title="Edit">
