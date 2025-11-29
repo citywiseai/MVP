@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Building2, Plus, ChevronDown, ChevronUp, Trash2, Upload, FileText, MessageSquare, Pencil, FileDown, Search, Archive, ArchiveRestore } from 'lucide-react'
+import { Building2, Plus, ChevronDown, ChevronUp, Trash2, Upload, FileText, MessageSquare, Pencil, FileDown, Search, Archive, ArchiveRestore, Sparkles, X } from 'lucide-react'
 import { SignOutButton } from './SignOutButton'
 import dynamic from 'next/dynamic'
 import DashboardEmptyState from './DashboardEmptyState'
@@ -10,6 +10,7 @@ import PropertyReportModal from './PropertyReportModal'
 import AssessorReportModal from './AssessorReportModal'
 import EditProjectModal from './EditProjectModal'
 import PDFPreviewModal from './PDFPreviewModal'
+import AIVisualizationPanel from './AIVisualizationPanel'
 import { exportPropertyPdf } from '@/lib/exportPdf'
 import { toast } from 'sonner'
 
@@ -67,6 +68,23 @@ export function ProjectsDashboard({
   const [priorityFilter, setPriorityFilter] = useState<string>('all')
   const [tagFilter, setTagFilter] = useState<string>('all')
   const [showArchived, setShowArchived] = useState(false)
+
+  // Vision Board state
+  const [visionBoard, setVisionBoard] = useState<Array<{
+    id: string;
+    fileName: string;
+    fileUrl: string;
+    metadata?: { prompt?: string } | null;
+    createdAt: string;
+  }>>([])
+  const [showAIVisualization, setShowAIVisualization] = useState(false)
+  const [selectedVisionImage, setSelectedVisionImage] = useState<{
+    fileUrl: string;
+    fileName: string;
+    prompt?: string;
+  } | null>(null)
+  const [editingVisionId, setEditingVisionId] = useState<string | null>(null)
+  const [editingVisionName, setEditingVisionName] = useState('')
 
   const selectedProject = projects.find(p => p.id === selectedProjectId)
 
@@ -195,6 +213,67 @@ export function ProjectsDashboard({
     const timeoutId = setTimeout(autoFetchAssessorData, 1000);
     return () => clearTimeout(timeoutId);
   }, [selectedProject?.id, selectedProject?.parcel?.totalBuildingSF]);
+
+  // Load Vision Board items when project changes
+  useEffect(() => {
+    const loadVisualizations = async () => {
+      if (!selectedProjectId) return;
+
+      try {
+        const response = await fetch(`/api/projects/${selectedProjectId}/visualizations`);
+        if (response.ok) {
+          const data = await response.json();
+          setVisionBoard(data.visualizations || []);
+        }
+      } catch (error) {
+        console.error('Error loading visualizations:', error);
+      }
+    };
+
+    loadVisualizations();
+  }, [selectedProjectId]);
+
+  // Refresh visualizations callback
+  const refreshVisualizations = async () => {
+    if (!selectedProjectId) return;
+
+    try {
+      const response = await fetch(`/api/projects/${selectedProjectId}/visualizations`);
+      if (response.ok) {
+        const data = await response.json();
+        setVisionBoard(data.visualizations || []);
+      }
+    } catch (error) {
+      console.error('Error refreshing visualizations:', error);
+    }
+  };
+
+  const handleRenameVisualization = async (fileId: string, newFileName: string) => {
+    if (!selectedProjectId || !newFileName.trim()) return;
+
+    try {
+      const response = await fetch(`/api/projects/${selectedProjectId}/visualizations`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileId, fileName: newFileName }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setVisionBoard(prev => prev.map(viz =>
+          viz.id === fileId ? { ...viz, fileName: data.visualization.fileName } : viz
+        ));
+        setEditingVisionId(null);
+        setEditingVisionName('');
+        toast.success('Visualization renamed successfully');
+      } else {
+        toast.error('Failed to rename visualization');
+      }
+    } catch (error) {
+      console.error('Error renaming visualization:', error);
+      toast.error('Failed to rename visualization');
+    }
+  };
 
   const getProjectScope = (project: any) => {
     return project.scopeOfWork || project.description || ''
@@ -1182,6 +1261,134 @@ export function ProjectsDashboard({
               </div>
             )}
 
+            {/* Vision Board Section */}
+            <div className="mb-8 bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Sparkles className="w-6 h-6 text-purple-600" />
+                    <h2 className="text-xl font-bold text-[#1e3a5f]">Vision Board ({visionBoard.length})</h2>
+                  </div>
+                  <button
+                    onClick={() => setShowAIVisualization(true)}
+                    className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-lg font-medium flex items-center gap-2 shadow-md transition-all"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    Generate New
+                  </button>
+                </div>
+              </div>
+
+              <div className="px-6 py-6">
+                {visionBoard.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">
+                    <Sparkles className="w-16 h-16 mx-auto mb-3 text-gray-300" />
+                    <p className="text-base font-medium">No visualizations yet</p>
+                    <p className="text-sm mt-1">Click "Generate New" to create your first visualization</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-4 gap-4">
+                    {visionBoard.map((viz) => (
+                      <div key={viz.id} className="group relative bg-gray-50 rounded-lg overflow-hidden border border-gray-200 hover:border-purple-400 transition-colors">
+                        <div className="aspect-square relative">
+                          <img
+                            src={viz.fileUrl}
+                            alt={viz.fileName}
+                            className="w-full h-full object-cover"
+                          />
+                          {/* Overlay on hover */}
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                            <a
+                              href={viz.fileUrl}
+                              download={viz.fileName}
+                              className="p-2 bg-white rounded-full hover:bg-gray-100"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                              </svg>
+                            </a>
+                            <button
+                              onClick={() => setSelectedVisionImage({
+                                fileUrl: viz.fileUrl,
+                                fileName: viz.fileName,
+                                prompt: viz.metadata?.prompt
+                              })}
+                              className="p-2 bg-white rounded-full hover:bg-gray-100"
+                            >
+                              <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                        <div className="p-3">
+                          {editingVisionId === viz.id ? (
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="text"
+                                value={editingVisionName}
+                                onChange={(e) => setEditingVisionName(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    handleRenameVisualization(viz.id, editingVisionName);
+                                  } else if (e.key === 'Escape') {
+                                    setEditingVisionId(null);
+                                    setEditingVisionName('');
+                                  }
+                                }}
+                                className="flex-1 px-2 py-1 text-xs border border-purple-400 rounded focus:outline-none focus:ring-1 focus:ring-purple-500"
+                                autoFocus
+                              />
+                              <button
+                                onClick={() => handleRenameVisualization(viz.id, editingVisionName)}
+                                className="p-1 text-green-600 hover:bg-green-50 rounded"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setEditingVisionId(null);
+                                  setEditingVisionName('');
+                                }}
+                                className="p-1 text-gray-600 hover:bg-gray-100 rounded"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-700 truncate">{viz.fileName}</p>
+                                {viz.metadata?.prompt && (
+                                  <p className="text-xs text-gray-500 truncate mt-0.5" title={viz.metadata.prompt}>
+                                    {viz.metadata.prompt}
+                                  </p>
+                                )}
+                              </div>
+                              <button
+                                onClick={() => {
+                                  setEditingVisionId(viz.id);
+                                  setEditingVisionName(viz.fileName);
+                                }}
+                                className="p-1 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
+                          <p className="text-xs text-gray-400 mt-1">{new Date(viz.createdAt).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
             {selectedProject.engineeringReqs && selectedProject.engineeringReqs.length > 0 && (
               <div className="mb-8 bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
                 <button onClick={() => toggleSection('engineering')} className="w-full p-6 flex items-center justify-between hover:bg-gray-50 transition-colors">
@@ -1417,6 +1624,53 @@ export function ProjectsDashboard({
           fileName={pdfFileName}
           onDownload={handlePdfDownload}
         />
+
+        {/* AI Visualization Panel */}
+        {selectedProject && (
+          <AIVisualizationPanel
+            isOpen={showAIVisualization}
+            onClose={() => setShowAIVisualization(false)}
+            projectId={selectedProject.id}
+            onVisualizationSaved={refreshVisualizations}
+          />
+        )}
+
+        {/* Vision Image Lightbox */}
+        {selectedVisionImage && (
+          <div
+            className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/90 backdrop-blur-sm"
+            onClick={() => setSelectedVisionImage(null)}
+          >
+            <div className="relative max-w-7xl max-h-[90vh] w-full h-full flex flex-col items-center justify-center p-8">
+              {/* Close button */}
+              <button
+                onClick={() => setSelectedVisionImage(null)}
+                className="absolute top-4 right-4 p-3 bg-white/10 hover:bg-white/20 rounded-full transition-colors z-10"
+              >
+                <X className="w-6 h-6 text-white" />
+              </button>
+
+              {/* Image */}
+              <img
+                src={selectedVisionImage.fileUrl}
+                alt={selectedVisionImage.fileName}
+                className="max-w-full max-h-[calc(100%-120px)] object-contain rounded-lg shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              />
+
+              {/* Image info */}
+              <div className="mt-4 bg-white/10 backdrop-blur-md px-6 py-4 rounded-2xl max-w-3xl">
+                <p className="text-white text-sm font-medium mb-1">{selectedVisionImage.fileName}</p>
+                {selectedVisionImage.prompt && (
+                  <p className="text-white/80 text-xs leading-relaxed">
+                    <span className="font-semibold">Prompt: </span>
+                    {selectedVisionImage.prompt}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

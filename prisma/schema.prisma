@@ -175,6 +175,7 @@ model ProjectFile {
   fileUrl    String
   fileType   String?
   uploadedBy String
+  metadata   Json?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 

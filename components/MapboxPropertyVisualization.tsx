@@ -7,6 +7,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import { toast } from 'sonner';
 import * as turf from '@turf/turf';
+import { ChevronDown, ChevronUp, Layers } from 'lucide-react';
 import ShapeBuilderPanel from './ShapeBuilderPanel';
 import { getTemplateById } from '@/lib/shape-templates';
 import { transformSvg } from '@/lib/svg-utils';
@@ -59,6 +60,18 @@ export default function MapboxPropertyVisualization({
   const [mapStyle, setMapStyle] = useState<'satellite' | 'map'>('satellite');
   const [showShapeBuilder, setShowShapeBuilder] = useState(false);
   const [isMapReady, setIsMapReady] = useState(false);
+
+  // Layer visibility state
+  const [layerVisibility, setLayerVisibility] = useState({
+    propertyBoundary: true,
+    setbackLines: true,
+    buildableArea: true,
+    edgeLabels: true,
+    shapes: true,
+    measurements: true,
+    snapGuides: true,
+  });
+  const [isLayerPanelCollapsed, setIsLayerPanelCollapsed] = useState(false);
 
   // Property metrics state
   const [propertyMetrics, setPropertyMetrics] = useState({
@@ -2251,6 +2264,14 @@ export default function MapboxPropertyVisualization({
     }
   };
 
+  // Toggle layer visibility
+  const toggleLayerVisibility = (layerKey: keyof typeof layerVisibility) => {
+    setLayerVisibility(prev => ({
+      ...prev,
+      [layerKey]: !prev[layerKey]
+    }));
+  };
+
   const drawMeasurementLine = (points: [number, number][]) => {
     if (!map.current) return;
 
@@ -4111,6 +4132,130 @@ export default function MapboxPropertyVisualization({
     calculatePropertyMetrics();
   }, [drawnShapes, setbacks, localBoundaryCoords]);
 
+  // Apply layer visibility changes
+  useEffect(() => {
+    if (!map.current || !isMapReady) return;
+
+    // Property Boundary layers
+    const boundaryLayers = ['boundary-fill', 'boundary-line'];
+    boundaryLayers.forEach(layerId => {
+      if (map.current?.getLayer(layerId)) {
+        map.current.setLayoutProperty(
+          layerId,
+          'visibility',
+          layerVisibility.propertyBoundary ? 'visible' : 'none'
+        );
+      }
+    });
+
+    // Setback Lines
+    if (map.current.getLayer('setback-line')) {
+      map.current.setLayoutProperty(
+        'setback-line',
+        'visibility',
+        layerVisibility.setbackLines ? 'visible' : 'none'
+      );
+    }
+
+    // Buildable Area (assuming it's part of setback layers)
+    if (map.current.getLayer('buildable-area')) {
+      map.current.setLayoutProperty(
+        'buildable-area',
+        'visibility',
+        layerVisibility.buildableArea ? 'visible' : 'none'
+      );
+    }
+
+    // Edge Labels (handle markers visibility)
+    if (layerVisibility.edgeLabels) {
+      edgeLabelMarkers.current.forEach(marker => marker.getElement().style.display = 'block');
+    } else {
+      edgeLabelMarkers.current.forEach(marker => marker.getElement().style.display = 'none');
+    }
+
+    // Measurement layers
+    const measurementLayers = ['measurement-line', 'measurement-points'];
+    measurementLayers.forEach(layerId => {
+      if (map.current?.getLayer(layerId)) {
+        map.current.setLayoutProperty(
+          layerId,
+          'visibility',
+          layerVisibility.measurements ? 'visible' : 'none'
+        );
+      }
+    });
+
+    // Measurement markers visibility
+    if (layerVisibility.measurements) {
+      measurementMarkers.current.forEach(marker => marker?.getElement() && (marker.getElement().style.display = 'block'));
+      savedMeasurementMarkersRef.current.forEach(marker => marker?.getElement() && (marker.getElement().style.display = 'block'));
+    } else {
+      measurementMarkers.current.forEach(marker => marker?.getElement() && (marker.getElement().style.display = 'none'));
+      savedMeasurementMarkersRef.current.forEach(marker => marker?.getElement() && (marker.getElement().style.display = 'none'));
+    }
+
+    // Drawn Shapes (MapboxDraw layers) - handle specially
+    if (draw.current) {
+      // MapboxDraw layer patterns to match
+      const drawLayerPatterns = [
+        'gl-draw-polygon-fill',
+        'gl-draw-polygon-stroke',
+        'gl-draw-line',
+        'gl-draw-point',
+      ];
+
+      // Get all layers from map style and filter for draw layers
+      const style = map.current.getStyle();
+      if (style && style.layers) {
+        style.layers.forEach(layer => {
+          const isDrawLayer = drawLayerPatterns.some(pattern =>
+            layer.id.startsWith(pattern)
+          );
+
+          if (isDrawLayer) {
+            console.log('🎨 Toggling draw layer:', layer.id, layerVisibility.shapes ? 'visible' : 'none');
+            try {
+              map.current?.setLayoutProperty(
+                layer.id,
+                'visibility',
+                layerVisibility.shapes ? 'visible' : 'none'
+              );
+            } catch (error) {
+              console.error('Error toggling layer:', layer.id, error);
+            }
+          }
+        });
+      }
+
+      // Also toggle custom shape layers
+      const customShapeLayers = ['shape-violations-line', 'shape-intersections-line'];
+      customShapeLayers.forEach(layerId => {
+        if (map.current?.getLayer(layerId)) {
+          console.log('🎨 Toggling custom shape layer:', layerId);
+          try {
+            map.current.setLayoutProperty(
+              layerId,
+              'visibility',
+              layerVisibility.shapes ? 'visible' : 'none'
+            );
+          } catch (error) {
+            console.error('Error toggling custom layer:', layerId, error);
+          }
+        }
+      });
+
+      // SVG overlays visibility
+      svgOverlays.current.forEach(overlay => {
+        overlay.element.style.display = layerVisibility.shapes ? 'block' : 'none';
+      });
+    }
+
+    // Snap Guides (handle via CSS or markers)
+    // Snap guides are typically rendered as temporary visual feedback
+    // We'll control them by checking layerVisibility.snapGuides in the render logic
+
+  }, [isMapReady, layerVisibility]);
+
   // Handle edit mode - show/hide vertex and edge label markers
   useEffect(() => {
     if (viewMode === 'edit') {
@@ -4833,6 +4978,109 @@ export default function MapboxPropertyVisualization({
           currentCoverage={propertyMetrics.currentCoverage}
           lotSize={propertyMetrics.lotSize}
         />
+
+        {/* Layer Visibility Panel (top-right) */}
+        <div className="absolute top-4 right-4 z-[1000]">
+          <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
+            {/* Panel Header */}
+            <button
+              onClick={() => setIsLayerPanelCollapsed(!isLayerPanelCollapsed)}
+              className="w-full flex items-center justify-between px-4 py-3 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Layers className="w-4 h-4 text-gray-700" />
+                <span className="text-sm font-semibold text-gray-700">Layers</span>
+              </div>
+              {isLayerPanelCollapsed ? (
+                <ChevronDown className="w-4 h-4 text-gray-600" />
+              ) : (
+                <ChevronUp className="w-4 h-4 text-gray-600" />
+              )}
+            </button>
+
+            {/* Panel Content */}
+            {!isLayerPanelCollapsed && (
+              <div className="p-3 space-y-2 min-w-[200px]">
+                {/* Property Boundary */}
+                <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-50 cursor-pointer transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={layerVisibility.propertyBoundary}
+                    onChange={() => toggleLayerVisibility('propertyBoundary')}
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  />
+                  <span className="text-sm text-gray-700">Property Boundary</span>
+                </label>
+
+                {/* Setback Lines */}
+                <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-50 cursor-pointer transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={layerVisibility.setbackLines}
+                    onChange={() => toggleLayerVisibility('setbackLines')}
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  />
+                  <span className="text-sm text-gray-700">Setback Lines</span>
+                </label>
+
+                {/* Buildable Area */}
+                <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-50 cursor-pointer transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={layerVisibility.buildableArea}
+                    onChange={() => toggleLayerVisibility('buildableArea')}
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  />
+                  <span className="text-sm text-gray-700">Buildable Area</span>
+                </label>
+
+                {/* Edge Labels */}
+                <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-50 cursor-pointer transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={layerVisibility.edgeLabels}
+                    onChange={() => toggleLayerVisibility('edgeLabels')}
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  />
+                  <span className="text-sm text-gray-700">Edge Labels</span>
+                </label>
+
+                {/* Drawn Shapes */}
+                <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-50 cursor-pointer transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={layerVisibility.shapes}
+                    onChange={() => toggleLayerVisibility('shapes')}
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  />
+                  <span className="text-sm text-gray-700">Drawn Shapes</span>
+                </label>
+
+                {/* Measurements */}
+                <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-50 cursor-pointer transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={layerVisibility.measurements}
+                    onChange={() => toggleLayerVisibility('measurements')}
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  />
+                  <span className="text-sm text-gray-700">Measurements</span>
+                </label>
+
+                {/* Snap Guides */}
+                <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-50 cursor-pointer transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={layerVisibility.snapGuides}
+                    onChange={() => toggleLayerVisibility('snapGuides')}
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  />
+                  <span className="text-sm text-gray-700">Snap Guides</span>
+                </label>
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* Measurement Tool Floating Panel (bottom-right) */}
         {viewMode === 'measure' && (
