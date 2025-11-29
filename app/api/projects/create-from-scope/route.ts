@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import {  PrismaClient } from '@prisma/client'
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
 import Anthropic from '@anthropic-ai/sdk'
-
-
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
@@ -12,7 +9,7 @@ const anthropic = new Anthropic({
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -81,7 +78,7 @@ Respond with JSON only.`
     if (!org) {
       org = await prisma.org.create({
         data: {
-ame: `${session.user.name || session.user.email}'s Organization`,
+          name: `${session.user.name || session.user.email}'s Organization`,
           memberships: {
             create: {
               userId: session.user.id,
@@ -116,7 +113,7 @@ ame: `${session.user.name || session.user.email}'s Organization`,
     // Create project
     const project = await prisma.project.create({
       data: {
-ame: `${projectData.projectType} at ${parcelData.address}`,
+        name: `${projectData.projectType} at ${parcelData.address}`,
         fullAddress: parcelData.address,
         propertyType: 'Residential',
         projectType: projectData.projectType,
@@ -138,7 +135,7 @@ ame: `${projectData.projectType} at ${parcelData.address}`,
         projectId: project.id,
         discipline: 'Structural',
         required: true,
-otes: projectData.keyDetails.movingWalls 
+        notes: projectData.keyDetails.movingWalls
           ? 'Required for wall modifications and load analysis'
           : 'Required for structural analysis'
       })
@@ -149,7 +146,7 @@ otes: projectData.keyDetails.movingWalls
         projectId: project.id,
         discipline: 'Electrical',
         required: true,
-otes: projectData.keyDetails.panelUpgrade
+        notes: projectData.keyDetails.panelUpgrade
           ? 'Panel upgrade and load calculations required'
           : 'Electrical design and calculations required'
       })
@@ -160,7 +157,7 @@ otes: projectData.keyDetails.panelUpgrade
         projectId: project.id,
         discipline: 'Plumbing',
         required: true,
-otes: projectData.keyDetails.plumbingRelocation
+        notes: projectData.keyDetails.plumbingRelocation
           ? 'Plumbing relocations and fixture design'
           : 'Plumbing design required'
       })
@@ -171,7 +168,7 @@ otes: projectData.keyDetails.plumbingRelocation
         projectId: project.id,
         discipline: 'Mechanical',
         required: true,
-otes: 'HVAC design and load calculations'
+        notes: 'HVAC design and load calculations'
       })
     }
 
@@ -180,7 +177,7 @@ otes: 'HVAC design and load calculations'
         projectId: project.id,
         discipline: 'Civil',
         required: true,
-otes: 'Site grading and drainage design'
+        notes: 'Site grading and drainage design'
       })
     }
 
