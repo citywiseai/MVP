@@ -1,17 +1,21 @@
 "use client";
 
 import React from 'react';
-import { Eye, Edit2, Ruler, PenTool } from 'lucide-react';
+import { Eye, Edit2, Ruler, PenTool, FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface MapToolbarProps {
   mode: 'view' | 'edit' | 'draw' | 'measure';
   onModeChange: (mode: 'view' | 'edit' | 'draw' | 'measure') => void;
+  onExportPdf?: () => void;
+  isExportingPdf?: boolean;
 }
 
 export default function MapToolbar({
   mode,
-  onModeChange
+  onModeChange,
+  onExportPdf,
+  isExportingPdf = false
 }: MapToolbarProps) {
   
   const modes = [
@@ -50,6 +54,40 @@ export default function MapToolbar({
             );
           })}
         </div>
+
+        {/* Separator */}
+        {onExportPdf && (
+          <div className="w-px h-8 bg-gray-300" />
+        )}
+
+        {/* Export PDF Button */}
+        {onExportPdf && (
+          <button
+            onClick={onExportPdf}
+            disabled={isExportingPdf}
+            title="Export PDF Report"
+            className={`
+              flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm
+              transition-all duration-200
+              ${isExportingPdf
+                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                : 'bg-green-600 text-white hover:bg-green-700 shadow-md'
+              }
+            `}
+          >
+            {isExportingPdf ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>Exporting...</span>
+              </>
+            ) : (
+              <>
+                <FileDown className="w-4 h-4" />
+                <span>Export PDF</span>
+              </>
+            )}
+          </button>
+        )}
       </div>
     </div>
   );

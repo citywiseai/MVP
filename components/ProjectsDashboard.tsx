@@ -2,13 +2,16 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Building2, Plus, ChevronDown, ChevronUp, Trash2, Upload, FileText, MessageSquare, Pencil } from 'lucide-react'
+import { Building2, Plus, ChevronDown, ChevronUp, Trash2, Upload, FileText, MessageSquare, Pencil, FileDown } from 'lucide-react'
 import { SignOutButton } from './SignOutButton'
 import dynamic from 'next/dynamic'
 import DashboardEmptyState from './DashboardEmptyState'
 import PropertyReportModal from './PropertyReportModal'
 import AssessorReportModal from './AssessorReportModal'
 import EditProjectModal from './EditProjectModal'
+import PDFPreviewModal from './PDFPreviewModal'
+import { exportPropertyPdf } from '@/lib/exportPdf'
+import { toast } from 'sonner'
 
 const MapboxPropertyVisualization = dynamic(() => import('./MapboxPropertyVisualization'), {
   ssr: false,
@@ -54,6 +57,11 @@ export function ProjectsDashboard({
   const [assessorData, setAssessorData] = useState<any>(null)
   const [editingProject, setEditingProject] = useState<any>(null)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [isExportingPdf, setIsExportingPdf] = useState(false)
+  const [showPdfPreview, setShowPdfPreview] = useState(false)
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null)
+  const [pdfFileName, setPdfFileName] = useState<string>('')
+  const [pdfInstance, setPdfInstance] = useState<any>(null)
 
   const selectedProject = projects.find(p => p.id === selectedProjectId)
 
@@ -597,6 +605,22 @@ export function ProjectsDashboard({
     return d.toLocaleDateString()
   }
 
+  // Handle PDF download from preview modal
+  const handlePdfDownload = () => {
+    if (pdfInstance && pdfFileName) {
+      pdfInstance.save(pdfFileName);
+      toast.success(`PDF downloaded: ${pdfFileName}`);
+      // Clean up blob URL
+      if (pdfBlobUrl) {
+        URL.revokeObjectURL(pdfBlobUrl);
+      }
+      setShowPdfPreview(false);
+      setPdfBlobUrl(null);
+      setPdfFileName('');
+      setPdfInstance(null);
+    }
+  };
+
   if (projects.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#faf8f3] via-[#faf8f3] to-[#9caf88]/10">
@@ -715,25 +739,33 @@ export function ProjectsDashboard({
         ) : (
           <div className="px-8 py-8">
             <div className="mb-8 bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <h1 className="text-3xl font-bold text-[#1e3a5f] mb-2">{selectedProject.name}</h1>
-                  {getProjectScope(selectedProject) && <p className="text-gray-700 mb-4 whitespace-pre-wrap">{getProjectScope(selectedProject)}</p>}
-                  <div className="flex flex-wrap items-center justify-between gap-4 w-full mt-3">
-                    <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium ${selectedProject.status === 'active' ? 'bg-[#9caf88]/20 text-[#9caf88]' : 'bg-gray-100 text-gray-600'}`}>{selectedProject.status}</span>
-                    {selectedProject.fullAddress && <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">📍 {formatAddress(selectedProject.fullAddress)}</span>}
-                    {selectedProject.propertyType && <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">🏠 {selectedProject.propertyType}</span>}
-                    {(selectedProject.parcel?.lotSizeSqFt || selectedProject.lotSizeSqFt) && <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">📐 Lot: {formatSqFt(selectedProject.parcel?.lotSizeSqFt || selectedProject.lotSizeSqFt)}</span>}
-                    {(selectedProject.parcel?.existingSqFt) && <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">🏗️ Building: {formatSqFt(selectedProject.parcel.existingSqFt)}</span>}
-                    {selectedProject.parcel?.apn && <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">📋 APN: {selectedProject.parcel.apn}</span>}
-                    {selectedProject.parcel?.zoning && <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">🏘️ Zoning: {selectedProject.parcel.zoning}</span>}
-                    {selectedProject.parcel?.city && <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">🏛️ Jurisdiction: {selectedProject.parcel.city.charAt(0).toUpperCase() + selectedProject.parcel.city.slice(1)}</span>}
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  {selectedProject.parcel && (
-                    <>
-                      <button
+              {/* Title and Description */}
+              <h1 className="text-3xl font-bold text-[#1e3a5f] mb-2">{selectedProject.name}</h1>
+              {getProjectScope(selectedProject) && <p className="text-gray-700 mb-4 whitespace-pre-wrap">{getProjectScope(selectedProject)}</p>}
+
+              {/* Info Bubbles */}
+              <div className="flex flex-wrap items-center gap-2 mb-6">
+                <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium ${selectedProject.status === 'active' ? 'bg-[#9caf88]/20 text-[#9caf88]' : 'bg-gray-100 text-gray-600'}`}>{selectedProject.status}</span>
+                {selectedProject.fullAddress && <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">📍 {formatAddress(selectedProject.fullAddress)}</span>}
+                {selectedProject.propertyType && <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">🏠 {selectedProject.propertyType}</span>}
+                {(selectedProject.parcel?.lotSizeSqFt || selectedProject.lotSizeSqFt) && <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">📐 Lot: {formatSqFt(selectedProject.parcel?.lotSizeSqFt || selectedProject.lotSizeSqFt)}</span>}
+                {(selectedProject.parcel?.existingSqFt) && <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">🏗️ Building: {formatSqFt(selectedProject.parcel.existingSqFt)}</span>}
+                {selectedProject.parcel?.apn && <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">📋 APN: {selectedProject.parcel.apn}</span>}
+                {selectedProject.parcel?.zoning && <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">🏘️ Zoning: {selectedProject.parcel.zoning}</span>}
+                {selectedProject.parcel?.city && <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700">🏛️ Jurisdiction: {selectedProject.parcel.city.charAt(0).toUpperCase() + selectedProject.parcel.city.slice(1)}</span>}
+              </div>
+
+              {/* Action Buttons - Row at bottom, all same size */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => router.push(`/projects/${selectedProject.id}/edit`)}
+                  className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 hover:bg-gray-50 rounded-xl font-medium transition-all duration-200"
+                >
+                  Edit
+                </button>
+                {selectedProject.parcel && (
+                  <>
+                    <button
                         onClick={async () => {
                           if (!selectedProject?.parcel?.apn) {
                             alert('Missing parcel APN');
@@ -760,33 +792,188 @@ export function ProjectsDashboard({
                           }
                         }}
                         disabled={assessorLoading}
-                        className="px-6 py-3 bg-gradient-to-br from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white rounded-xl font-medium shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 px-6 py-3 bg-gradient-to-br from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white rounded-xl font-medium shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <FileText className="h-5 w-5" />
                         {assessorLoading ? 'Loading...' : 'Assessor Report'}
                       </button>
-                      {/* Import Buildings button - Hidden: auto-fetch handles this now */}
-                      {/* Only show if auto-fetch failed and no building data exists */}
-                      {!selectedProject.parcel.totalBuildingSF && !assessorLoading && (
-                        <button
-                          onClick={fetchAssessorData}
-                          className="px-6 py-3 bg-gradient-to-br from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-xl font-medium shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2"
-                        >
-                          <Building2 className="h-5 w-5" />
-                          Retry Import Buildings
-                        </button>
-                      )}
+                    <button
+                      onClick={() => setShowPropertyReport(true)}
+                      className="flex-1 px-6 py-3 bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl font-medium shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
+                    >
+                      Property Report
+                    </button>
                       <button
-                        onClick={() => setShowPropertyReport(true)}
-                        className="px-6 py-3 bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl font-medium shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2"
+                        onClick={async () => {
+                          if (!selectedProject?.parcel) {
+                            toast.error('Parcel data not available');
+                            return;
+                          }
+
+                          setIsExportingPdf(true);
+                          try {
+                            console.log('📄 Starting PDF export...');
+
+                            // Fetch drawn shapes from API
+                            const shapesRes = await fetch(`/api/projects/${selectedProject.id}/shapes`);
+                            const shapesResponse = await shapesRes.json();
+                            console.log('📄 Raw API response:', shapesResponse);
+
+                            // Extract shapes array from response (API returns { shapes: [...] })
+                            const shapesArray = shapesResponse.shapes || [];
+                            console.log('📋 Extracted shapes array:', shapesArray);
+                            console.log('📋 Number of shapes:', shapesArray.length);
+
+                            shapesArray.forEach((shape: any, idx: number) => {
+                              console.log(`  Shape ${idx}:`, {
+                                name: shape.name,
+                                area: shape.area,
+                                perimeter: shape.perimeter,
+                                shapeType: shape.shapeType,
+                                properties: shape.properties
+                              });
+                            });
+
+                            // Prepare requirements from tasks with full details
+                            const requirements = [];
+                            if (selectedProject.tasks && selectedProject.tasks.length > 0) {
+                              selectedProject.tasks.forEach((task: any) => {
+                                requirements.push({
+                                  name: task.title || task.description || 'Task',
+                                  status: task.status || 'To Do',
+                                  description: task.description || task.notes || '',
+                                  priority: task.priority,
+                                });
+                              });
+                            }
+                            if (selectedProject.engineeringReqs && selectedProject.engineeringReqs.length > 0) {
+                              selectedProject.engineeringReqs.forEach((req: any) => {
+                                requirements.push({
+                                  name: req.type || req.name || 'Engineering Requirement',
+                                  status: req.status || 'Required',
+                                  description: req.description || req.notes || '',
+                                  priority: req.priority,
+                                });
+                              });
+                            }
+
+                            // Calculate coverage statistics
+                            const lotSize = selectedProject.parcel.lotSizeSqFt || 0;
+                            const existingBuildings = selectedProject.parcel.totalBuildingSF || 0;
+                            const newStructures = shapesArray.reduce((sum, shape) =>
+                              sum + (shape.area || shape.properties?.area || 0), 0
+                            );
+                            const totalCoverage = existingBuildings + newStructures;
+                            const coveragePercent = lotSize > 0 ? (totalCoverage / lotSize) * 100 : 0;
+
+                            // Extract max coverage from zoning (e.g., "R1-10" -> 40% typical)
+                            const zoning = selectedProject.parcel.zoning || '';
+                            let maxPercent = 40; // Default for R1 zones
+                            if (zoning.includes('R1')) maxPercent = 40;
+                            else if (zoning.includes('R2')) maxPercent = 50;
+                            else if (zoning.includes('R3')) maxPercent = 60;
+
+                            const maxAllowed = (lotSize * maxPercent) / 100;
+                            const remainingSpace = maxAllowed - totalCoverage;
+                            const underLimit = remainingSpace >= 0;
+
+                            const coverageStats = {
+                              lotSize,
+                              maxAllowed: Math.round(maxAllowed),
+                              maxPercent,
+                              zoning,
+                              existingBuildings,
+                              newStructures: Math.round(newStructures),
+                              totalCoverage: Math.round(totalCoverage),
+                              coveragePercent: parseFloat(coveragePercent.toFixed(1)),
+                              remainingSpace: Math.round(remainingSpace),
+                              underLimit,
+                            };
+
+                            // Prepare property data for PDF
+                            const propertyData = {
+                              address: selectedProject.parcel.address || 'Unknown Address',
+                              lotSize: selectedProject.parcel.lotSizeSqFt || 0,
+                              zoning: selectedProject.parcel.zoning || 'Unknown',
+                              setbacks: {
+                                front: 20,
+                                rear: 20,
+                                left: 5,
+                                right: 5,
+                              },
+                              shapes: shapesArray.map((shape: any) => ({
+                                name: shape.name || `Unnamed ${shape.shapeType || 'Structure'}`,
+                                area: Math.round(shape.area || 0),
+                                perimeter: shape.perimeter,
+                                coordinates: shape.coordinates,
+                              })),
+                              apn: selectedProject.parcel.apn,
+                              existingSqFt: selectedProject.parcel.totalBuildingSF || 0,
+                              centerLat: selectedProject.parcel.latitude,
+                              centerLng: selectedProject.parcel.longitude,
+                              boundaryCoordinates: selectedProject.parcel.coordinates || selectedProject.parcel.geometry?.coordinates?.[0],
+                              requirements: requirements.length > 0 ? requirements : undefined,
+                              coverageStats,
+                            };
+
+                            console.log('📊 Final shapes for PDF export:', propertyData.shapes);
+                            propertyData.shapes.forEach((shape: any, idx: number) => {
+                              console.log(`  PDF Shape ${idx}: "${shape.name}" - ${shape.area} sq ft, coords: ${shape.coordinates?.length || 0}`);
+                            });
+                            console.log('📋 Requirements for PDF:', propertyData.requirements);
+                            console.log('📊 Coverage stats:', propertyData.coverageStats);
+                            console.log('🗺️ Boundary coordinates for PDF:', propertyData.boundaryCoordinates?.length || 0, 'points');
+                            if (propertyData.boundaryCoordinates && propertyData.boundaryCoordinates.length > 0) {
+                              console.log('🗺️ First boundary coord:', propertyData.boundaryCoordinates[0]);
+                            }
+
+                            // Export PDF with preview option
+                            const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+                            console.log('🔑 Mapbox token available:', !!mapboxToken);
+
+                            const result = await exportPropertyPdf(
+                              null as any, // mapElement not needed
+                              selectedProject.parcel.address || `Project_${selectedProject.id}`,
+                              propertyData,
+                              {
+                                preview: true,
+                                mapboxToken: mapboxToken
+                              }
+                            );
+
+                            // Set PDF preview data and show modal
+                            if (result.blobUrl) {
+                              setPdfBlobUrl(result.blobUrl);
+                              setPdfFileName(result.fileName);
+                              setPdfInstance(result.pdf);
+                              setShowPdfPreview(true);
+                            }
+                          } catch (error) {
+                            console.error('Failed to export PDF:', error);
+                            toast.error('Failed to export PDF');
+                          } finally {
+                            setIsExportingPdf(false);
+                          }
+                        }}
+                        disabled={isExportingPdf}
+                        className={`flex-1 px-6 py-3 rounded-xl font-medium shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 ${
+                          isExportingPdf
+                            ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                            : 'bg-gradient-to-br from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white'
+                        }`}
                       >
-                        <FileText className="h-5 w-5" />
-                        Property Report
+                        {isExportingPdf ? (
+                          <>
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            <span>Exporting...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>Export PDF</span>
+                          </>
+                        )}
                       </button>
-                    </>
-                  )}
-                  <button onClick={() => router.push(`/projects/${selectedProject.id}/edit`)} className="px-6 py-3 border-2 border-[#9caf88] text-[#9caf88] hover:bg-[#9caf88] hover:text-white rounded-xl font-medium transition-all duration-200">Edit</button>
-                </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -1028,6 +1215,23 @@ export function ProjectsDashboard({
             setEditingProject(null)
           }}
           onSave={handleSaveProject}
+        />
+
+        {/* PDF Preview Modal */}
+        <PDFPreviewModal
+          isOpen={showPdfPreview}
+          onClose={() => {
+            setShowPdfPreview(false);
+            if (pdfBlobUrl) {
+              URL.revokeObjectURL(pdfBlobUrl);
+            }
+            setPdfBlobUrl(null);
+            setPdfFileName('');
+            setPdfInstance(null);
+          }}
+          pdfBlobUrl={pdfBlobUrl}
+          fileName={pdfFileName}
+          onDownload={handlePdfDownload}
         />
       </div>
     </div>
