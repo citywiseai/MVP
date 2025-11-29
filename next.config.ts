@@ -21,3 +21,4 @@ const nextConfig: NextConfig = {
 
 export default nextConfig;
 // Deployment trigger Sat Nov 29 13:05:09 MST 2025
+// Deploy 1764447382
