@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { MapPin, Loader2, Send, MessageCircle, ChevronDown } from 'lucide-react'
+import { Send, Loader2, MapPin, Home } from 'lucide-react'
 import { AddressAutocomplete } from '@/components/AddressAutocomplete'
+import CityWiseLogo from '@/components/CityWiseLogo'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -26,6 +27,14 @@ interface ParcelData {
   jurisdictionCode?: string
 }
 
+const ScoutAvatar = () => (
+  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-citywise-orange to-citywise-gold flex items-center justify-center shadow-lg glow-orange">
+    <svg viewBox="0 0 24 24" className="w-10 h-10 text-citywise-bg" fill="currentColor">
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+    </svg>
+  </div>
+);
+
 export default function SmartScoutChat() {
   const router = useRouter()
 
@@ -47,6 +56,7 @@ export default function SmartScoutChat() {
   const [isCreating, setIsCreating] = useState(false)
   const [loadingAddress, setLoadingAddress] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [addressReady, setAddressReady] = useState(false)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -102,6 +112,7 @@ export default function SmartScoutChat() {
   const handleAddressSelect = (address: string) => {
     const cleanAddress = address.replace(/, USA$/, '')
     setAddressInput(cleanAddress)
+    setAddressReady(cleanAddress.length > 5)
   }
 
   const handleAddressSubmit = async () => {
@@ -317,124 +328,65 @@ export default function SmartScoutChat() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-800 via-slate-900 to-blue-900 py-12">
-      <div className="max-w-4xl mx-auto px-4">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-semibold text-white mb-3">AI Scope Capture</h1>
-          <p className="text-lg text-blue-100">Let Scout guide you through your project setup</p>
-        </div>
+    <div className="min-h-screen bg-citywise-bg text-citywise-text">
+      {/* Header */}
+      <div className="border-b border-citywise-border px-6 py-4 bg-citywise-surface/50 backdrop-blur-sm">
+        <CityWiseLogo theme="light" width={160} />
+      </div>
 
-        {/* Exploration Mode - General Q&A Chat */}
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6 py-12 lg:py-20">
+        {/* Two Column Layout - Initial State */}
         {!parcelData && (
-          <>
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 mb-12">
-              <div className="mb-6">
-                <h2 className="text-2xl font-semibold text-gray-900 mb-3">Chat with Scout</h2>
-                <p className="text-sm text-gray-600 leading-relaxed">
-                  Whether you're exploring possibilities or ready to build, I'm here to help answer any questions.
-                </p>
-              </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 animate-fade-in">
 
-              {/* Exploration chat messages */}
-              {explorationMessages.length > 0 && (
-                <div className="border border-gray-100 rounded-2xl p-6 mb-6 max-h-[320px] overflow-y-auto bg-gray-50/50">
-                  <div className="space-y-4">
-                    {explorationMessages.map((message, index) => (
-                      <div
-                        key={index}
-                        className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                      >
-                        <div
-                          className={`max-w-[80%] px-5 py-3 rounded-2xl ${
-                            message.role === 'user'
-                              ? 'bg-blue-500 text-white'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}
-                        >
-                          <p className="text-sm leading-relaxed">{message.content}</p>
-                        </div>
-                      </div>
-                    ))}
-                    {explorationLoading && (
-                      <div className="flex justify-start">
-                        <div className="bg-gray-100 px-5 py-3 rounded-2xl flex items-center gap-2">
-                          <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
-                          <span className="text-sm text-gray-600">Thinking...</span>
-                        </div>
-                      </div>
-                    )}
-                    <div ref={explorationEndRef} />
-                  </div>
+            {/* Left Column - Property Address */}
+            <div className="bg-citywise-surface rounded-2xl p-8 border border-citywise-border hover:border-citywise-orange transition-all duration-300 shadow-xl">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="bg-gradient-to-br from-citywise-orange to-citywise-gold p-3 rounded-xl">
+                  <MapPin className="w-8 h-8 text-citywise-bg" />
                 </div>
-              )}
-
-              {/* Exploration input */}
-              <form onSubmit={handleExplorationSubmit} className="flex gap-3">
-                <input
-                  type="text"
-                  value={explorationInput}
-                  onChange={(e) => setExplorationInput(e.target.value)}
-                  placeholder="Ask about permits, costs, zoning, ADUs..."
-                  disabled={explorationLoading}
-                  className="flex-1 h-12 px-5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 text-sm placeholder:text-gray-400"
-                />
-                <button
-                  type="submit"
-                  disabled={explorationLoading || !explorationInput.trim()}
-                  className="h-12 px-6 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 flex items-center justify-center"
-                >
-                  <Send className="w-5 h-5" />
-                </button>
-              </form>
-            </div>
-
-            {/* Divider - Elegant Glow */}
-            <div className="flex flex-col items-center justify-center py-12 space-y-3">
-              {/* Dots */}
-              <div className="flex space-x-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-white/60"></div>
-                <div className="w-1.5 h-1.5 rounded-full bg-white/60"></div>
-                <div className="w-1.5 h-1.5 rounded-full bg-white/60"></div>
+                <h2 className="text-2xl font-bold text-citywise-text">
+                  Every project starts with an address
+                </h2>
               </div>
 
-              {/* Text with glow */}
-              <p
-                className="text-white text-lg font-medium text-center px-8"
-                style={{
-                  textShadow: '0 0 20px rgba(255, 255, 255, 0.3), 0 0 10px rgba(255, 255, 255, 0.2)'
-                }}
-              >
-                When you're ready, let's look at your specific property
+              <p className="text-citywise-text-muted mb-6">
+                Get personalized guidance for your specific property
               </p>
 
-              {/* Optional subtle line */}
-              <div className="w-32 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
-            </div>
+              <div className="space-y-4">
+                <AddressAutocomplete
+                  placeholder="e.g., 123 Main St, Phoenix, AZ 85001"
+                  className="w-full px-6 py-4 bg-citywise-bg border-2 border-citywise-border rounded-xl text-citywise-text placeholder-gray-500 focus:outline-none focus:border-citywise-orange transition-all duration-300"
+                  onAddressSelect={handleAddressSelect}
+                  required={false}
+                />
 
-            {/* Project Start - Address Input */}
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
-              <div className="mb-6">
-                <label className="block text-base font-medium text-gray-900 mb-2">
-                  Property Address
-                </label>
-                <p className="text-sm text-gray-600">
-                  Get personalized guidance for your specific property
-                </p>
-              </div>
+                {addressInput.length > 0 && !addressReady && (
+                  <div className="flex items-start gap-2 text-citywise-orange text-sm">
+                    <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                    <span>Start typing for address suggestions</span>
+                  </div>
+                )}
 
-              <div className="flex gap-3">
-                <div className="flex-1">
-                  <AddressAutocomplete
-                    placeholder="e.g., 123 Main St, Phoenix, AZ 85001"
-                    className="w-full h-14 px-5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                    onAddressSelect={handleAddressSelect}
-                    required={false}
-                  />
-                </div>
+                {addressReady && (
+                  <div className="flex items-start gap-2 text-green-400 text-sm">
+                    <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                    </svg>
+                    <span>Address autocomplete ready</span>
+                  </div>
+                )}
+
                 <button
                   onClick={handleAddressSubmit}
-                  disabled={loadingAddress}
-                  className="h-14 px-8 bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 flex-shrink-0"
+                  disabled={loadingAddress || !addressReady}
+                  className={`w-full py-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 ${
+                    addressReady && !loadingAddress
+                      ? 'bg-gradient-to-r from-citywise-orange to-citywise-gold text-citywise-bg hover:shadow-lg hover:scale-[1.02] glow-orange'
+                      : 'bg-citywise-border text-gray-500 cursor-not-allowed'
+                  }`}
                 >
                   {loadingAddress ? (
                     <>
@@ -451,33 +403,110 @@ export default function SmartScoutChat() {
                   )}
                 </button>
               </div>
+
+              <div className="mt-6 p-4 bg-citywise-bg rounded-lg border border-citywise-border">
+                <p className="text-sm text-citywise-text-muted">
+                  🏠 We'll analyze zoning, setbacks, permits, and development potential for your property
+                </p>
+              </div>
             </div>
-          </>
+
+            {/* Right Column - Chat with Scout */}
+            <div className="bg-citywise-surface rounded-2xl p-8 border border-citywise-border hover:border-citywise-orange transition-all duration-300 shadow-xl">
+              <div className="flex items-center gap-4 mb-6">
+                <ScoutAvatar />
+                <div>
+                  <h2 className="text-2xl font-bold text-citywise-text mb-1">Chat with Scout</h2>
+                  <p className="text-citywise-text-muted text-sm">
+                    Whether you're exploring possibilities or ready to build, I'm here to help answer any questions.
+                  </p>
+                </div>
+              </div>
+
+              {/* Chat messages */}
+              {explorationMessages.length > 0 && (
+                <div className="mb-4 max-h-[320px] overflow-y-auto bg-citywise-bg rounded-xl p-4 border border-citywise-border">
+                  <div className="space-y-3">
+                    {explorationMessages.map((message, index) => (
+                      <div
+                        key={index}
+                        className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div
+                          className={`max-w-[80%] px-4 py-2.5 rounded-xl ${
+                            message.role === 'user'
+                              ? 'bg-gradient-to-r from-citywise-orange to-citywise-gold text-citywise-bg'
+                              : 'bg-citywise-surface border border-citywise-border text-citywise-text'
+                          }`}
+                        >
+                          <p className="text-sm leading-relaxed">{message.content}</p>
+                        </div>
+                      </div>
+                    ))}
+                    {explorationLoading && (
+                      <div className="flex justify-start">
+                        <div className="bg-citywise-surface border border-citywise-border px-4 py-2.5 rounded-xl flex items-center gap-2">
+                          <Loader2 className="w-4 h-4 animate-spin text-citywise-orange" />
+                          <span className="text-sm text-citywise-text-muted">Thinking...</span>
+                        </div>
+                      </div>
+                    )}
+                    <div ref={explorationEndRef} />
+                  </div>
+                </div>
+              )}
+
+              <form onSubmit={handleExplorationSubmit} className="relative">
+                <input
+                  type="text"
+                  value={explorationInput}
+                  onChange={(e) => setExplorationInput(e.target.value)}
+                  placeholder="Ask about permits, costs, zoning, ADUs..."
+                  disabled={explorationLoading}
+                  className="w-full px-6 py-4 bg-citywise-bg border-2 border-citywise-border rounded-xl text-citywise-text placeholder-gray-500 focus:outline-none focus:border-citywise-orange transition-all duration-300"
+                />
+                <button
+                  type="submit"
+                  disabled={explorationLoading}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 bg-gradient-to-r from-citywise-orange to-citywise-gold p-3 rounded-lg hover:shadow-lg hover:scale-105 transition-all duration-200 disabled:opacity-50"
+                >
+                  <Send className="w-5 h-5 text-citywise-bg" />
+                </button>
+              </form>
+
+              <div className="mt-6 p-4 bg-citywise-bg rounded-lg border border-citywise-border">
+                <p className="text-sm text-citywise-text-muted italic">
+                  💡 Try asking: "What permits do I need for an ADU?" or "How long does the approval process take?"
+                </p>
+              </div>
+            </div>
+          </div>
         )}
 
-        {/* Project Mode - Existing Conversation Flow */}
+        {/* Project Mode - After Address Selected */}
         {parcelData && (
-          <>
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 mb-6">
-              <div className="flex items-start gap-4">
+          <div className="space-y-6 animate-fade-in">
+            {/* Property Info Card */}
+            <div className="bg-citywise-surface rounded-2xl p-6 border border-citywise-border shadow-xl">
+              <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900 text-lg mb-3">{parcelData.address}</h3>
-                  <div className="grid grid-cols-4 gap-4 text-sm text-gray-600">
+                  <h3 className="font-bold text-citywise-text text-xl mb-4">{parcelData.address}</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div>
-                      <span className="font-medium text-gray-500">Lot Size</span>
-                      <p className="text-gray-900 mt-0.5">{parcelData.lotSize.toLocaleString()} sq ft</p>
+                      <span className="text-citywise-text-muted block mb-1">Lot Size</span>
+                      <p className="text-citywise-text font-semibold">{parcelData.lotSize.toLocaleString()} sq ft</p>
                     </div>
                     <div>
-                      <span className="font-medium text-gray-500">Building SF</span>
-                      <p className="text-gray-900 mt-0.5">{parcelData.buildingSize > 0 ? parcelData.buildingSize.toLocaleString() : 'N/A'} sq ft</p>
+                      <span className="text-citywise-text-muted block mb-1">Building SF</span>
+                      <p className="text-citywise-text font-semibold">{parcelData.buildingSize > 0 ? parcelData.buildingSize.toLocaleString() : 'N/A'} sq ft</p>
                     </div>
                     <div>
-                      <span className="font-medium text-gray-500">Zoning</span>
-                      <p className="text-gray-900 mt-0.5">{parcelData.zoning}</p>
+                      <span className="text-citywise-text-muted block mb-1">Zoning</span>
+                      <p className="text-citywise-text font-semibold">{parcelData.zoning}</p>
                     </div>
                     <div>
-                      <span className="font-medium text-gray-500">Jurisdiction</span>
-                      <p className="text-gray-900 mt-0.5">{parcelData.jurisdiction}</p>
+                      <span className="text-citywise-text-muted block mb-1">Jurisdiction</span>
+                      <p className="text-citywise-text font-semibold">{parcelData.jurisdiction}</p>
                     </div>
                   </div>
                 </div>
@@ -487,26 +516,28 @@ export default function SmartScoutChat() {
                     setMessages([])
                     setCurrentButtons([])
                     setAddressInput('')
+                    setAddressReady(false)
                   }}
-                  className="text-sm text-gray-500 hover:text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="text-sm text-citywise-text-muted hover:text-citywise-orange px-4 py-2 rounded-lg hover:bg-citywise-bg transition-colors border border-citywise-border"
                 >
                   Change
                 </button>
               </div>
             </div>
 
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="h-[420px] overflow-y-auto p-8 space-y-4">
+            {/* Chat Container */}
+            <div className="bg-citywise-surface rounded-2xl border border-citywise-border overflow-hidden shadow-xl">
+              <div className="h-[420px] overflow-y-auto p-6 space-y-3">
                 {messages.map((message, index) => (
                   <div
                     key={index}
                     className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`max-w-[80%] px-5 py-3 rounded-2xl ${
+                      className={`max-w-[80%] px-4 py-2.5 rounded-xl ${
                         message.role === 'user'
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-gray-100 text-gray-800'
+                          ? 'bg-gradient-to-r from-citywise-orange to-citywise-gold text-citywise-bg'
+                          : 'bg-citywise-bg border border-citywise-border text-citywise-text'
                       }`}
                     >
                       <p className="text-sm leading-relaxed">{message.content}</p>
@@ -516,9 +547,9 @@ export default function SmartScoutChat() {
 
                 {isLoading && (
                   <div className="flex justify-start">
-                    <div className="bg-gray-100 px-5 py-3 rounded-2xl flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
-                      <span className="text-sm text-gray-600">Thinking...</span>
+                    <div className="bg-citywise-bg border border-citywise-border px-4 py-2.5 rounded-xl flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-citywise-orange" />
+                      <span className="text-sm text-citywise-text-muted">Thinking...</span>
                     </div>
                   </div>
                 )}
@@ -526,8 +557,9 @@ export default function SmartScoutChat() {
                 <div ref={messagesEndRef} />
               </div>
 
+              {/* Buttons */}
               {currentButtons.length > 0 && !isLoading && !isCreating && (
-                <div className="border-t border-gray-100 p-6 bg-gray-50/50 space-y-4">
+                <div className="border-t border-citywise-border p-6 bg-citywise-bg/50 space-y-4">
                   <div className="flex flex-wrap gap-2">
                     {currentButtons.map((button, index) => (
                       <button
@@ -535,8 +567,8 @@ export default function SmartScoutChat() {
                         onClick={() => handleButtonClick(button.value, button.label)}
                         className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
                           selectedButtons.includes(button.value)
-                            ? 'bg-blue-500 text-white shadow-sm'
-                            : 'bg-white border border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50'
+                            ? 'bg-gradient-to-r from-citywise-orange to-citywise-gold text-citywise-bg shadow-lg glow-orange'
+                            : 'bg-citywise-surface border border-citywise-border text-citywise-text hover:border-citywise-orange hover:bg-citywise-bg'
                         }`}
                       >
                         {button.label}
@@ -547,7 +579,7 @@ export default function SmartScoutChat() {
                   {selectedButtons.length > 0 && (
                     <button
                       onClick={handleContinueMultiSelect}
-                      className="w-full px-6 py-3 bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600 transition-colors"
+                      className="w-full px-6 py-3 bg-gradient-to-r from-citywise-orange to-citywise-gold text-citywise-bg rounded-xl font-semibold hover:shadow-lg transition-all"
                     >
                       Continue with: {selectedButtons.map(val => currentButtons.find(b => b.value === val)?.label).filter(Boolean).join(', ')}
                     </button>
@@ -555,27 +587,37 @@ export default function SmartScoutChat() {
                 </div>
               )}
 
-              <div className="border-t border-gray-100 p-6 bg-white">
-                <form onSubmit={handleTextSubmit} className="flex gap-3">
+              {/* Input */}
+              <div className="border-t border-citywise-border p-6 bg-citywise-surface">
+                <form onSubmit={handleTextSubmit} className="relative">
                   <input
                     type="text"
                     value={textInput}
                     onChange={(e) => setTextInput(e.target.value)}
                     placeholder="Type a message or ask a question..."
                     disabled={isLoading || isCreating}
-                    className="flex-1 h-12 px-5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 text-sm placeholder:text-gray-400"
+                    className="w-full px-6 py-4 bg-citywise-bg border-2 border-citywise-border rounded-xl text-citywise-text placeholder-gray-500 focus:outline-none focus:border-citywise-orange transition-all duration-300 disabled:opacity-50"
                   />
                   <button
                     type="submit"
                     disabled={isLoading || isCreating || !textInput.trim()}
-                    className="h-12 px-6 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 bg-gradient-to-r from-citywise-orange to-citywise-gold p-3 rounded-lg hover:shadow-lg hover:scale-105 transition-all duration-200 disabled:opacity-50"
                   >
-                    <Send className="w-5 h-5" />
+                    <Send className="w-5 h-5 text-citywise-bg" />
                   </button>
                 </form>
               </div>
             </div>
-          </>
+          </div>
+        )}
+
+        {/* Bottom CTA - Only show initially */}
+        {!parcelData && (
+          <div className="mt-12 text-center animate-fade-in">
+            <p className="text-citywise-text-muted text-lg">
+              Not sure where to start? <span className="text-citywise-orange font-semibold cursor-pointer hover:underline">Take our quick assessment</span>
+            </p>
+          </div>
         )}
       </div>
     </div>

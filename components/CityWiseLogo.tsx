@@ -7,20 +7,21 @@ interface CityWiseLogoProps {
   animated?: boolean;
 }
 
-export default function CityWiseLogo({ 
-  className = '', 
-  width = 180, 
+export default function CityWiseLogo({
+  className = '',
+  width = 180,
   theme = 'dark',
-  animated = false 
+  animated = false
 }: CityWiseLogoProps) {
-  const textColor = theme === 'light' ? '#ffffff' : '#1e3a5f';
-  const accentColor = '#9caf88';
-  
+  const textColor = theme === 'light' ? '#f4f5f7' : '#1d1d1d';
+  const primaryColor = '#faa950'; // Orange
+  const secondaryColor = '#bf9968'; // Tan/gold
+
   return (
     <svg
       width={width}
-      height={width / 3}
-      viewBox="0 0 180 60"
+      height={width / 3.5}
+      viewBox="0 0 200 57"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
@@ -29,18 +30,18 @@ export default function CityWiseLogo({
       {animated && (
         <defs>
           <linearGradient id="citywise-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#1e3a5f">
+            <stop offset="0%" stopColor={primaryColor}>
               <animate
                 attributeName="stop-color"
-                values="#1e3a5f; #9caf88; #1e3a5f"
+                values={`${primaryColor}; ${secondaryColor}; ${primaryColor}`}
                 dur="3s"
                 repeatCount="indefinite"
               />
             </stop>
-            <stop offset="100%" stopColor="#9caf88">
+            <stop offset="100%" stopColor={secondaryColor}>
               <animate
                 attributeName="stop-color"
-                values="#9caf88; #1e3a5f; #9caf88"
+                values={`${secondaryColor}; ${primaryColor}; ${secondaryColor}`}
                 dur="3s"
                 repeatCount="indefinite"
               />
@@ -49,24 +50,56 @@ export default function CityWiseLogo({
         </defs>
       )}
 
-      <g transform="translate(5, 10)">
-        <rect x="0" y="10" width="12" height="30" rx="2" fill={animated ? "url(#citywise-gradient)" : "#1e3a5f"} />
-        <rect x="15" y="5" width="12" height="35" rx="2" fill={animated ? "url(#citywise-gradient)" : accentColor} />
-        <rect x="30" y="15" width="12" height="25" rx="2" fill={animated ? "url(#citywise-gradient)" : "#1e3a5f"} />
-        
-        <circle cx="6" cy="25" r="1.5" fill="#ffffff" opacity="0.8" />
-        <circle cx="21" cy="20" r="1.5" fill="#ffffff" opacity="0.8" />
-        <circle cx="36" cy="30" r="1.5" fill="#ffffff" opacity="0.8" />
-        
-        <line x1="6" y1="25" x2="21" y2="20" stroke="#ffffff" strokeWidth="0.5" opacity="0.6" />
-        <line x1="21" y1="20" x2="36" y2="30" stroke="#ffffff" strokeWidth="0.5" opacity="0.6" />
+      {/* Modern cityscape icon */}
+      <g transform="translate(0, 8)">
+        {/* Building 1 */}
+        <path
+          d="M 3 35 L 3 18 C 3 16.5 4 15.5 5.5 15.5 L 14.5 15.5 C 16 15.5 17 16.5 17 18 L 17 35 Z"
+          fill={animated ? "url(#citywise-gradient)" : primaryColor}
+          opacity="0.9"
+        />
+
+        {/* Building 2 - Taller */}
+        <path
+          d="M 20 35 L 20 10 C 20 8.5 21 7.5 22.5 7.5 L 31.5 7.5 C 33 7.5 34 8.5 34 10 L 34 35 Z"
+          fill={animated ? "url(#citywise-gradient)" : secondaryColor}
+        />
+
+        {/* Building 3 */}
+        <path
+          d="M 37 35 L 37 20 C 37 18.5 38 17.5 39.5 17.5 L 48.5 17.5 C 50 17.5 51 18.5 51 20 L 51 35 Z"
+          fill={animated ? "url(#citywise-gradient)" : primaryColor}
+          opacity="0.85"
+        />
+
+        {/* Window details */}
+        <rect x="7" y="20" width="3" height="3" rx="0.5" fill={theme === 'light' ? '#f4f5f7' : '#1d1d1d'} opacity="0.3" />
+        <rect x="12" y="20" width="3" height="3" rx="0.5" fill={theme === 'light' ? '#f4f5f7' : '#1d1d1d'} opacity="0.3" />
+        <rect x="7" y="26" width="3" height="3" rx="0.5" fill={theme === 'light' ? '#f4f5f7' : '#1d1d1d'} opacity="0.3" />
+        <rect x="12" y="26" width="3" height="3" rx="0.5" fill={theme === 'light' ? '#f4f5f7' : '#1d1d1d'} opacity="0.3" />
+
+        <rect x="24" y="13" width="3" height="3" rx="0.5" fill={theme === 'light' ? '#f4f5f7' : '#1d1d1d'} opacity="0.4" />
+        <rect x="29" y="13" width="3" height="3" rx="0.5" fill={theme === 'light' ? '#f4f5f7' : '#1d1d1d'} opacity="0.4" />
+        <rect x="24" y="19" width="3" height="3" rx="0.5" fill={theme === 'light' ? '#f4f5f7' : '#1d1d1d'} opacity="0.4" />
+        <rect x="29" y="19" width="3" height="3" rx="0.5" fill={theme === 'light' ? '#f4f5f7' : '#1d1d1d'} opacity="0.4" />
+        <rect x="24" y="25" width="3" height="3" rx="0.5" fill={theme === 'light' ? '#f4f5f7' : '#1d1d1d'} opacity="0.4" />
+        <rect x="29" y="25" width="3" height="3" rx="0.5" fill={theme === 'light' ? '#f4f5f7' : '#1d1d1d'} opacity="0.4" />
+
+        <rect x="41" y="23" width="3" height="3" rx="0.5" fill={theme === 'light' ? '#f4f5f7' : '#1d1d1d'} opacity="0.3" />
+        <rect x="46" y="23" width="3" height="3" rx="0.5" fill={theme === 'light' ? '#f4f5f7' : '#1d1d1d'} opacity="0.3" />
+        <rect x="41" y="29" width="3" height="3" rx="0.5" fill={theme === 'light' ? '#f4f5f7' : '#1d1d1d'} opacity="0.3" />
+        <rect x="46" y="29" width="3" height="3" rx="0.5" fill={theme === 'light' ? '#f4f5f7' : '#1d1d1d'} opacity="0.3" />
+
+        {/* Base line */}
+        <line x1="0" y1="36" x2="54" y2="36" stroke={primaryColor} strokeWidth="2" strokeLinecap="round" />
       </g>
 
+      {/* CityWise text */}
       <text
-        x="55"
-        y="32"
-        fontFamily="system-ui, -apple-system, sans-serif"
-        fontSize="20"
+        x="62"
+        y="35"
+        fontFamily="system-ui, -apple-system, 'SF Pro Display', sans-serif"
+        fontSize="24"
         fontWeight="700"
         fill={textColor}
         letterSpacing="-0.5"
@@ -74,17 +107,21 @@ export default function CityWiseLogo({
         CityWise
       </text>
 
+      {/* Subtle tagline */}
       <text
-        x="55"
-        y="47"
+        x="62"
+        y="48"
         fontFamily="system-ui, -apple-system, sans-serif"
-        fontSize="11"
+        fontSize="9"
         fontWeight="500"
-        fill={accentColor}
-        letterSpacing="0.5"
+        fill={secondaryColor}
+        letterSpacing="1"
+        opacity="0.8"
       >
-        AI
+        PRECONSTRUCTION
       </text>
     </svg>
   );
 }
+
+export { CityWiseLogo };

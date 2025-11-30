@@ -45,3 +45,4 @@ next-env.d.ts
 *.tsx.bak*
 check_projects.sql
 update_setbacks.sh
+.env.production.local

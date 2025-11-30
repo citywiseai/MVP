@@ -51,7 +51,7 @@ export async function exportPropertyPdf(
 
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');
-    pdf.text('CityWise AI', pageWidth / 2, 19, { align: 'center' });
+    pdf.text('CityWise', pageWidth / 2, 19, { align: 'center' });
 
     // Reset text color for body
     pdf.setTextColor(0, 0, 0);

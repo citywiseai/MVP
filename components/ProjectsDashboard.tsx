@@ -829,7 +829,7 @@ export function ProjectsDashboard({
       <div className="min-h-screen bg-gradient-to-br from-[#faf8f3] via-[#faf8f3] to-[#9caf88]/10">
         <div className="border-b border-gray-200 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
           <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-[#1e3a5f]">CityWise AI</h1>
+            <h1 className="text-2xl font-bold text-[#1e3a5f]">CityWise</h1>
             <div className="flex items-center gap-4">
               <span className="text-sm text-gray-600">{userEmail}</span>
               <SignOutButton />
@@ -848,7 +848,7 @@ export function ProjectsDashboard({
           <div className="flex items-center gap-3 mb-4">
             <Building2 className="w-8 h-8" />
             <div>
-              <h1 className="text-xl font-bold">CityWise AI</h1>
+              <h1 className="text-xl font-bold">CityWise</h1>
               <p className="text-xs text-white/80">{userEmail}</p>
             </div>
           </div>

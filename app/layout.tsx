@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CityWise AI",
-  description: "Preconstruction planning made simple",
+  title: "CityWise - Preconstruction Planning Platform",
+  description: "Smart preconstruction planning for residential projects. Navigate zoning, engineering, and permits with confidence.",
 };
 
 export default function RootLayout({

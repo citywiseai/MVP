@@ -25,7 +25,7 @@ export default async function PermitResultPage({
       <nav className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
-            <Link href="/dashboard" className="text-xl font-bold">CityWise AI</Link>
+            <Link href="/dashboard" className="text-xl font-bold">CityWise</Link>
             <span className="text-sm">{session.user.email}</span>
           </div>
         </div>

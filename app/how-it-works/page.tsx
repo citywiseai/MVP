@@ -188,7 +188,7 @@ export default function HowItWorksPage() {
       {/* Footer */}
       <footer className="border-t border-gray-200 bg-white/80 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-6 py-8 text-center text-sm text-gray-600">
-          <p>© 2024 CityWise AI. Simplifying preconstruction in Phoenix Metro.</p>
+          <p>© 2024 CityWise. Simplifying preconstruction in Phoenix Metro.</p>
         </div>
       </footer>
     </div>

@@ -12,7 +12,7 @@ export default function DashboardEmptyState() {
         <div className="mb-12">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-[#9caf88]/20 to-[#d4836f]/20 border border-[#9caf88]/30 mb-6">
             <Sparkles className="w-4 h-4 text-[#d4836f]" />
-            <span className="text-sm font-medium text-[#1e3a5f]">Welcome to CityWise AI</span>
+            <span className="text-sm font-medium text-[#1e3a5f]">Welcome to CityWise</span>
           </div>
           
           <h1 className="text-4xl md:text-5xl font-bold text-[#1e3a5f] mb-4">
