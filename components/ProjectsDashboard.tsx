@@ -13,6 +13,8 @@ import PDFPreviewModal from './PDFPreviewModal'
 import AIVisualizationPanel from './AIVisualizationPanel'
 import { exportPropertyPdf } from '@/lib/exportPdf'
 import { toast } from 'sonner'
+import CompactTimeline from '@/components/roadmap/CompactTimeline'
+import { ProjectRoadmap } from '@/types/roadmap'
 
 const MapboxPropertyVisualization = dynamic(() => import('./MapboxPropertyVisualization'), {
   ssr: false,
@@ -85,6 +87,10 @@ export function ProjectsDashboard({
   } | null>(null)
   const [editingVisionId, setEditingVisionId] = useState<string | null>(null)
   const [editingVisionName, setEditingVisionName] = useState('')
+
+  // Roadmap state
+  const [roadmap, setRoadmap] = useState<ProjectRoadmap | null>(null)
+  const [selectedPhaseId, setSelectedPhaseId] = useState<string>('')
 
   const selectedProject = projects.find(p => p.id === selectedProjectId)
 
@@ -231,6 +237,31 @@ export function ProjectsDashboard({
     };
 
     loadVisualizations();
+  }, [selectedProjectId]);
+
+  // Load Roadmap when project changes
+  useEffect(() => {
+    const loadRoadmap = async () => {
+      if (!selectedProjectId) {
+        setRoadmap(null);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/projects/${selectedProjectId}/roadmap`);
+        if (response.ok) {
+          const data = await response.json();
+          setRoadmap(data);
+        } else {
+          setRoadmap(null);
+        }
+      } catch (error) {
+        console.error('Error loading roadmap:', error);
+        setRoadmap(null);
+      }
+    };
+
+    loadRoadmap();
   }, [selectedProjectId]);
 
   // Refresh visualizations callback
@@ -618,7 +649,12 @@ export function ProjectsDashboard({
       const res = await fetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectId: selectedProjectId, title, description }),
+        body: JSON.stringify({
+          projectId: selectedProjectId,
+          title,
+          description,
+          phaseId: selectedPhaseId || null
+        }),
       })
       if (!res.ok) throw new Error('Failed')
       const newTask = await res.json()
@@ -629,6 +665,7 @@ export function ProjectsDashboard({
         return p
       }))
       e.currentTarget.reset()
+      setSelectedPhaseId('')
     } catch (error) {
       console.error(error)
     }
@@ -1424,6 +1461,39 @@ export function ProjectsDashboard({
                 </button>
                 {expandedSections.tasks && (
                   <div className="px-6 pb-6">
+                    {/* Roadmap Timeline Section */}
+                    {roadmap ? (
+                      <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="text-sm font-semibold text-gray-900">Project Roadmap</h4>
+                          <span className="text-xs text-gray-600">
+                            {roadmap.phases.filter(p => p.status === 'completed').length} / {roadmap.phases.length} phases complete
+                          </span>
+                        </div>
+                        <CompactTimeline
+                          roadmap={roadmap}
+                          onPhaseClick={(phase) => console.log('Phase clicked:', phase)}
+                        />
+                      </div>
+                    ) : (
+                      <button
+                        onClick={async () => {
+                          try {
+                            const response = await fetch(`/api/projects/${selectedProjectId}/roadmap`, { method: 'POST' });
+                            if (response.ok) {
+                              const data = await response.json();
+                              setRoadmap(data);
+                            }
+                          } catch (err) {
+                            console.error('Error generating roadmap:', err);
+                          }
+                        }}
+                        className="mb-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+                      >
+                        Generate Roadmap
+                      </button>
+                    )}
+
                     <div className="space-y-3 mb-4 max-h-[600px] overflow-y-auto">
                       {sortTasksByPriority(selectedProject.tasks || []).map((task: any) => (
                         <div key={task.id} className="p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-[#9caf88] transition-colors">
@@ -1495,9 +1565,32 @@ export function ProjectsDashboard({
                         </div>
                       ))}
                     </div>
+
                     <form onSubmit={handleAddTask} className="space-y-2">
                       <input type="text" name="title" placeholder="Task title" required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9caf88] text-sm" />
                       <input type="text" name="description" placeholder="Description" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9caf88] text-sm" />
+
+                      {/* Phase Assignment Dropdown */}
+                      {roadmap && roadmap.phases && roadmap.phases.length > 0 && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Assign to Phase (Optional)
+                          </label>
+                          <select
+                            value={selectedPhaseId}
+                            onChange={(e) => setSelectedPhaseId(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                          >
+                            <option value="">No phase (general task)</option>
+                            {roadmap.phases.map((phase) => (
+                              <option key={phase.id} value={phase.id}>
+                                {phase.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+
                       <button type="submit" className="w-full px-4 py-2 bg-[#9caf88] hover:bg-[#8a9d78] text-white rounded-lg font-medium transition-colors text-sm">Add Task</button>
                     </form>
                   </div>

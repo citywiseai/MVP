@@ -1,13 +1,36 @@
-import { auth } from "@/lib/auth";
+import { auth, signIn } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import CityWiseLogo from "@/components/CityWiseLogo";
+import { AuthError } from "next-auth";
 
 export default async function LoginPage() {
   const session = await auth();
-  
+
   if (session?.user) {
     redirect('/dashboard');
+  }
+
+  async function handleLogin(formData: FormData) {
+    "use server"
+
+    const email = formData.get('email') as string
+    const password = formData.get('password') as string
+
+    try {
+      await signIn('credentials', {
+        email,
+        password,
+        redirectTo: '/dashboard'
+      })
+    } catch (error) {
+      if (error instanceof AuthError) {
+        // Handle auth errors
+        console.error('Login failed:', error.type, error.message)
+        throw error
+      }
+      throw error
+    }
   }
 
   return (
@@ -23,7 +46,7 @@ export default async function LoginPage() {
           <h2 className="text-2xl font-bold text-[#1e3a5f] mb-2 text-center">Welcome Back</h2>
           <p className="text-gray-600 text-center mb-8">Sign in to continue to your projects</p>
 
-          <form action="/api/auth/signin" method="post" className="space-y-4">
+          <form action={handleLogin} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-[#1e3a5f] mb-2">
                 Email
