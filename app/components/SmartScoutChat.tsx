@@ -347,7 +347,7 @@ export default function SmartScoutChat() {
                   <MapPin className="w-8 h-8 text-citywise-bg" />
                 </div>
                 <h2 className="text-2xl font-bold text-citywise-text">
-                  Every project starts with an address
+                  Enter your address...
                 </h2>
               </div>
 
