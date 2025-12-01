@@ -1287,9 +1287,17 @@ export function ProjectsDashboard({
                   <MapboxPropertyVisualization
                     parcelId={selectedProject.parcel.id}
                     projectId={selectedProject.id}
-                    boundaryCoords={typeof selectedProject.parcel.boundaryCoordinates === 'string'
-                      ? JSON.parse(selectedProject.parcel.boundaryCoordinates)
-                      : selectedProject.parcel.boundaryCoordinates}
+                    boundaryCoords={(() => {
+                      const coords = typeof selectedProject.parcel.boundaryCoordinates === 'string'
+                        ? JSON.parse(selectedProject.parcel.boundaryCoordinates)
+                        : selectedProject.parcel.boundaryCoordinates;
+                      // boundaryCoordinates is stored as [[[lng, lat], ...]] (rings format)
+                      // Extract the first ring to get [[lng, lat], ...]
+                      if (Array.isArray(coords) && Array.isArray(coords[0]) && Array.isArray(coords[0][0])) {
+                        return coords[0];
+                      }
+                      return coords || [];
+                    })()}
                     centerLat={selectedProject.parcel.latitude}
                     centerLng={selectedProject.parcel.longitude}
                     parcel={selectedProject.parcel}
