@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';;
+import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 import { getRequirementsForProject, parseProjectDataToDetails } from '@/lib/requirements';
-
-
+import { searchRegridParcel } from '@/lib/regrid';
 
 function parseScoutConversation(conversation: string) {
   const lines = conversation.split('\n');
@@ -163,30 +162,76 @@ export async function POST(req: NextRequest) {
     const conversationSummary = parseScoutConversation(projectData.conversation || '');
     const cleanDescription = createProjectSummary(conversationSummary);
 
-    // Create Parcel if parcelData exists
+    // Create or fetch Parcel from Regrid
     let parcelId = null;
-    if (projectData.parcelData) {
-      console.log('📦 Creating parcel from Scout data');
+    if (formattedAddress) {
+      console.log('📦 Fetching parcel data from Regrid for:', formattedAddress);
       try {
-        const parcel = await prisma.parcel.create({
-          data: {
-            apn: projectData.parcelData.apn || '',
-            address: projectData.parcelData.address,
-            city: projectData.parcelData.city,
-            state: projectData.parcelData.state || 'AZ',
-            zipCode: projectData.parcelData.zip,
-            zoning: projectData.parcelData.zoning,
-            lotSizeSqFt: projectData.parcelData.lotSize,
-            latitude: projectData.parcelData.latitude,
-            longitude: projectData.parcelData.longitude,
-            boundaryCoordinates: projectData.parcelData.boundaryCoordinates,
-            existingSqFt: projectData.parcelData.buildingSize,
+        // Fetch fresh data from Regrid to ensure we have complete boundary coordinates
+        const parcelData = await searchRegridParcel(formattedAddress);
+        
+        if (parcelData && parcelData.apn) {
+          // Build zoning rules
+          const zoningRules = [];
+          if (parcelData.subdivision || parcelData.platBook) {
+            zoningRules.push({
+              type: 'subdivision',
+              name: parcelData.subdivision || 'Unknown Subdivision',
+              platBook: parcelData.platBook,
+              platPage: parcelData.platPage,
+            });
           }
-        });
-        parcelId = parcel.id;
-        console.log('✅ Parcel created:', parcel.id);
+          if (parcelData.zoning) {
+            zoningRules.push({
+              type: 'zoning',
+              code: parcelData.zoning,
+              name: `Zoning: ${parcelData.zoning}`
+            });
+          }
+
+          // Store complete Regrid data
+          const propertyMetadata = parcelData.rawRegridData || {};
+
+          // Upsert parcel (create or update if APN exists)
+          const parcel = await prisma.parcel.upsert({
+            where: { apn: parcelData.apn },
+            create: {
+              apn: parcelData.apn,
+              address: parcelData.address,
+              city: parcelData.city,
+              state: parcelData.state,
+              county: parcelData.county,
+              zipCode: parcelData.zip,
+              zoning: parcelData.zoning || '',
+              lotSizeSqFt: Math.round(parcelData.lotSizeSqFt || 0),
+              latitude: parcelData.latitude,
+              longitude: parcelData.longitude,
+              boundaryCoordinates: parcelData.boundaryRings,
+              zoningRules: zoningRules,
+              propertyMetadata: propertyMetadata,
+            },
+            update: {
+              address: parcelData.address,
+              city: parcelData.city,
+              state: parcelData.state,
+              county: parcelData.county,
+              zipCode: parcelData.zip,
+              zoning: parcelData.zoning || '',
+              lotSizeSqFt: Math.round(parcelData.lotSizeSqFt || 0),
+              latitude: parcelData.latitude,
+              longitude: parcelData.longitude,
+              boundaryCoordinates: parcelData.boundaryRings,
+              zoningRules: zoningRules,
+              propertyMetadata: propertyMetadata,
+            },
+          });
+          parcelId = parcel.id;
+          console.log('✅ Parcel created/updated:', parcel.id, 'APN:', parcelData.apn);
+        } else {
+          console.log('⚠️ No parcel data found from Regrid');
+        }
       } catch (parcelError) {
-        console.error('⚠️ Error creating parcel:', parcelError);
+        console.error('⚠️ Error fetching/creating parcel:', parcelError);
         // Continue without parcel if creation fails
       }
     }
