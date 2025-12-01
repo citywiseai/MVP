@@ -93,7 +93,7 @@ export function ProjectsDashboard({
   const [selectedPhaseId, setSelectedPhaseId] = useState<string>('')
   
   // Map height state (default 700px for better visibility)
-  const [mapHeight, setMapHeight] = useState(700)
+  const [mapHeight, setMapHeight] = useState(1000)
 
   const selectedProject = projects.find(p => p.id === selectedProjectId)
 
