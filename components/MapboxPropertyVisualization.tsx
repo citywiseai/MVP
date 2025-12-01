@@ -4974,11 +4974,11 @@ export default function MapboxPropertyVisualization({
         </button>
       </div>
 
-      {/* Map Section - takes remaining height */}
-      <div className="flex-1 relative min-h-0">
+{/* Map Section - explicit height minus stats bar (~120px) */}
+      <div className="relative" style={{ height: `${containerHeight - 120}px` }}>
         {/* Map Container */}
-        <div ref={mapContainer} className="absolute inset-0" />
-
+        <div ref={mapContainer} className="w-full h-full" />
+        
         {/* Professional Shape Builder Panel */}
         <ShapeBuilderPanel
           isOpen={viewMode === 'draw'}
