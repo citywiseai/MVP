@@ -1,0 +1,11 @@
+{
+  "name": "assessor-scraper",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@cloudflare/puppeteer": "^0.0.15"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}
