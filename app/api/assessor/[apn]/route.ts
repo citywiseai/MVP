@@ -15,18 +15,13 @@ export async function GET(
   const cleanApn = apn.replace(/[-\s]/g, '');
 
   try {
-    // Fetch property info via proxy
-    const propertyUrl = `${MARICOPA_PROXY}?url=${encodeURIComponent(`https://mcassessor.maricopa.gov/file/home/propertyinfo?parcel=${cleanApn}`)}`;
-    const propertyRes = await fetch(propertyUrl);
-    const propertyInfo = await propertyRes.json();
-
-    // Fetch residential data via proxy
-    const residentialUrl = `${MARICOPA_PROXY}?url=${encodeURIComponent(`https://mcassessor.maricopa.gov/file/home/residential?parcel=${cleanApn}`)}`;
+    // Fetch residential details via proxy
+    const residentialUrl = `${MARICOPA_PROXY}?url=${encodeURIComponent(`https://mcassessor.maricopa.gov/parcel/${cleanApn}/residential-details`)}`;
     const residentialRes = await fetch(residentialUrl);
     const residentialData = await residentialRes.json();
 
     // Fetch valuation data via proxy
-    const valuationUrl = `${MARICOPA_PROXY}?url=${encodeURIComponent(`https://mcassessor.maricopa.gov/file/home/valuation?parcel=${cleanApn}`)}`;
+    const valuationUrl = `${MARICOPA_PROXY}?url=${encodeURIComponent(`https://mcassessor.maricopa.gov/parcel/${cleanApn}/valuation`)}`;
     const valuationRes = await fetch(valuationUrl);
     const valuationData = await valuationRes.json();
 
@@ -34,24 +29,24 @@ export async function GET(
       success: true,
       parcel: {
         parcelNumber: cleanApn,
-        situsStreet1: propertyInfo?.PropertyAddress?.split(' PHOENIX')?.[0] || '',
-        situsCity: 'Phoenix',
+        situsStreet1: residentialData?.SitusAddress || residentialData?.PropertyAddress || '',
+        situsCity: residentialData?.SitusCity || 'Phoenix',
         situsState: 'AZ',
-        situsZip: propertyInfo?.PropertyAddress?.match(/\d{5}$/)?.[0] || '',
-        propertyClass: propertyInfo?.PropertyType || 'Residential',
-        propertyType: propertyInfo?.PropertyType || 'Single Family',
-        subdivision: propertyInfo?.SubdivisionName || '',
-        schoolDistrict: propertyInfo?.HighSchoolDistrict || '',
-        taxArea: propertyInfo?.AssessorMarket || '',
+        situsZip: residentialData?.SitusZip || '',
+        propertyClass: residentialData?.PropertyType || 'Residential',
+        propertyType: residentialData?.PropertyType || 'Single Family',
+        subdivision: residentialData?.SubdivisionName || '',
+        schoolDistrict: residentialData?.HighSchoolDistrict || '',
+        taxArea: residentialData?.AssessorMarket || '',
         fullCashValue: valuationData?.FullCashValue || 0,
         limitedPropertyValue: valuationData?.LimitedPropertyValue || 0,
         landValue: valuationData?.LandValue || 0,
         improvementValue: valuationData?.ImprovementValue || 0,
         taxYear: valuationData?.TaxYear || new Date().getFullYear(),
         assessedValue: valuationData?.AssessedLimitedValue || 0,
-        legalDescription: propertyInfo?.PropertyDescription || '',
-        lotSize: parseInt(propertyInfo?.LotSize) || 0,
-        lotSizeAcres: propertyInfo?.LotSize ? (parseInt(propertyInfo.LotSize) / 43560).toFixed(3) : 0,
+        legalDescription: residentialData?.PropertyDescription || '',
+        lotSize: parseInt(residentialData?.LotSize) || 0,
+        lotSizeAcres: residentialData?.LotSize ? (parseInt(residentialData.LotSize) / 43560).toFixed(3) : 0,
         zoning: '',
       },
       residential: {
@@ -63,9 +58,9 @@ export async function GET(
         garageSpaces: parseInt(residentialData?.NumberOfGarages) || 0,
         pool: residentialData?.Pool || false,
       },
-      valuation: valuationData?.ValuationHistory || [],
+      valuation: valuationData || [],
       assessorUrl: `https://mcassessor.maricopa.gov/mcs/?q=${cleanApn}&mod=pd`,
-      _raw: { propertyInfo, residentialData, valuationData },
+      _raw: { residentialData, valuationData },
     };
 
     return NextResponse.json(result);
