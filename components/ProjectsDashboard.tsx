@@ -18,7 +18,7 @@ import { ProjectRoadmap } from '@/types/roadmap'
 
 const MapboxPropertyVisualization = dynamic(() => import('./MapboxPropertyVisualization'), {
   ssr: false,
-  loading: () => <div className="h-[400px] bg-gray-100 animate-pulse rounded-lg" />
+loading: () => <div className="h-[800px] bg-gray-100 animate-pulse rounded-lg" />
 })
 
 const ProjectChatWrapper = dynamic(() => import('./ProjectChatWrapper'), {
@@ -93,6 +93,9 @@ export function ProjectsDashboard({
   const [selectedPhaseId, setSelectedPhaseId] = useState<string>('')
 
   const selectedProject = projects.find(p => p.id === selectedProjectId)
+
+  // Map height state (default 700px for better visibility)
+  const [mapHeight, setMapHeight] = useState(800)
 
   // Debug initial projects on mount
   useEffect(() => {
@@ -1280,10 +1283,28 @@ export function ProjectsDashboard({
             {/* Property Visualization Map */}
             {selectedProject.parcel?.boundaryCoordinates && selectedProject.parcel?.latitude && selectedProject.parcel?.longitude && (
               <div className="mb-8 bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-                <div className="px-3 py-4 border-b border-gray-100">
+                <div className="px-3 py-4 border-b border-gray-100 flex items-center justify-between">
                   <h2 className="text-xl font-bold text-[#1e3a5f]">Property Map</h2>
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <span>Height:</span>
+                    <button
+                      onClick={() => setMapHeight(Math.max(400, mapHeight - 100))}
+                      className="px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-gray-600"
+                      title="Decrease height"
+                    >
+                      −
+                    </button>
+                    <span className="w-16 text-center">{mapHeight}px</span>
+                    <button
+                      onClick={() => setMapHeight(Math.min(1200, mapHeight + 100))}
+                      className="px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-gray-600"
+                      title="Increase height"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
-                <div className="px-3 py-4">
+                <div className="px-3 py-4" style={{ height: `${mapHeight}px` }}>
                   <MapboxPropertyVisualization
                     parcelId={selectedProject.parcel.id}
                     projectId={selectedProject.id}

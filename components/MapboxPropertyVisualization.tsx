@@ -4906,7 +4906,7 @@ export default function MapboxPropertyVisualization({
   };
 
   return (
-    <div className="flex flex-col h-screen">
+   <div className="flex flex-col h-full">
       {/* Top Bar with Property Stats */}
       <div className="flex gap-4 p-4 bg-white border-b">
         <div className="bg-gray-50 rounded-lg p-3">
