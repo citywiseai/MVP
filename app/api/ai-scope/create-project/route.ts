@@ -4,6 +4,8 @@ import { auth } from '@/lib/auth';
 import { getRequirementsForProject, parseProjectDataToDetails } from '@/lib/requirements';
 import { searchRegridParcel } from '@/lib/regrid';
 
+
+
 function parseScoutConversation(conversation: string) {
   const lines = conversation.split('\n');
   const summary: any = {

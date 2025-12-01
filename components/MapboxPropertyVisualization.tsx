@@ -25,6 +25,7 @@ interface MapboxPropertyVisualizationProps {
   centerLat: number;
   centerLng: number;
   parcel?: any; // Full parcel object with totalBuildingSF, etc.
+  containerHeight?: number; // Height in pixels for the map container
 }
 
 export default function MapboxPropertyVisualization({
@@ -34,6 +35,7 @@ export default function MapboxPropertyVisualization({
   centerLat,
   centerLng,
   parcel,
+  containerHeight = 600, // Default height
 }: MapboxPropertyVisualizationProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -683,6 +685,17 @@ export default function MapboxPropertyVisualization({
       updateSetbacks();
     }
   }, [edgeLabels]);
+
+  // Resize map when container height changes
+  useEffect(() => {
+    if (map.current) {
+      // Small delay to ensure DOM has updated
+      setTimeout(() => {
+        map.current?.resize();
+        console.log('📐 Map resized for new container height:', containerHeight);
+      }, 100);
+    }
+  }, [containerHeight]);
 
   // Trigger updateSetbacks when setback values change
   useEffect(() => {
@@ -4906,9 +4919,9 @@ export default function MapboxPropertyVisualization({
   };
 
   return (
-   <div className="flex flex-col h-full">
+    <div className="flex flex-col" style={{ height: `${containerHeight}px` }}>
       {/* Top Bar with Property Stats */}
-      <div className="flex gap-4 p-4 bg-white border-b">
+      <div className="flex flex-wrap gap-4 p-4 bg-white border-b shrink-0">
         <div className="bg-gray-50 rounded-lg p-3">
           <div className="text-xs text-gray-600">Lot Size</div>
           <div className="text-lg font-bold">{propertyMetrics.lotSize.toLocaleString()} sq ft</div>
@@ -4961,10 +4974,10 @@ export default function MapboxPropertyVisualization({
         </button>
       </div>
 
-      {/* Map Section */}
-      <div className="flex-1 relative">
+      {/* Map Section - takes remaining height */}
+      <div className="flex-1 relative min-h-0">
         {/* Map Container */}
-        <div ref={mapContainer} className="w-full h-full" />
+        <div ref={mapContainer} className="absolute inset-0" />
 
         {/* Professional Shape Builder Panel */}
         <ShapeBuilderPanel

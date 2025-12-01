@@ -18,7 +18,7 @@ import { ProjectRoadmap } from '@/types/roadmap'
 
 const MapboxPropertyVisualization = dynamic(() => import('./MapboxPropertyVisualization'), {
   ssr: false,
-loading: () => <div className="h-[800px] bg-gray-100 animate-pulse rounded-lg" />
+  loading: () => <div className="h-[700px] bg-gray-100 animate-pulse rounded-lg" />
 })
 
 const ProjectChatWrapper = dynamic(() => import('./ProjectChatWrapper'), {
@@ -91,11 +91,11 @@ export function ProjectsDashboard({
   // Roadmap state
   const [roadmap, setRoadmap] = useState<ProjectRoadmap | null>(null)
   const [selectedPhaseId, setSelectedPhaseId] = useState<string>('')
+  
+  // Map height state (default 700px for better visibility)
+  const [mapHeight, setMapHeight] = useState(700)
 
   const selectedProject = projects.find(p => p.id === selectedProjectId)
-
-  // Map height state (default 700px for better visibility)
-  const [mapHeight, setMapHeight] = useState(800)
 
   // Debug initial projects on mount
   useEffect(() => {
@@ -1304,7 +1304,7 @@ export function ProjectsDashboard({
                     </button>
                   </div>
                 </div>
-                <div className="px-3 py-4" style={{ height: `${mapHeight}px` }}>
+                <div className="px-3 py-4">
                   <MapboxPropertyVisualization
                     parcelId={selectedProject.parcel.id}
                     projectId={selectedProject.id}
@@ -1322,6 +1322,7 @@ export function ProjectsDashboard({
                     centerLat={selectedProject.parcel.latitude}
                     centerLng={selectedProject.parcel.longitude}
                     parcel={selectedProject.parcel}
+                    containerHeight={mapHeight}
                   />
                 </div>
               </div>
