@@ -70,15 +70,14 @@ export default {
       await browser.close();
       browser = null;
 
-// Convert screenshot to base64 (chunked to avoid stack overflow)
+// Convert screenshot to base64
 const uint8Array = new Uint8Array(screenshot as ArrayBuffer);
 let binary = '';
-const chunkSize = 8192;
-for (let i = 0; i < uint8Array.length; i += chunkSize) {
-  const chunk = uint8Array.subarray(i, i + chunkSize);
-  binary += String.fromCharCode.apply(null, Array.from(chunk));
+for (let i = 0; i < uint8Array.length; i++) {
+  binary += String.fromCharCode(uint8Array[i]);
 }
 const screenshotBase64 = btoa(binary);
+
       const claudeResponse = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
