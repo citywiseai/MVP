@@ -107,7 +107,6 @@ export function ProjectsDashboard({
   useEffect(() => {
     // Clear assessor data when switching projects
     setAssessorData(null);
-    
     console.log('🔄 useEffect: selectedProject changed:', selectedProject?.name || 'none');
     console.log('🔄 useEffect: Has parcel?', !!selectedProject?.parcel);
     console.log('🔄 useEffect: Parcel ID:', selectedProject?.parcel?.id);
