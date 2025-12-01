@@ -105,6 +105,9 @@ export function ProjectsDashboard({
   // Auto-fetch parcel data if project has address but no parcel
   // Also fetch complete Regrid data if propertyMetadata is missing
   useEffect(() => {
+    // Clear assessor data when switching projects
+    setAssessorData(null);
+    
     console.log('🔄 useEffect: selectedProject changed:', selectedProject?.name || 'none');
     console.log('🔄 useEffect: Has parcel?', !!selectedProject?.parcel);
     console.log('🔄 useEffect: Parcel ID:', selectedProject?.parcel?.id);
