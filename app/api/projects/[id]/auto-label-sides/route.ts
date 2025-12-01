@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';;
+import { prisma } from '@/lib/prisma';
 import * as turf from '@turf/turf';
-
-
 
 interface EdgeLabel {
   edgeIndex: number;
   side: 'front' | 'rear' | 'left' | 'right';
+}
+
+interface EdgeAnalysis {
+  edgeIndex: number;
+  midpoint: [number, number];
+  bearing: number; // bearing of the edge line itself
+  distanceToStreet: number;
+  length: number;
 }
 
 export async function POST(
@@ -15,6 +21,8 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
+    const body = await req.json().catch(() => ({}));
+    const forceRecalculate = body.forceRecalculate === true;
     
     // Get project with parcel data
     const project = await prisma.project.findUnique({
@@ -28,8 +36,8 @@ export async function POST(
 
     const parcel = project.parcel;
 
-    // Check if edge labels already exist
-    if (parcel.edgeLabels) {
+    // Check if edge labels already exist (unless force recalculate)
+    if (parcel.edgeLabels && !forceRecalculate) {
       console.log('✅ Edge labels already exist, returning saved labels');
       return NextResponse.json({
         success: true,
@@ -56,67 +64,144 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid boundary coordinates' }, { status: 400 });
     }
 
-    // Remove duplicate last point if exists
+    // Remove duplicate closing point if exists
     if (boundaryCoords.length > 3 && 
         boundaryCoords[0][0] === boundaryCoords[boundaryCoords.length - 1][0] &&
         boundaryCoords[0][1] === boundaryCoords[boundaryCoords.length - 1][1]) {
       boundaryCoords = boundaryCoords.slice(0, -1);
     }
 
+    // Get the geocoded point (address location - typically at the street)
+    // This is where Google/Regrid places the pin when geocoding the address
+    const streetPoint: [number, number] | null = 
+      (parcel.longitude && parcel.latitude) 
+        ? [parcel.longitude, parcel.latitude]
+        : (project.longitude && project.latitude)
+          ? [project.longitude, project.latitude]
+          : null;
+
     // Calculate centroid of the parcel
     const polygon = turf.polygon([boundaryCoords.concat([boundaryCoords[0]])]);
     const centroid = turf.centroid(polygon);
-    const centroidCoords = centroid.geometry.coordinates;
+    const centroidCoords = centroid.geometry.coordinates as [number, number];
 
-    // For each edge, calculate its bearing from centroid and midpoint
-    const edgeAnalysis = boundaryCoords.map((coord, index) => {
+    // Analyze each edge
+    const edgeAnalysis: EdgeAnalysis[] = boundaryCoords.map((coord, index) => {
       const nextIndex = (index + 1) % boundaryCoords.length;
       const nextCoord = boundaryCoords[nextIndex];
       
       // Midpoint of edge
-      const midLng = (coord[0] + nextCoord[0]) / 2;
-      const midLat = (coord[1] + nextCoord[1]) / 2;
+      const midpoint: [number, number] = [
+        (coord[0] + nextCoord[0]) / 2,
+        (coord[1] + nextCoord[1]) / 2
+      ];
       
-      // Bearing from centroid to midpoint (tells us which direction this edge faces)
-      const bearing = turf.bearing(centroidCoords, [midLng, midLat]);
+      // Bearing of the edge line (direction it runs, not faces)
+      const edgeBearing = turf.bearing(coord, nextCoord);
       
-      // Normalize bearing to 0-360
-      const normalizedBearing = bearing < 0 ? bearing + 360 : bearing;
+      // Length of edge
+      const length = turf.distance(coord, nextCoord, { units: 'feet' });
       
-      return {
-        edgeIndex: index,
-        bearing: normalizedBearing,
-        midpoint: [midLng, midLat]
-      };
-    });
-
-    // Identify sides based on bearing:
-    // North (0°/360°): bearing 315-45
-    // East (90°): bearing 45-135
-    // South (180°): bearing 135-225
-    // West (270°): bearing 225-315
-    
-    const edgeLabels: EdgeLabel[] = edgeAnalysis.map(edge => {
-      const b = edge.bearing;
-      let side: 'front' | 'rear' | 'left' | 'right';
-      
-      // Assume front faces north (toward street at bottom of map in typical Phoenix orientation)
-      // Bearing from centroid to edge: north=0°, east=90°, south=180°, west=270°
-      if (b >= 315 || b < 45) {
-        side = 'front';
-      } else if (b >= 135 && b < 225) {
-        side = 'rear';
-      } else if (b >= 45 && b < 135) {
-        side = 'right';
-      } else {
-        side = 'left';
+      // Distance from edge midpoint to street point (if available)
+      let distanceToStreet = Infinity;
+      if (streetPoint) {
+        // Create a line segment for this edge
+        const edgeLine = turf.lineString([coord, nextCoord]);
+        // Find the closest point on the edge to the street point
+        const nearestOnEdge = turf.nearestPointOnLine(edgeLine, streetPoint);
+        distanceToStreet = turf.distance(streetPoint, nearestOnEdge, { units: 'feet' });
       }
       
       return {
-        edgeIndex: edge.edgeIndex,
-        side
+        edgeIndex: index,
+        midpoint,
+        bearing: edgeBearing,
+        distanceToStreet,
+        length
       };
     });
+
+    let edgeLabels: EdgeLabel[];
+
+    if (streetPoint) {
+      // METHOD 1: Use street point (geocoded address) to identify front
+      console.log('🎯 Using geocoded address point to identify front edge');
+      console.log('📍 Street point:', streetPoint);
+      console.log('📐 Edge analysis:', edgeAnalysis.map(e => ({
+        index: e.edgeIndex,
+        distanceToStreet: Math.round(e.distanceToStreet),
+        length: Math.round(e.length)
+      })));
+
+      // Find the edge closest to the street point - that's the front
+      const sortedByDistance = [...edgeAnalysis].sort((a, b) => a.distanceToStreet - b.distanceToStreet);
+      const frontEdge = sortedByDistance[0];
+      
+      // Get bearing from centroid to front edge midpoint (direction the front faces)
+      const frontBearing = turf.bearing(centroidCoords, frontEdge.midpoint);
+      const normalizedFrontBearing = frontBearing < 0 ? frontBearing + 360 : frontBearing;
+      
+      console.log('🏠 Front edge:', frontEdge.edgeIndex, 'facing bearing:', normalizedFrontBearing);
+
+      // Label all edges based on their bearing relative to the front
+      edgeLabels = edgeAnalysis.map(edge => {
+        const bearingFromCentroid = turf.bearing(centroidCoords, edge.midpoint);
+        const normalizedBearing = bearingFromCentroid < 0 ? bearingFromCentroid + 360 : bearingFromCentroid;
+        
+        // Calculate angle difference from front bearing
+        let angleDiff = normalizedBearing - normalizedFrontBearing;
+        if (angleDiff < 0) angleDiff += 360;
+        if (angleDiff > 180) angleDiff = 360 - angleDiff;
+        
+        // Also check if this edge is close to the street (could be a corner lot with two fronts)
+        const isCloseToStreet = edge.distanceToStreet < 50; // within 50 feet
+        
+        let side: 'front' | 'rear' | 'left' | 'right';
+        
+        if (edge.edgeIndex === frontEdge.edgeIndex) {
+          side = 'front';
+        } else if (angleDiff > 135) {
+          // Opposite side of front (135-180 degrees away)
+          side = 'rear';
+        } else {
+          // Determine left vs right based on bearing
+          const crossProduct = Math.sin((normalizedBearing - normalizedFrontBearing) * Math.PI / 180);
+          side = crossProduct > 0 ? 'right' : 'left';
+        }
+        
+        return {
+          edgeIndex: edge.edgeIndex,
+          side
+        };
+      });
+
+    } else {
+      // METHOD 2: Fallback - use compass directions (north = front for Phoenix grid)
+      console.log('⚠️ No geocoded point available, using compass directions');
+      
+      edgeLabels = edgeAnalysis.map(edge => {
+        const bearingFromCentroid = turf.bearing(centroidCoords, edge.midpoint);
+        const b = bearingFromCentroid < 0 ? bearingFromCentroid + 360 : bearingFromCentroid;
+        
+        let side: 'front' | 'rear' | 'left' | 'right';
+        
+        // Phoenix grid: streets typically run E-W, so front often faces N or S
+        if (b >= 315 || b < 45) {
+          side = 'front'; // North-facing
+        } else if (b >= 135 && b < 225) {
+          side = 'rear'; // South-facing
+        } else if (b >= 45 && b < 135) {
+          side = 'right'; // East-facing
+        } else {
+          side = 'left'; // West-facing
+        }
+        
+        return { edgeIndex: edge.edgeIndex, side };
+      });
+    }
+
+    // Log the results
+    console.log('🏷️ Final edge labels:', edgeLabels);
 
     // Save edge labels to parcel
     await prisma.parcel.update({
@@ -126,13 +211,18 @@ export async function POST(
       }
     });
 
-    console.log('💾 Saved edge labels to database:', edgeLabels);
+    console.log('💾 Saved edge labels to database');
 
     return NextResponse.json({ 
       success: true, 
       edgeLabels,
-      message: 'Sides automatically identified. You can manually adjust if needed.'
+      method: streetPoint ? 'street-detection' : 'compass-fallback',
+      streetPoint: streetPoint || null,
+      message: streetPoint 
+        ? 'Front edge identified based on street position. Adjust if needed.'
+        : 'Sides identified by compass direction (no street point available).'
     });
+
   } catch (error) {
     console.error('Error auto-labeling sides:', error);
     return NextResponse.json({ error: 'Failed to auto-label sides' }, { status: 500 });
