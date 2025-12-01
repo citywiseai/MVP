@@ -4924,12 +4924,12 @@ export default function MapboxPropertyVisualization({
       <div className="flex flex-wrap gap-4 p-4 bg-white border-b shrink-0">
         <div className="bg-gray-50 rounded-lg p-3">
           <div className="text-xs text-gray-600">Lot Size</div>
-          <div className="text-lg font-bold text-gray-900">{propertyMetrics.lotSize.toLocaleString()} sq ft</div>
+          <div className="text-lg font-bold">{propertyMetrics.lotSize.toLocaleString()} sq ft</div>
         </div>
         <div className="bg-gray-50 rounded-lg p-3">
           <div className="text-xs text-gray-600">Max Allowed Coverage</div>
           <div className="text-lg font-bold text-green-600">{propertyMetrics.buildableArea.toLocaleString()} sq ft</div>
-          <div className="text-xs text-gray-600">
+          <div className="text-xs text-gray-500">
             ({parcel?.zoning || 'R1-10'} - {((propertyMetrics.buildableArea / propertyMetrics.lotSize) * 100).toFixed(0)}% max)
           </div>
         </div>
@@ -4948,7 +4948,7 @@ export default function MapboxPropertyVisualization({
         <div className="bg-gray-50 rounded-lg p-3">
           <div className="text-xs text-gray-600">Total Coverage</div>
           <div className="text-lg font-bold text-orange-600">{propertyMetrics.currentCoverage.toLocaleString()} sq ft</div>
-          <div className="text-xs text-gray-600">
+          <div className="text-xs text-gray-500">
             ({((propertyMetrics.currentCoverage / propertyMetrics.lotSize) * 100).toFixed(1)}% of lot)
           </div>
         </div>
@@ -4957,10 +4957,22 @@ export default function MapboxPropertyVisualization({
           <div className={`text-lg font-bold ${propertyMetrics.remainingArea > 0 ? 'text-green-600' : 'text-red-600'}`}>
             {propertyMetrics.remainingArea.toLocaleString()} sq ft
           </div>
-          <div className={`text-xs ${propertyMetrics.remainingArea > 0 ? 'text-green-600' : 'text-red-600'}`}>
+          <div className={`text-xs ${propertyMetrics.remainingArea > 0 ? 'text-green-500' : 'text-red-500'}`}>
             {propertyMetrics.remainingArea > 0 ? 'Under limit' : 'Over limit!'}
           </div>
         </div>
+
+        {/* Smart Shape Builder Toggle */}
+        <button
+          onClick={() => {
+            setViewMode(viewMode === 'draw' ? 'view' : 'draw');
+            setMeasurementMode('off'); // Deactivate measurement when toggling Shape Builder
+          }}
+          className="ml-auto px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium"
+        >
+          {viewMode === 'draw' ? 'Hide' : 'Show'} Shape Builder
+        </button>
+      </div>
 
 {/* Map Section - explicit height minus stats bar (~120px) */}
       <div className="relative" style={{ height: `${containerHeight - 120}px` }}>
