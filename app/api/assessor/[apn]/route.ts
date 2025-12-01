@@ -15,26 +15,17 @@ export async function GET(
   const cleanApn = apn.replace(/[-\s]/g, '');
 
   try {
+    // Fetch property info via proxy (has address)
+    const propertyUrl = `${MARICOPA_PROXY}?url=${encodeURIComponent(`https://mcassessor.maricopa.gov/parcel/${cleanApn}/propertyinfo`)}`;
+    const propertyRes = await fetch(propertyUrl);
+    const propertyText = await propertyRes.text();
+    const propertyData = propertyText.trim().startsWith('<') ? {} : JSON.parse(propertyText);
+
     // Fetch residential details via proxy
     const residentialUrl = `${MARICOPA_PROXY}?url=${encodeURIComponent(`https://mcassessor.maricopa.gov/parcel/${cleanApn}/residential-details`)}`;
-    console.log('Fetching:', residentialUrl);
-    
     const residentialRes = await fetch(residentialUrl);
     const residentialText = await residentialRes.text();
-    
-    console.log('Response status:', residentialRes.status);
-    console.log('Response text (first 500 chars):', residentialText.substring(0, 500));
-    
-    // Check if it's HTML
-    if (residentialText.trim().startsWith('<')) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Proxy returned HTML instead of JSON',
-        assessorUrl: `https://mcassessor.maricopa.gov/mcs/?q=${cleanApn}&mod=pd`,
-      }, { status: 502 });
-    }
-    
-    const residentialData = JSON.parse(residentialText);
+    const residentialData = residentialText.trim().startsWith('<') ? {} : JSON.parse(residentialText);
 
     // Fetch valuation data via proxy
     const valuationUrl = `${MARICOPA_PROXY}?url=${encodeURIComponent(`https://mcassessor.maricopa.gov/parcel/${cleanApn}/valuation`)}`;
@@ -42,18 +33,25 @@ export async function GET(
     const valuationText = await valuationRes.text();
     const valuationData = valuationText.trim().startsWith('<') ? {} : JSON.parse(valuationText);
 
+    // Parse address from PropertyAddress field (e.g., "1223 E SHEENA DR PHOENIX, AZ 85022")
+    const fullAddress = propertyData?.PropertyAddress || '';
+    const addressMatch = fullAddress.match(/^(.+?)\s+(PHOENIX|SCOTTSDALE|TEMPE|MESA|CHANDLER|GLENDALE|GILBERT|PEORIA|SURPRISE|AVONDALE|GOODYEAR|BUCKEYE|CAVE CREEK|CAREFREE|FOUNTAIN HILLS|PARADISE VALLEY),?\s*AZ\s*(\d{5})?/i);
+    const streetAddress = addressMatch ? addressMatch[1].trim() : fullAddress;
+    const city = addressMatch ? addressMatch[2] : 'Phoenix';
+    const zip = addressMatch ? addressMatch[3] || '' : '';
+
     const result = {
       success: true,
       parcel: {
         parcelNumber: cleanApn,
-        situsStreet1: residentialData?.SitusAddress || residentialData?.PropertyAddress || '',
-        situsCity: residentialData?.SitusCity || 'Phoenix',
+        situsStreet1: streetAddress,
+        situsCity: city,
         situsState: 'AZ',
-        situsZip: residentialData?.SitusZip || '',
-        propertyClass: residentialData?.PropertyType || 'Residential',
-        propertyType: residentialData?.PropertyType || 'Single Family',
-        subdivision: residentialData?.SubdivisionName || '',
-        schoolDistrict: residentialData?.HighSchoolDistrict || '',
+        situsZip: zip,
+        propertyClass: propertyData?.PropertyType || 'Residential',
+        propertyType: propertyData?.PropertyType || 'Single Family',
+        subdivision: propertyData?.SubdivisionName || '',
+        schoolDistrict: propertyData?.HighSchoolDistrict || '',
         taxArea: residentialData?.AssessorMarket || '',
         fullCashValue: valuationData?.FullCashValue || 0,
         limitedPropertyValue: valuationData?.LimitedPropertyValue || 0,
@@ -61,7 +59,7 @@ export async function GET(
         improvementValue: valuationData?.ImprovementValue || 0,
         taxYear: valuationData?.TaxYear || new Date().getFullYear(),
         assessedValue: valuationData?.AssessedLimitedValue || 0,
-        legalDescription: residentialData?.PropertyDescription || '',
+        legalDescription: propertyData?.PropertyDescription || '',
         lotSize: parseInt(residentialData?.LotSize) || 0,
         lotSizeAcres: residentialData?.LotSize ? (parseInt(residentialData.LotSize) / 43560).toFixed(3) : 0,
         zoning: '',
