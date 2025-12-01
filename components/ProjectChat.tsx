@@ -42,11 +42,18 @@ export function ProjectChat({ projectData, currentRequirements, onRequirementsUp
   const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  const scrollToBottom = () => {
+const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
+  const isInitialMount = useRef(true)
+  
   useEffect(() => {
+    // Skip scroll on initial mount to prevent page jumping to Scout section
+    if (isInitialMount.current) {
+      isInitialMount.current = false
+      return
+    }
     scrollToBottom()
   }, [messages])
 
