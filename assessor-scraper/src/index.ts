@@ -11,6 +11,15 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     if (request.method === "OPTIONS") {
@@ -70,13 +79,7 @@ export default {
       await browser.close();
       browser = null;
 
-// Convert screenshot to base64
-const uint8Array = new Uint8Array(screenshot as ArrayBuffer);
-let binary = '';
-for (let i = 0; i < uint8Array.length; i++) {
-  binary += String.fromCharCode(uint8Array[i]);
-}
-const screenshotBase64 = btoa(binary);
+      const screenshotBase64 = arrayBufferToBase64(screenshot as ArrayBuffer);
 
       const claudeResponse = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
