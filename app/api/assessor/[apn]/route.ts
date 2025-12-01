@@ -17,13 +17,30 @@ export async function GET(
   try {
     // Fetch residential details via proxy
     const residentialUrl = `${MARICOPA_PROXY}?url=${encodeURIComponent(`https://mcassessor.maricopa.gov/parcel/${cleanApn}/residential-details`)}`;
+    console.log('Fetching:', residentialUrl);
+    
     const residentialRes = await fetch(residentialUrl);
-    const residentialData = await residentialRes.json();
+    const residentialText = await residentialRes.text();
+    
+    console.log('Response status:', residentialRes.status);
+    console.log('Response text (first 500 chars):', residentialText.substring(0, 500));
+    
+    // Check if it's HTML
+    if (residentialText.trim().startsWith('<')) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Proxy returned HTML instead of JSON',
+        assessorUrl: `https://mcassessor.maricopa.gov/mcs/?q=${cleanApn}&mod=pd`,
+      }, { status: 502 });
+    }
+    
+    const residentialData = JSON.parse(residentialText);
 
     // Fetch valuation data via proxy
     const valuationUrl = `${MARICOPA_PROXY}?url=${encodeURIComponent(`https://mcassessor.maricopa.gov/parcel/${cleanApn}/valuation`)}`;
     const valuationRes = await fetch(valuationUrl);
-    const valuationData = await valuationRes.json();
+    const valuationText = await valuationRes.text();
+    const valuationData = valuationText.trim().startsWith('<') ? {} : JSON.parse(valuationText);
 
     const result = {
       success: true,
@@ -60,7 +77,6 @@ export async function GET(
       },
       valuation: valuationData || [],
       assessorUrl: `https://mcassessor.maricopa.gov/mcs/?q=${cleanApn}&mod=pd`,
-      _raw: { residentialData, valuationData },
     };
 
     return NextResponse.json(result);
