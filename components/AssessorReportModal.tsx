@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { X, MapPin, FileText, Home, Building2, DollarSign, Calendar, Hash, Landmark, TrendingUp, Globe, Layout, AlertCircle } from 'lucide-react';
+import { X, MapPin, FileText, Home, Building2, DollarSign, Calendar, Hash, Landmark, TrendingUp, Globe, Layout } from 'lucide-react';
 
 interface AssessorReportModalProps {
   data: any;
@@ -9,65 +9,12 @@ interface AssessorReportModalProps {
   onClose: () => void;
 }
 
-// Source badge component
-const SourceBadge = ({ source, small = false }: { source: string; small?: boolean }) => {
-  const colors = {
-    assessor: 'bg-orange-100 text-orange-700 border-orange-200',
-    regrid: 'bg-blue-100 text-blue-700 border-blue-200',
-  };
-  
-  const labels = {
-    assessor: 'Assessor',
-    regrid: 'Regrid',
-  };
-
-  return (
-    <span className={`inline-flex items-center ${small ? 'text-[10px] px-1.5 py-0.5' : 'text-xs px-2 py-0.5'} rounded-full border ${colors[source as keyof typeof colors] || 'bg-gray-100 text-gray-600 border-gray-200'}`}>
-      {labels[source as keyof typeof labels] || source}
-    </span>
-  );
-};
-
-// Conflict indicator component
-const ConflictValue = ({ label, assessorValue, regridValue, formatFn }: { 
-  label: string; 
-  assessorValue: any; 
-  regridValue: any; 
-  formatFn?: (v: any) => string;
-}) => {
-  const format = formatFn || ((v: any) => String(v));
-  
-  return (
-    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-2">
-      <div className="flex items-center gap-1 text-amber-700 text-xs font-medium mb-2">
-        <AlertCircle className="h-3 w-3" />
-        Data Discrepancy
-      </div>
-      <div className="grid grid-cols-2 gap-2 text-sm">
-        {assessorValue && (
-          <div>
-            <SourceBadge source="assessor" small />
-            <p className="mt-1 font-medium">{format(assessorValue)}</p>
-          </div>
-        )}
-        {regridValue && (
-          <div>
-            <SourceBadge source="regrid" small />
-            <p className="mt-1 font-medium">{format(regridValue)}</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
 export default function AssessorReportModal({ data, isOpen, onClose }: AssessorReportModalProps) {
   if (!isOpen || !data) return null;
 
   const parcel = data.parcel || {};
   const residential = data.residential || {};
   const valuation = data.valuation || {};
-  const sources = data._sources || {};
 
   const formatNumber = (num: number | null | undefined) => {
     if (!num) return 'N/A';
@@ -79,72 +26,18 @@ export default function AssessorReportModal({ data, isOpen, onClose }: AssessorR
     return `$${num.toLocaleString()}`;
   };
 
-  // Helper to get value from field (handles both new format with source and old format)
-  const getValue = (field: any) => {
-    if (field === null || field === undefined) return null;
-    if (typeof field === 'object' && 'value' in field) return field.value;
-    return field;
+  const formatDate = (date: string | null | undefined) => {
+    if (!date) return 'N/A';
+    try {
+      return new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    } catch {
+      return date;
+    }
   };
 
-  const getSource = (field: any) => {
-    if (typeof field === 'object' && 'source' in field) return field.source;
-    return null;
-  };
-
-  const hasConflict = (field: any) => {
-    if (typeof field === 'object' && 'hasConflict' in field) return field.hasConflict;
-    return false;
-  };
-
-  const getAssessorValue = (field: any) => {
-    if (typeof field === 'object' && 'assessorValue' in field) return field.assessorValue;
-    return null;
-  };
-
-  const getRegridValue = (field: any) => {
-    if (typeof field === 'object' && 'regridValue' in field) return field.regridValue;
-    return null;
-  };
-
-  // Field display component
-  const Field = ({ label, field, format = 'text', showSource = true }: { 
-    label: string; 
-    field: any; 
-    format?: 'text' | 'number' | 'currency' | 'sqft' | 'acres';
-    showSource?: boolean;
-  }) => {
-    const value = getValue(field);
-    const source = getSource(field);
-    const conflict = hasConflict(field);
-    
-    if (!value && value !== 0) return null;
-
-    let displayValue = value;
-    if (format === 'number') displayValue = formatNumber(value);
-    if (format === 'currency') displayValue = formatCurrency(value);
-    if (format === 'sqft') displayValue = `${formatNumber(value)} sq ft`;
-    if (format === 'acres') displayValue = `${Number(value).toFixed(3)} acres`;
-
-    return (
-      <div>
-        <div className="flex items-center gap-2">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{label}</p>
-          {showSource && source && <SourceBadge source={source} small />}
-        </div>
-        <p className={`text-base ${format === 'sqft' || format === 'currency' ? 'font-bold text-orange-600 text-lg' : 'text-gray-900'}`}>
-          {displayValue}
-        </p>
-        {conflict && (
-          <ConflictValue 
-            label={label}
-            assessorValue={getAssessorValue(field)}
-            regridValue={getRegridValue(field)}
-            formatFn={format === 'number' || format === 'sqft' ? formatNumber : 
-                     format === 'currency' ? formatCurrency : undefined}
-          />
-        )}
-      </div>
-    );
+  // Helper to safely get nested values
+  const get = (obj: any, path: string) => {
+    return path.split('.').reduce((acc, part) => acc && acc[part], obj);
   };
 
   return (
@@ -174,47 +67,23 @@ export default function AssessorReportModal({ data, isOpen, onClose }: AssessorR
             <div className="p-8 print:p-6">
               {/* Header */}
               <div className="mb-8 pb-6 border-b border-gray-200">
-                <div className="flex items-center gap-3 mb-3">
-                  <h1 className="text-4xl font-bold text-gray-900">Combined Property Report</h1>
-                </div>
+                <h1 className="text-4xl font-bold text-gray-900 mb-3">Maricopa County Assessor Report</h1>
                 <div className="space-y-1">
-                  <p className="text-xl text-gray-700 font-semibold">{getValue(parcel.situsStreet1) || 'Address Not Available'}</p>
-                  {getValue(parcel.situsCity) && (
-                    <div className="flex items-center gap-2">
-                      <p className="text-lg text-gray-600">
-                        {getValue(parcel.situsCity)}, {getValue(parcel.situsState)} {getValue(parcel.situsZip)}
-                      </p>
-                      {hasConflict(parcel.situsCity) && (
-                        <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded">
-                          ⚠️ Jurisdiction differs between sources
-                        </span>
-                      )}
-                    </div>
+                  <p className="text-xl text-gray-700 font-semibold">{get(parcel, 'situsStreet1') || 'Address Not Available'}</p>
+                  {get(parcel, 'situsCity') && (
+                    <p className="text-lg text-gray-600">
+                      {get(parcel, 'situsCity')}, {get(parcel, 'situsState')} {get(parcel, 'situsZip')}
+                    </p>
                   )}
                 </div>
-                <div className="flex items-center gap-4 mt-3">
-                  <p className="text-sm text-gray-400">
-                    Report Generated: {new Date().toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </p>
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="text-gray-400">Sources:</span>
-                    {sources.assessor && <SourceBadge source="assessor" />}
-                    {sources.regrid && <SourceBadge source="regrid" />}
-                  </div>
-                </div>
-              </div>
-
-              {/* Source Legend */}
-              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-600">
-                  <strong>Data Priority:</strong> County Assessor data is shown when available. Regrid data fills in gaps. 
-                  Fields with ⚠️ indicate discrepancies between sources.
+                <p className="text-sm text-gray-400 mt-3">
+                  Report Generated: {new Date().toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
                 </p>
               </div>
 
@@ -229,10 +98,22 @@ export default function AssessorReportModal({ data, isOpen, onClose }: AssessorR
                       <h2 className="text-lg font-bold text-gray-900">Property Identification</h2>
                     </div>
                     <div className="space-y-3 pl-1">
-                      <Field label="Parcel Number (APN)" field={parcel.parcelNumber} showSource={false} />
-                      <Field label="Property Class" field={parcel.propertyClass} />
-                      <Field label="Property Type" field={parcel.propertyType} />
-                      <Field label="Ownership" field={parcel.ownership} />
+                      <div>
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Parcel Number (APN)</p>
+                        <p className="text-base font-bold text-gray-900">{get(parcel, 'parcelNumber') || 'Not Available'}</p>
+                      </div>
+                      {get(parcel, 'propertyClass') && (
+                        <div>
+                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Property Class</p>
+                          <p className="text-base text-gray-900">{get(parcel, 'propertyClass')}</p>
+                        </div>
+                      )}
+                      {get(parcel, 'propertyType') && (
+                        <div>
+                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Property Type</p>
+                          <p className="text-base text-gray-900">{get(parcel, 'propertyType')}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -243,25 +124,36 @@ export default function AssessorReportModal({ data, isOpen, onClose }: AssessorR
                       <h2 className="text-lg font-bold text-gray-900">Location</h2>
                     </div>
                     <div className="space-y-3 pl-1">
-                      <Field label="Jurisdiction" field={parcel.situsCity} />
-                      <Field label="Subdivision" field={parcel.subdivision} />
-                      <Field label="School District" field={parcel.schoolDistrict} />
-                      <Field label="Tax Area" field={parcel.taxArea} />
+                      {get(parcel, 'subdivision') && (
+                        <div>
+                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Subdivision</p>
+                          <p className="text-base text-gray-900">{get(parcel, 'subdivision')}</p>
+                        </div>
+                      )}
+                      {get(parcel, 'schoolDistrict') && (
+                        <div>
+                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">School District</p>
+                          <p className="text-base text-gray-900">{get(parcel, 'schoolDistrict')}</p>
+                        </div>
+                      )}
+                      {get(parcel, 'taxArea') && (
+                        <div>
+                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Tax Area</p>
+                          <p className="text-base text-gray-900">{get(parcel, 'taxArea')}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   {/* Legal Description */}
-                  {getValue(parcel.legalDescription) && (
+                  {get(parcel, 'legalDescription') && (
                     <div>
                       <div className="flex items-center gap-2 mb-4 pb-2 border-b-2 border-orange-200">
                         <FileText className="h-5 w-5 text-orange-600" />
                         <h2 className="text-lg font-bold text-gray-900">Legal Description</h2>
                       </div>
                       <div className="space-y-3 pl-1">
-                        <div className="flex items-center gap-2">
-                          {getSource(parcel.legalDescription) && <SourceBadge source={getSource(parcel.legalDescription)} small />}
-                        </div>
-                        <p className="text-sm text-gray-900 leading-relaxed">{getValue(parcel.legalDescription)}</p>
+                        <p className="text-sm text-gray-900 leading-relaxed">{get(parcel, 'legalDescription')}</p>
                       </div>
                     </div>
                   )}
@@ -276,93 +168,192 @@ export default function AssessorReportModal({ data, isOpen, onClose }: AssessorR
                       <h2 className="text-lg font-bold text-gray-900">Property Valuation</h2>
                     </div>
                     <div className="space-y-3 pl-1">
-                      <Field label="Full Cash Value (FCV)" field={valuation.fullCashValue} format="currency" />
-                      <Field label="Market Value" field={valuation.marketValue} format="currency" />
-                      <Field label="Land Value" field={valuation.landValue} format="currency" />
-                      <Field label="Improvement Value" field={valuation.improvementValue} format="currency" />
+                      {get(parcel, 'fullCashValue') && (
+                        <div>
+                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Full Cash Value (FCV)</p>
+                          <p className="text-lg font-bold text-orange-600">{formatCurrency(get(parcel, 'fullCashValue'))}</p>
+                        </div>
+                      )}
+                      {get(parcel, 'limitedPropertyValue') && (
+                        <div>
+                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Limited Property Value (LPV)</p>
+                          <p className="text-base font-bold text-gray-900">{formatCurrency(get(parcel, 'limitedPropertyValue'))}</p>
+                        </div>
+                      )}
+                      {get(parcel, 'landValue') && (
+                        <div>
+                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Land Value</p>
+                          <p className="text-base text-gray-900">{formatCurrency(get(parcel, 'landValue'))}</p>
+                        </div>
+                      )}
+                      {get(parcel, 'improvementValue') && (
+                        <div>
+                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Improvement Value</p>
+                          <p className="text-base text-gray-900">{formatCurrency(get(parcel, 'improvementValue'))}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   {/* Tax Information */}
-                  <div>
-                    <div className="flex items-center gap-2 mb-4 pb-2 border-b-2 border-orange-200">
-                      <Landmark className="h-5 w-5 text-orange-600" />
-                      <h2 className="text-lg font-bold text-gray-900">Tax Information</h2>
+                  {(get(parcel, 'taxYear') || get(parcel, 'taxAmount')) && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-4 pb-2 border-b-2 border-orange-200">
+                        <Landmark className="h-5 w-5 text-orange-600" />
+                        <h2 className="text-lg font-bold text-gray-900">Tax Information</h2>
+                      </div>
+                      <div className="space-y-3 pl-1">
+                        {get(parcel, 'taxYear') && (
+                          <div>
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Tax Year</p>
+                            <p className="text-base text-gray-900">{get(parcel, 'taxYear')}</p>
+                          </div>
+                        )}
+                        {get(parcel, 'assessedValue') && (
+                          <div>
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Assessed Value</p>
+                            <p className="text-base font-bold text-gray-900">{formatCurrency(get(parcel, 'assessedValue'))}</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className="space-y-3 pl-1">
-                      <Field label="Tax Year" field={valuation.taxYear} />
-                    </div>
-                  </div>
+                  )}
 
-                  {/* Zoning */}
-                  {getValue(parcel.zoning) && (
+                  {/* Valuation History */}
+                  {valuation && Array.isArray(valuation) && valuation.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-4 pb-2 border-b-2 border-orange-200">
+                        <TrendingUp className="h-5 w-5 text-orange-600" />
+                        <h2 className="text-lg font-bold text-gray-900">Valuation History</h2>
+                      </div>
+                      <div className="space-y-2 pl-1">
+                        {valuation.slice(0, 5).map((val: any, idx: number) => (
+                          <div key={idx} className="bg-gray-50 rounded p-3">
+                            <div className="flex justify-between items-center">
+                              <span className="font-medium">{val.taxYear || 'N/A'}</span>
+                              <span className="font-semibold text-orange-600">{formatCurrency(val.fullCashValue)}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Column 3 - Physical Characteristics */}
+                <div className="space-y-8">
+                  {/* Building Details */}
+                  {residential && Object.keys(residential).length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-4 pb-2 border-b-2 border-orange-200">
+                        <Building2 className="h-5 w-5 text-orange-600" />
+                        <h2 className="text-lg font-bold text-gray-900">Building Details</h2>
+                      </div>
+                      <div className="space-y-3 pl-1">
+                        {get(residential, 'livingArea') && (
+                          <div>
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Living Area</p>
+                            <p className="text-lg font-bold text-orange-600">{formatNumber(get(residential, 'livingArea'))} sq ft</p>
+                          </div>
+                        )}
+                        {get(residential, 'yearBuilt') && (
+                          <div>
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Year Built</p>
+                            <p className="text-base text-gray-900">{get(residential, 'yearBuilt')}</p>
+                            <p className="text-xs text-gray-500">({new Date().getFullYear() - Number(get(residential, 'yearBuilt'))} years old)</p>
+                          </div>
+                        )}
+                        {get(residential, 'bedrooms') && (
+                          <div>
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Bedrooms</p>
+                            <p className="text-base text-gray-900">{get(residential, 'bedrooms')}</p>
+                          </div>
+                        )}
+                        {get(residential, 'bathrooms') && (
+                          <div>
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Bathrooms</p>
+                            <p className="text-base text-gray-900">{get(residential, 'bathrooms')}</p>
+                          </div>
+                        )}
+                        {get(residential, 'stories') && (
+                          <div>
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Stories</p>
+                            <p className="text-base text-gray-900">{get(residential, 'stories')}</p>
+                          </div>
+                        )}
+                        {get(residential, 'garageSpaces') && (
+                          <div>
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Garage Spaces</p>
+                            <p className="text-base text-gray-900">{get(residential, 'garageSpaces')}</p>
+                          </div>
+                        )}
+                        {get(residential, 'pool') && (
+                          <div>
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Pool</p>
+                            <p className="text-base text-gray-900">{get(residential, 'pool') === true ? 'Yes' : 'No'}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Lot Information */}
+                  {(get(parcel, 'lotSize') || get(parcel, 'lotSizeAcres')) && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-4 pb-2 border-b-2 border-orange-200">
+                        <Home className="h-5 w-5 text-orange-600" />
+                        <h2 className="text-lg font-bold text-gray-900">Lot Information</h2>
+                      </div>
+                      <div className="space-y-3 pl-1">
+                        {get(parcel, 'lotSize') && (
+                          <div>
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Lot Size</p>
+                            <p className="text-lg font-bold text-orange-600">{formatNumber(get(parcel, 'lotSize'))} sq ft</p>
+                          </div>
+                        )}
+                        {get(parcel, 'lotSizeAcres') && (
+                          <div>
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Lot Size (Acres)</p>
+                            <p className="text-base text-gray-900">{Number(get(parcel, 'lotSizeAcres')).toFixed(3)} acres</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Additional Info */}
+                  {get(parcel, 'zoning') && (
                     <div>
                       <div className="flex items-center gap-2 mb-4 pb-2 border-b-2 border-orange-200">
                         <Globe className="h-5 w-5 text-orange-600" />
                         <h2 className="text-lg font-bold text-gray-900">Zoning</h2>
                       </div>
                       <div className="space-y-3 pl-1">
-                        <Field label="Zoning Code" field={parcel.zoning} />
+                        <div>
+                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Zoning Code</p>
+                          <p className="text-lg font-bold text-orange-600">{get(parcel, 'zoning')}</p>
+                        </div>
                       </div>
                     </div>
                   )}
-                </div>
-
-                {/* Column 3 - Building Details */}
-                <div className="space-y-8">
-                  {/* Building Details */}
-                  <div>
-                    <div className="flex items-center gap-2 mb-4 pb-2 border-b-2 border-orange-200">
-                      <Building2 className="h-5 w-5 text-orange-600" />
-                      <h2 className="text-lg font-bold text-gray-900">Building Details</h2>
-                    </div>
-                    <div className="space-y-3 pl-1">
-                      <Field label="Living Area" field={residential.livingArea} format="sqft" />
-                      <Field label="Year Built" field={residential.yearBuilt} />
-                      <Field label="Bedrooms" field={residential.bedrooms} />
-                      <Field label="Bathrooms" field={residential.bathrooms} />
-                      <Field label="Stories" field={residential.stories} />
-                      <Field label="Garage Spaces" field={residential.garageSpaces} />
-                      <Field label="Pool" field={{ 
-                        value: getValue(residential.pool) ? 'Yes' : 'No', 
-                        source: getSource(residential.pool) 
-                      }} />
-                      <Field label="Quality Grade" field={residential.qualityGrade} />
-                      <Field label="Roof Type" field={residential.roofType} />
-                      <Field label="Exterior Walls" field={residential.exteriorWalls} />
-                      <Field label="Cooling" field={residential.cooling} />
-                    </div>
-                  </div>
-
-                  {/* Lot Information */}
-                  <div>
-                    <div className="flex items-center gap-2 mb-4 pb-2 border-b-2 border-orange-200">
-                      <Home className="h-5 w-5 text-orange-600" />
-                      <h2 className="text-lg font-bold text-gray-900">Lot Information</h2>
-                    </div>
-                    <div className="space-y-3 pl-1">
-                      <Field label="Lot Size" field={parcel.lotSize} format="sqft" />
-                      <Field label="Lot Size (Acres)" field={parcel.lotSizeAcres} format="acres" />
-                    </div>
-                  </div>
                 </div>
               </div>
 
               {/* Footer */}
               <div className="mt-8 pt-6 border-t border-gray-200">
-                <div className="bg-gradient-to-r from-orange-50 to-blue-50 rounded-lg p-4">
+                <div className="bg-orange-50 rounded-lg p-4">
                   <p className="text-xs text-gray-600 text-center">
-                    <strong>Sources:</strong> Maricopa County Assessor's Office & Regrid Property Data. 
-                    Data is for informational purposes only. All information should be independently verified with official records.
+                    <strong>Source:</strong> Maricopa County Assessor's Office. Data is for informational purposes only.
+                    All information should be independently verified with official county records.
                   </p>
-                  <div className="text-center mt-2 space-x-4">
+                  <div className="text-center mt-2">
                     <a
-                      href={data.assessorUrl || `https://mcassessor.maricopa.gov/mcs/?q=${getValue(parcel.parcelNumber)}`}
+                      href={`https://treasurer.maricopa.gov/Parcel/${get(parcel, 'parcelNumber')}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-sm text-orange-600 hover:text-orange-800 underline"
                     >
-                      View on County Assessor →
+                      View on Maricopa County Assessor Website →
                     </a>
                   </div>
                 </div>
@@ -371,7 +362,7 @@ export default function AssessorReportModal({ data, isOpen, onClose }: AssessorR
               {/* Action Buttons */}
               <div className="mt-6 flex justify-center gap-4 print:hidden">
                 <a
-                  href={`https://mcassessor.maricopa.gov/mcs/?q=${getValue(parcel.parcelNumber)}`}
+                  href={`https://mcassessor.maricopa.gov/mcs/?q=${get(parcel, 'parcelNumber')}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all"
