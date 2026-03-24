@@ -1,0 +1,50 @@
+{
+  "planId": "aspen",
+  "metadata": {
+    "id": "aspen",
+    "source": "betterplace",
+    "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/aspen/",
+    "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2024/04/Aspen-500-SQ-FT-1-Bedroom-1-Bath-Floor-Plan-2.jpg",
+    "localImagePath": "aspen.jpg",
+    "squareFootage": 500,
+    "bedrooms": 1,
+    "bathrooms": 1,
+    "stories": 1,
+    "style": "ADU",
+    "scrapedAt": "2025-12-10T17:17:10.065Z"
+  },
+  "roomCount": 7,
+  "roomTypes": [
+    "kitchen",
+    "bedroom",
+    "bathroom",
+    "living room",
+    "hall",
+    "closet",
+    "laundry"
+  ],
+  "layoutType": "hybrid",
+  "circulationPattern": "central-hall",
+  "entryType": "direct entry into living room with central hallway access",
+  "kitchenLocation": "rear right corner with island, adjacent to living room",
+  "bedroomLayout": "single bedroom positioned in upper right quadrant with direct hall access",
+  "bathroomPlacement": "single full bathroom in upper left area accessed via central hallway",
+  "storageFeatures": [
+    "bedroom closet",
+    "hall closet"
+  ],
+  "efficiencyNotes": [
+    "central hallway minimizes circulation space",
+    "kitchen island provides additional counter and storage",
+    "compact bathroom with standard fixtures",
+    "washer/dryer positioned near bathroom for plumbing efficiency",
+    "open living area maximizes perceived space"
+  ],
+  "uniqueFeatures": [
+    "angled entry wall creates interesting geometry",
+    "kitchen island serves as room divider",
+    "compact 500 sqft design maximizes functionality",
+    "bedroom positioned for privacy from main living areas"
+  ],
+  "dimensionNotes": "Overall footprint is 22'-5\" x 22'-6\" creating an efficient square layout with well-proportioned rooms despite the compact size"
+}

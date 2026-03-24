@@ -1,0 +1,53 @@
+{
+  "planId": "alder",
+  "metadata": {
+    "id": "alder",
+    "source": "betterplace",
+    "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/alder/",
+    "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2024/04/Alder-800-SQ-FT-2-Bedroom-2-Bath-Floor-Plan-2.jpg",
+    "localImagePath": "alder.jpg",
+    "squareFootage": 800,
+    "bedrooms": 2,
+    "bathrooms": 2,
+    "stories": 1,
+    "style": "ADU",
+    "scrapedAt": "2025-12-10T17:15:30.151Z"
+  },
+  "roomCount": 10,
+  "roomTypes": [
+    "kitchen",
+    "bedroom",
+    "bathroom",
+    "living room",
+    "dining room",
+    "pantry",
+    "closet",
+    "entry",
+    "laundry"
+  ],
+  "layoutType": "hybrid",
+  "circulationPattern": "central-hall",
+  "entryType": "defined entry foyer connecting to open living area",
+  "kitchenLocation": "northwest corner, open to dining and living areas with pantry adjacent",
+  "bedroomLayout": "split bedroom layout with bedrooms on opposite ends of unit",
+  "bathroomPlacement": "two full bathrooms - one ensuite with right bedroom, one shared hall bath accessible from living area",
+  "storageFeatures": [
+    "pantry",
+    "walk-in closets in both bedrooms",
+    "laundry area"
+  ],
+  "efficiencyNotes": [
+    "galley kitchen maximizes counter and storage space",
+    "back-to-back bathrooms share plumbing wall",
+    "open living/dining/kitchen reduces circulation space",
+    "central laundry location serves both bedrooms",
+    "compact entry transitions efficiently to main living space"
+  ],
+  "uniqueFeatures": [
+    "built-in dishwasher and appliances in kitchen",
+    "washer/dryer placement in central hall",
+    "angled entry wall creates interesting geometry",
+    "both bedrooms have equal size and amenities"
+  ],
+  "dimensionNotes": "overall dimensions 30'-11\" x 25'-10\", bedrooms are identically sized at 9'-6\" wide, central circulation area is 5'-0\" wide, compact but well-proportioned rooms throughout"
+}

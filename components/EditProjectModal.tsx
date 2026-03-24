@@ -23,6 +23,8 @@ export default function EditProjectModal({
     dueDate: '',
     clientName: '',
     projectNotes: '',
+    budget: '',
+    budgetNotes: '',
   })
 
   // Tags state
@@ -56,6 +58,8 @@ export default function EditProjectModal({
         dueDate: project.dueDate ? new Date(project.dueDate).toISOString().split('T')[0] : '',
         clientName: project.clientName || '',
         projectNotes: project.projectNotes || '',
+        budget: project.budget?.toString() || '',
+        budgetNotes: project.budgetNotes || '',
       })
       setTags(project.tags || [])
     }
@@ -71,6 +75,8 @@ export default function EditProjectModal({
       clientName: formData.clientName || null,
       projectNotes: formData.projectNotes || null,
       dueDate: formData.dueDate || null,
+      budget: formData.budget ? parseFloat(formData.budget) : null,
+      budgetNotes: formData.budgetNotes || null,
       tags: tags,
     }
 
@@ -106,7 +112,7 @@ export default function EditProjectModal({
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9caf88] focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9caf88] focus:border-transparent text-black placeholder:text-gray-400"
               placeholder="My Project"
             />
           </div>
@@ -121,7 +127,7 @@ export default function EditProjectModal({
               <select
                 value={formData.priority}
                 onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9caf88] focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9caf88] focus:border-transparent text-black"
               >
                 <option value="high">🔴 High</option>
                 <option value="medium">🟡 Medium</option>
@@ -137,7 +143,7 @@ export default function EditProjectModal({
               <select
                 value={formData.status}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9caf88] focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9caf88] focus:border-transparent text-black"
               >
                 <option value="active">Active</option>
                 <option value="on-hold">On Hold</option>
@@ -157,7 +163,7 @@ export default function EditProjectModal({
                 type="date"
                 value={formData.dueDate}
                 onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9caf88] focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9caf88] focus:border-transparent text-black"
               />
             </div>
 
@@ -170,10 +176,31 @@ export default function EditProjectModal({
                 type="text"
                 value={formData.clientName}
                 onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9caf88] focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9caf88] focus:border-transparent text-black placeholder:text-gray-400"
                 placeholder="John Doe"
               />
             </div>
+          </div>
+
+          {/* Project Budget */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Project Budget (optional)
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-2 text-gray-500">$</span>
+              <input
+                type="number"
+                step="0.01"
+                value={formData.budget}
+                onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
+                className="w-full pl-7 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9caf88] focus:border-transparent text-black placeholder:text-gray-400"
+                placeholder="50,000"
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Set a budget to track costs against your target
+            </p>
           </div>
 
           {/* Tags */}
@@ -214,7 +241,7 @@ export default function EditProjectModal({
                     addTag(tagInput)
                   }
                 }}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9caf88] focus:border-transparent"
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9caf88] focus:border-transparent text-black placeholder:text-gray-400"
               />
               <button
                 type="button"
@@ -249,7 +276,7 @@ export default function EditProjectModal({
               value={formData.projectNotes}
               onChange={(e) => setFormData({ ...formData, projectNotes: e.target.value })}
               rows={4}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9caf88] focus:border-transparent resize-none"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9caf88] focus:border-transparent resize-none text-black placeholder:text-gray-400"
               placeholder="Project notes and details..."
             />
           </div>

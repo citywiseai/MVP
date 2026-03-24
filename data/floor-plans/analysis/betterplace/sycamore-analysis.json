@@ -1,0 +1,52 @@
+{
+  "planId": "sycamore",
+  "metadata": {
+    "id": "sycamore",
+    "source": "betterplace",
+    "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/sycamore/",
+    "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2025/04/Sycamore-749-SQ-FT-1-Bedroom-1-Bath-Floor-Plan-2.jpg",
+    "localImagePath": "sycamore.jpg",
+    "squareFootage": 749,
+    "bedrooms": 1,
+    "bathrooms": 1,
+    "stories": 1,
+    "style": "ADU",
+    "scrapedAt": "2025-12-10T17:15:43.934Z"
+  },
+  "roomCount": 8,
+  "roomTypes": [
+    "kitchen",
+    "bedroom",
+    "bathroom",
+    "living room",
+    "dining room",
+    "laundry",
+    "closet",
+    "pantry"
+  ],
+  "layoutType": "hybrid",
+  "circulationPattern": "open-flow",
+  "entryType": "direct entry into open living/dining area",
+  "kitchenLocation": "northeast corner with island, adjacent to dining and pantry",
+  "bedroomLayout": "single bedroom positioned in northwest corner for privacy",
+  "bathroomPlacement": "centrally located full bathroom accessible from main living area",
+  "storageFeatures": [
+    "walk-in closet",
+    "pantry",
+    "laundry room with W/D"
+  ],
+  "efficiencyNotes": [
+    "open kitchen-dining-living maximizes perceived space",
+    "kitchen island provides additional storage and workspace",
+    "centralized plumbing with bathroom and laundry adjacent",
+    "pantry provides dedicated food storage",
+    "bedroom separated from living areas for privacy"
+  ],
+  "uniqueFeatures": [
+    "kitchen island in small ADU layout",
+    "dedicated laundry room rather than closet",
+    "generous pantry space",
+    "bedroom positioned away from kitchen noise"
+  ],
+  "dimensionNotes": "compact 749 sqft efficiently organized with 32'-2.5\" x 28'-3\" footprint, bedroom approximately 11'-6\" x 13'-6\", kitchen island maximizes counter space in limited area"
+}

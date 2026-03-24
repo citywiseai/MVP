@@ -1,0 +1,51 @@
+{
+  "planId": "teak",
+  "metadata": {
+    "id": "teak",
+    "source": "betterplace",
+    "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/teak/",
+    "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2024/04/Teak-749-SQ-FT-3-Bedroom-2-Bath-Floor-Plan-2.jpg",
+    "localImagePath": "teak.jpg",
+    "squareFootage": 749,
+    "bedrooms": 3,
+    "bathrooms": 2,
+    "stories": 1,
+    "style": "ADU",
+    "scrapedAt": "2025-12-10T17:15:55.995Z"
+  },
+  "roomCount": 9,
+  "roomTypes": [
+    "bedroom",
+    "bathroom",
+    "kitchen",
+    "entry/living",
+    "walk-in closet",
+    "closet",
+    "laundry"
+  ],
+  "layoutType": "hybrid",
+  "circulationPattern": "linear",
+  "entryType": "direct entry into combined living/dining space with open concept to kitchen",
+  "kitchenLocation": "central location with open connection to entry/living area and access to laundry",
+  "bedroomLayout": "split bedroom layout with one bedroom on left side and two bedrooms on right side",
+  "bathroomPlacement": "two full bathrooms - one accessible from main living area, one shared between right-side bedrooms",
+  "storageFeatures": [
+    "walk-in closet",
+    "closet",
+    "laundry area"
+  ],
+  "efficiencyNotes": [
+    "galley-style kitchen maximizes counter and cabinet space",
+    "back-to-back bathroom placement shares plumbing",
+    "open entry/living/kitchen reduces circulation space",
+    "compact laundry integrated with kitchen area",
+    "strategic placement of closets for storage"
+  ],
+  "uniqueFeatures": [
+    "angled walls create visual interest and optimize space usage",
+    "integrated laundry with kitchen area",
+    "three bedrooms in compact 749 sqft footprint",
+    "two full bathrooms for a small ADU"
+  ],
+  "dimensionNotes": "overall dimensions 44'-0\" x 17'-0\", with bedrooms ranging from compact to moderate size, efficient use of every square foot with minimal hallway space"
+}

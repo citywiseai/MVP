@@ -1,0 +1,54 @@
+{
+  "planId": "cottonwood",
+  "metadata": {
+    "id": "cottonwood",
+    "source": "betterplace",
+    "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/cottonwood/",
+    "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2025/04/Cottonwood-1000-SQ-FT-2-Bedroom-2-Bath-Floor-Plan-2.jpg",
+    "localImagePath": "cottonwood.jpg",
+    "squareFootage": 1000,
+    "bedrooms": 2,
+    "bathrooms": 2,
+    "stories": 1,
+    "style": "ADU",
+    "scrapedAt": "2025-12-10T17:14:37.672Z"
+  },
+  "roomCount": 10,
+  "roomTypes": [
+    "kitchen",
+    "bedroom",
+    "bathroom",
+    "living room",
+    "dining room",
+    "laundry",
+    "walk-in closet",
+    "pantry",
+    "closet"
+  ],
+  "layoutType": "hybrid",
+  "circulationPattern": "linear",
+  "entryType": "direct entry into open living/dining area",
+  "kitchenLocation": "northeast corner, adjacent to dining room and pantry",
+  "bedroomLayout": "split bedroom layout with one bedroom on west side and one on north side",
+  "bathroomPlacement": "back-to-back bathrooms sharing plumbing wall, one ensuite with north bedroom, one accessible from main living area",
+  "storageFeatures": [
+    "walk-in closet",
+    "pantry",
+    "bedroom closets",
+    "laundry room"
+  ],
+  "efficiencyNotes": [
+    "back-to-back bathrooms share plumbing",
+    "compact galley-style kitchen maximizes counter space",
+    "central laundry room efficiently placed",
+    "pantry provides dedicated food storage",
+    "open living/dining reduces circulation space"
+  ],
+  "uniqueFeatures": [
+    "L-shaped overall footprint",
+    "central laundry room with washer/dryer placement",
+    "walk-in closet accessed through W.I.C. label",
+    "kitchen peninsula configuration"
+  ],
+  "dimensionNotes": "49'-0\" total width with efficient 28'-0\" depth for main body, compact 1000 sqft footprint maximizes room count while maintaining livability"
+}

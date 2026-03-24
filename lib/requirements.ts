@@ -17,6 +17,24 @@ export interface Requirement {
   name: string;
   description: string;
   type: 'structural' | 'civil' | 'electrical' | 'mechanical' | 'plumbing' | 'general';
+  category?: string; // For cascade deletion tracking
+}
+
+// Map project type to task category
+export function getCategoryForProjectType(projectType: ProjectType): string {
+  const typeMap: Record<ProjectType, string> = {
+    'ADU': 'adu',
+    'ADDITION': 'addition',
+    'REMODEL': 'remodel',
+    'NEW_CONSTRUCTION': 'new-construction',
+    'DEMOLITION': 'demolition',
+    'GARAGE_CONVERSION': 'garage',
+    'PATIO_COVER': 'outdoor',
+    'FENCE': 'outdoor',
+    'POOL': 'pool',
+    'SOLAR': 'solar'
+  };
+  return typeMap[projectType] || 'general';
 }
 
 export function parseProjectDataToDetails(projectData: any): ProjectDetails {
@@ -64,12 +82,14 @@ export function parseProjectDataToDetails(projectData: any): ProjectDetails {
 
 export async function getRequirementsForProject(details: ProjectDetails): Promise<Requirement[]> {
   const requirements: Requirement[] = [];
+  const baseCategory = getCategoryForProjectType(details.projectType);
 
   // Always include survey for Phoenix projects
   requirements.push({
     name: 'Topographic Survey',
     description: 'Required boundary and topographic survey showing property lines, easements, and existing improvements',
-    type: 'civil'
+    type: 'civil',
+    category: baseCategory
   });
 
   // Structural requirements
@@ -77,13 +97,15 @@ export async function getRequirementsForProject(details: ProjectDetails): Promis
     requirements.push({
       name: 'Structural Engineering Plans',
       description: 'Sealed structural plans for foundations, framing, and load-bearing elements',
-      type: 'structural'
+      type: 'structural',
+      category: 'structural'
     });
-    
+
     requirements.push({
       name: 'Soils Report',
       description: 'Geotechnical investigation for foundation design',
-      type: 'civil'
+      type: 'civil',
+      category: baseCategory
     });
   }
 
@@ -92,7 +114,8 @@ export async function getRequirementsForProject(details: ProjectDetails): Promis
     requirements.push({
       name: 'Civil Engineering Plans',
       description: 'Site grading, drainage, and utility connection plans',
-      type: 'civil'
+      type: 'civil',
+      category: baseCategory
     });
   }
 
@@ -101,7 +124,8 @@ export async function getRequirementsForProject(details: ProjectDetails): Promis
     requirements.push({
       name: 'Plumbing Plans',
       description: 'Water supply, drainage, and venting plans showing fixture locations and pipe sizing',
-      type: 'plumbing'
+      type: 'plumbing',
+      category: details.plumbingWork ? (details.projectType === 'ADU' ? 'adu-plumbing' : 'plumbing') : baseCategory
     });
   }
 
@@ -110,14 +134,16 @@ export async function getRequirementsForProject(details: ProjectDetails): Promis
     requirements.push({
       name: 'Electrical Plans',
       description: 'Single-line diagram, panel schedule, and lighting/receptacle layout',
-      type: 'electrical'
+      type: 'electrical',
+      category: details.projectType === 'ADU' ? 'adu-electrical' : 'electrical'
     });
-    
+
     if (details.electricalServiceAmps && details.electricalServiceAmps >= 200) {
       requirements.push({
         name: 'Electrical Service Upgrade',
         description: 'Utility coordination for new 200A service entrance',
-        type: 'electrical'
+        type: 'electrical',
+        category: details.projectType === 'ADU' ? 'adu-electrical' : 'electrical'
       });
     }
   }
@@ -127,7 +153,8 @@ export async function getRequirementsForProject(details: ProjectDetails): Promis
     requirements.push({
       name: 'HVAC Plans',
       description: 'Heating, ventilation, and air conditioning system design with Manual J load calculations',
-      type: 'mechanical'
+      type: 'mechanical',
+      category: details.projectType === 'ADU' ? 'adu-hvac' : baseCategory
     });
   }
 
@@ -136,9 +163,18 @@ export async function getRequirementsForProject(details: ProjectDetails): Promis
     requirements.push({
       name: 'Energy Code Compliance',
       description: 'REScheck or COMcheck analysis showing compliance with 2021 IECC',
-      type: 'general'
+      type: 'general',
+      category: baseCategory
     });
   }
+
+  // As-Built Drawings (required for all projects for permit closeout)
+  requirements.push({
+    name: 'As-Built Drawings',
+    description: 'Revised blueprints showing construction as-built, including all field changes, modifications, and final dimensions. Required by municipality for permit closeout and certificate of occupancy. Prepared by contractor upon project completion.',
+    type: 'general',
+    category: baseCategory
+  });
 
   return requirements;
 }

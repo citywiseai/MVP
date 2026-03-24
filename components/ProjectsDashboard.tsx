@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Building2, Plus, ChevronDown, ChevronUp, Trash2, Upload, FileText, MessageSquare, Pencil, FileDown, Search, Archive, ArchiveRestore, Sparkles, X } from 'lucide-react'
+import { Building2, Plus, ChevronDown, ChevronUp, Trash2, Upload, FileText, MessageSquare, Pencil, FileDown, Search, Archive, ArchiveRestore, Sparkles, X, DollarSign, Link, Users, Layers, Briefcase, AlertTriangle, Paperclip, Home } from 'lucide-react'
 import { SignOutButton } from './SignOutButton'
 import dynamic from 'next/dynamic'
 import DashboardEmptyState from './DashboardEmptyState'
@@ -13,8 +13,14 @@ import PDFPreviewModal from './PDFPreviewModal'
 import AIVisualizationPanel from './AIVisualizationPanel'
 import { exportPropertyPdf } from '@/lib/exportPdf'
 import { toast } from 'sonner'
-import CompactTimeline from '@/components/roadmap/CompactTimeline'
-import { ProjectRoadmap } from '@/types/roadmap'
+import ProjectRoadmap from '@/components/roadmap/ProjectRoadmap'
+import VendorSelector from '@/components/vendors/VendorSelector'
+import BidForm from '@/components/bids/BidForm'
+import CostSummary from '@/components/CostSummary'
+import ProjectTimeline from '@/components/ProjectTimeline'
+import PaymentStatusBadge from '@/components/PaymentStatusBadge'
+import PaymentModal from '@/components/PaymentModal'
+import ExportReportButton from '@/components/ExportReportButton'
 
 const MapboxPropertyVisualization = dynamic(() => import('./MapboxPropertyVisualization'), {
   ssr: false,
@@ -23,6 +29,16 @@ const MapboxPropertyVisualization = dynamic(() => import('./MapboxPropertyVisual
 
 const ProjectChatWrapper = dynamic(() => import('./ProjectChatWrapper'), {
   ssr: false,
+})
+
+const FloorPlanGenerator = dynamic(() => import('@/components/FloorPlanGenerator'), {
+  ssr: false,
+  loading: () => <div className="p-4 text-center text-gray-500">Loading generator...</div>
+})
+
+const FloorPlanGallery = dynamic(() => import('@/components/FloorPlanGallery'), {
+  ssr: false,
+  loading: () => <div className="p-4 text-center text-gray-500">Loading floor plans...</div>
 })
 
 type SortField = 'name' | 'address' | 'dueDate' | 'status'
@@ -54,6 +70,9 @@ export function ProjectsDashboard({
   })
   const [uploadingFile, setUploadingFile] = useState(false)
   const [expandedTaskNotes, setExpandedTaskNotes] = useState<{ [key: string]: boolean }>({})
+  const [showBidFormForTask, setShowBidFormForTask] = useState<string | null>(null)
+  const [expandedBids, setExpandedBids] = useState<{ [key: string]: boolean }>({})
+  const [paymentModalBid, setPaymentModalBid] = useState<any>(null)
   const [showPropertyReport, setShowPropertyReport] = useState(false)
   const [assessorLoading, setAssessorLoading] = useState(false)
   const [showAssessorReport, setShowAssessorReport] = useState(false)
@@ -91,6 +110,13 @@ export function ProjectsDashboard({
   // Roadmap state
   const [roadmap, setRoadmap] = useState<ProjectRoadmap | null>(null)
   const [selectedPhaseId, setSelectedPhaseId] = useState<string>('')
+
+  // Permit Timeline state
+  const [permitTimeline, setPermitTimeline] = useState<any>(null)
+
+  // Floor Plan state
+  const [showFloorPlanGenerator, setShowFloorPlanGenerator] = useState(false)
+  const [floorPlanRefresh, setFloorPlanRefresh] = useState(0)
 
   const selectedProject = projects.find(p => p.id === selectedProjectId)
 
@@ -263,6 +289,50 @@ export function ProjectsDashboard({
 
     loadRoadmap();
   }, [selectedProjectId]);
+
+  // Load Permit Timeline when project changes
+  useEffect(() => {
+    const loadPermitTimeline = async () => {
+      if (!selectedProject?.parcel?.city) {
+        setPermitTimeline(null);
+        return;
+      }
+
+      try {
+        const jurisdiction = selectedProject.parcel.city.toLowerCase();
+
+        // Determine project type from scope of work
+        const scope = selectedProject.scopeOfWork?.toLowerCase() || '';
+        let projectType = 'residential_addition';
+
+        if (scope.includes('adu')) {
+          projectType = 'adu';
+        } else if (scope.includes('new construction') || scope.includes('new build')) {
+          projectType = 'new_construction';
+        } else if (scope.includes('remodel') || scope.includes('renovation')) {
+          projectType = 'remodel';
+        } else if (scope.includes('addition')) {
+          projectType = 'residential_addition';
+        }
+
+        const response = await fetch(
+          `/api/permit-timeline?jurisdiction=${jurisdiction}&type=${projectType}`
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          setPermitTimeline(data);
+        } else {
+          setPermitTimeline(null);
+        }
+      } catch (error) {
+        console.error('Error loading permit timeline:', error);
+        setPermitTimeline(null);
+      }
+    };
+
+    loadPermitTimeline();
+  }, [selectedProject?.parcel?.city, selectedProject?.scopeOfWork]);
 
   // Refresh visualizations callback
   const refreshVisualizations = async () => {
@@ -620,6 +690,270 @@ export function ProjectsDashboard({
     }
   }
 
+  const handleVendorChange = async (taskId: string, vendorId: string | null) => {
+    try {
+      const res = await fetch(`/api/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vendorId }),
+      })
+      if (!res.ok) throw new Error('Failed to update vendor')
+      const data = await res.json()
+
+      // Update projects with the updated task including vendor data
+      setProjects(projects.map(p => {
+        if (p.id === selectedProjectId) {
+          return {
+            ...p,
+            tasks: p.tasks.map((t: any) =>
+              t.id === taskId ? { ...t, vendorId, vendor: data.task.vendor } : t
+            )
+          }
+        }
+        return p
+      }))
+
+      toast.success(vendorId ? 'Vendor assigned successfully' : 'Vendor removed')
+    } catch (error) {
+      console.error('Error updating vendor:', error)
+      toast.error('Failed to update vendor')
+    }
+  }
+
+  const handleBidAdded = async (bid: any) => {
+    console.log('✅ Bid added:', bid)
+    setShowBidFormForTask(null)
+    toast.success('Bid added successfully')
+
+    // Refetch the project with updated bids
+    if (selectedProjectId) {
+      try {
+        const response = await fetch(`/api/projects/${selectedProjectId}`)
+        if (response.ok) {
+          const updatedProject = await response.json()
+          setProjects(projects.map(p => p.id === selectedProjectId ? updatedProject : p))
+        }
+      } catch (error) {
+        console.error('Error refetching project:', error)
+      }
+    }
+    router.refresh()
+  }
+
+  const handleAcceptBid = async (bidId: string) => {
+    try {
+      console.log('✅ Accepting bid:', bidId)
+      const response = await fetch(`/api/bids/${bidId}/accept`, {
+        method: 'POST',
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to accept bid')
+      }
+
+      const data = await response.json()
+      console.log('✅ Bid accepted:', data)
+
+      // Update phase timeline if bid has completion date and task has phase
+      if (data.bid?.estimatedCompletionDate && data.bid?.task?.phaseId) {
+        console.log('📅 Updating phase timeline with bid completion date')
+        try {
+          const timelineResponse = await fetch(`/api/phases/${data.bid.task.phaseId}/timeline`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              estimatedEndDate: data.bid.estimatedCompletionDate,
+            }),
+          })
+
+          if (timelineResponse.ok) {
+            console.log('✅ Phase timeline updated')
+            // Reload roadmap to show updated timeline
+            const roadmapResponse = await fetch(`/api/projects/${selectedProjectId}/roadmap`)
+            if (roadmapResponse.ok) {
+              const updatedRoadmap = await roadmapResponse.json()
+              setRoadmap(updatedRoadmap)
+            }
+          }
+        } catch (error) {
+          console.error('⚠️ Failed to update phase timeline:', error)
+          // Don't fail the whole operation if timeline update fails
+        }
+      }
+
+      toast.success('Bid accepted successfully')
+
+      // Refetch the project with updated bids
+      if (selectedProjectId) {
+        const projectResponse = await fetch(`/api/projects/${selectedProjectId}`)
+        if (projectResponse.ok) {
+          const updatedProject = await projectResponse.json()
+          setProjects(projects.map(p => p.id === selectedProjectId ? updatedProject : p))
+        }
+      }
+
+      // Refresh project to show updated bid status
+      router.refresh()
+    } catch (error) {
+      console.error('❌ Error accepting bid:', error)
+      toast.error('Failed to accept bid')
+    }
+  }
+
+  const handleDeclineBid = async (bidId: string) => {
+    try {
+      console.log('❌ Declining bid:', bidId)
+      const response = await fetch(`/api/bids/${bidId}/decline`, {
+        method: 'POST',
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to decline bid')
+      }
+
+      toast.success('Bid declined successfully')
+
+      // Refetch the project with updated bids
+      if (selectedProjectId) {
+        const projectResponse = await fetch(`/api/projects/${selectedProjectId}`)
+        if (projectResponse.ok) {
+          const updatedProject = await projectResponse.json()
+          setProjects(projects.map(p => p.id === selectedProjectId ? updatedProject : p))
+        }
+      }
+
+      const data = await response.json()
+      console.log('❌ Bid declined:', data)
+
+      // Refresh project to show updated bid status
+      router.refresh()
+    } catch (error) {
+      console.error('❌ Error declining bid:', error)
+      toast.error('Failed to decline bid')
+    }
+  }
+
+  const handleUpdatePayment = async (bidId: string, paymentData: any) => {
+    try {
+      const response = await fetch(`/api/bids/${bidId}/payment`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(paymentData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update payment');
+      }
+
+      toast.success('Payment updated successfully');
+
+      // Refetch the project with updated bids
+      if (selectedProjectId) {
+        const projectResponse = await fetch(`/api/projects/${selectedProjectId}`);
+        if (projectResponse.ok) {
+          const updatedProject = await projectResponse.json();
+          setProjects(projects.map(p => p.id === selectedProjectId ? updatedProject : p));
+        }
+      }
+
+      console.log('💰 Payment updated');
+    } catch (error) {
+      console.error('Error updating payment:', error);
+      toast.error('Failed to update payment');
+    }
+  };
+
+  const handleReopenBid = async (bidId: string) => {
+    try {
+      console.log('🔄 Reopening bid:', bidId)
+
+      // First get the bid to check its current status and taskId
+      const bidResponse = await fetch(`/api/bids/${bidId}`)
+      if (!bidResponse.ok) {
+        throw new Error('Failed to fetch bid')
+      }
+      const bidData = await bidResponse.json()
+      const bid = bidData.bid
+
+      // Reset bid status to received (pending)
+      const response = await fetch(`/api/bids/${bidId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'received' })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to reopen bid')
+      }
+
+      // If this was an accepted bid, also clear the task's acceptedBidId
+      if (bid.status === 'accepted' && bid.task?.id) {
+        await fetch(`/api/tasks/${bid.task.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            acceptedBidId: null,
+            estimatedCost: null
+          })
+        })
+      }
+
+      toast.success('Bid reopened successfully')
+
+      // Refresh project data
+      if (selectedProjectId) {
+        const projectResponse = await fetch(`/api/projects/${selectedProjectId}`)
+        if (projectResponse.ok) {
+          const updatedProject = await projectResponse.json()
+          setProjects(projects.map(p => p.id === selectedProjectId ? updatedProject : p))
+        }
+      }
+
+      router.refresh()
+    } catch (error) {
+      console.error('❌ Error reopening bid:', error)
+      toast.error('Failed to reopen bid')
+    }
+  }
+
+  const handleDeleteBid = async (bidId: string) => {
+    if (!confirm('Delete this bid?')) return
+
+    try {
+      console.log('🗑️ Deleting bid:', bidId)
+      const response = await fetch(`/api/bids/${bidId}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to delete bid')
+      }
+
+      toast.success('Bid deleted successfully')
+
+      // Refresh project data
+      if (selectedProjectId) {
+        const projectResponse = await fetch(`/api/projects/${selectedProjectId}`)
+        if (projectResponse.ok) {
+          const updatedProject = await projectResponse.json()
+          setProjects(projects.map(p => p.id === selectedProjectId ? updatedProject : p))
+        }
+      }
+
+      router.refresh()
+    } catch (error) {
+      console.error('❌ Error deleting bid:', error)
+      toast.error('Failed to delete bid')
+    }
+  }
+
+  const toggleBidsExpanded = (taskId: string) => {
+    setExpandedBids(prev => ({
+      ...prev,
+      [taskId]: !prev[taskId]
+    }))
+  }
+
   const handleDeleteTask = async (taskId: string) => {
     try {
       const res = await fetch('/api/tasks', {
@@ -871,7 +1205,7 @@ export function ProjectsDashboard({
               placeholder="Search projects..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#9caf88] focus:border-[#9caf88] text-sm"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#9caf88] focus:border-[#9caf88] text-sm text-black placeholder:text-gray-400"
             />
             <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
           </div>
@@ -881,7 +1215,7 @@ export function ProjectsDashboard({
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#9caf88] focus:border-[#9caf88]"
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-[#9caf88] focus:border-[#9caf88]"
             >
               <option value="all">All Status</option>
               <option value="active">Active</option>
@@ -892,7 +1226,7 @@ export function ProjectsDashboard({
             <select
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value)}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#9caf88] focus:border-[#9caf88]"
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-[#9caf88] focus:border-[#9caf88]"
             >
               <option value="all">All Priority</option>
               <option value="high">High</option>
@@ -907,7 +1241,7 @@ export function ProjectsDashboard({
                 console.log('🏷️ e.target.value === "all":', e.target.value === 'all');
                 setTagFilter(e.target.value);
               }}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#9caf88] focus:border-[#9caf88]"
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:ring-2 focus:ring-[#9caf88] focus:border-[#9caf88]"
             >
               <option value="all">All Tags</option>
               {allTags.map(tag => (
@@ -1272,6 +1606,10 @@ export function ProjectsDashboard({
                           </>
                         )}
                       </button>
+                      <ExportReportButton
+                        project={selectedProject}
+                        tasks={selectedProject.tasks || []}
+                      />
                   </>
                 )}
               </div>
@@ -1447,7 +1785,7 @@ export function ProjectsDashboard({
                         </div>
                       ))}
                     </div>
-                    <button onClick={handleConvertToTasks} className="w-full px-4 py-3 bg-gradient-to-r from-[#9caf88] to-[#8a9d78] hover:from-[#8a9d78] hover:to-[#9caf88] text-white rounded-xl font-medium transition-all duration-200 shadow-md hover:shadow-lg">Convert to Tasks</button>
+                    <button onClick={handleConvertToTasks} className="w-full px-4 py-3 bg-gradient-to-r from-[#9caf88] to-[#8a9d78] hover:from-[#8a9d78] hover:to-[#9caf88] text-white rounded-xl font-medium transition-all duration-200 shadow-md hover:shadow-lg">Convert to Requirements</button>
                   </div>
                 )}
               </div>
@@ -1456,43 +1794,78 @@ export function ProjectsDashboard({
             <div className="mb-8">
               <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
                 <button onClick={() => toggleSection('tasks')} className="w-full p-6 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                  <h3 className="text-lg font-bold text-[#1e3a5f]">Tasks ({selectedProject.tasks?.length || 0})</h3>
+                  <h3 className="text-lg font-bold text-[#1e3a5f]">Requirements ({selectedProject.tasks?.length || 0})</h3>
                   {expandedSections.tasks ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
                 </button>
                 {expandedSections.tasks && (
                   <div className="px-6 pb-6">
                     {/* Roadmap Timeline Section */}
-                    {roadmap ? (
-                      <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
-                        <div className="flex items-center justify-between mb-4">
-                          <h4 className="text-sm font-semibold text-gray-900">Project Roadmap</h4>
-                          <span className="text-xs text-gray-600">
-                            {roadmap.phases.filter(p => p.status === 'completed').length} / {roadmap.phases.length} phases complete
-                          </span>
-                        </div>
-                        <CompactTimeline
-                          roadmap={roadmap}
-                          onPhaseClick={(phase) => console.log('Phase clicked:', phase)}
+                    <div className="mb-6">
+                      <ProjectRoadmap
+                        projectId={selectedProjectId}
+                        onRefresh={() => {
+                          // Refresh project data when roadmap is updated
+                          router.refresh();
+                        }}
+                      />
+                    </div>
+
+                    {/* Cost Summary Section */}
+                    <div className="mb-6">
+                      <CostSummary
+                        tasks={selectedProject.tasks || []}
+                        phases={roadmap?.phases}
+                        budget={selectedProject.budget}
+                      />
+                    </div>
+
+                    {/* Project Timeline Section */}
+                    {roadmap?.phases && roadmap.phases.length > 0 && (
+                      <div className="mb-6">
+                        <ProjectTimeline
+                          phases={roadmap.phases}
+                          permitTimeline={permitTimeline}
+                          projectStartDate={selectedProject.createdAt ? new Date(selectedProject.createdAt) : undefined}
+                          targetCompletionDate={selectedProject.targetCompletionDate ? new Date(selectedProject.targetCompletionDate) : undefined}
                         />
                       </div>
-                    ) : (
-                      <button
-                        onClick={async () => {
-                          try {
-                            const response = await fetch(`/api/projects/${selectedProjectId}/roadmap`, { method: 'POST' });
-                            if (response.ok) {
-                              const data = await response.json();
-                              setRoadmap(data);
-                            }
-                          } catch (err) {
-                            console.error('Error generating roadmap:', err);
-                          }
-                        }}
-                        className="mb-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
-                      >
-                        Generate Roadmap
-                      </button>
                     )}
+
+                    {/* Floor Plans Section */}
+                    <div className="bg-white rounded-lg border p-4 mb-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                          <Home className="w-5 h-5 text-blue-600" />
+                          Floor Plans
+                        </h3>
+                        <button
+                          onClick={() => setShowFloorPlanGenerator(!showFloorPlanGenerator)}
+                          className="text-sm bg-blue-500 text-white px-3 py-1.5 rounded-lg hover:bg-blue-600 flex items-center gap-1"
+                        >
+                          <Sparkles className="w-3 h-3" />
+                          {showFloorPlanGenerator ? 'Hide Generator' : 'AI Generate'}
+                        </button>
+                      </div>
+
+                      {showFloorPlanGenerator && (
+                        <div className="mb-6">
+                          <FloorPlanGenerator
+                            projectId={selectedProject.id}
+                            lotSizeSqFt={selectedProject.parcel?.lotSizeSqFt}
+                            maxLotCoverage={40}
+                            onSaved={() => {
+                              setFloorPlanRefresh(prev => prev + 1);
+                              setShowFloorPlanGenerator(false);
+                            }}
+                          />
+                        </div>
+                      )}
+
+                      <FloorPlanGallery
+                        projectId={selectedProject.id}
+                        refreshTrigger={floorPlanRefresh}
+                      />
+                    </div>
 
                     <div className="space-y-3 mb-4 max-h-[600px] overflow-y-auto">
                       {sortTasksByPriority(selectedProject.tasks || []).map((task: any) => (
@@ -1536,6 +1909,225 @@ export function ProjectsDashboard({
                               className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-[#9caf88] focus:border-transparent"
                             />
 
+                            {/* Vendor Assignment */}
+                            <div className="flex items-center gap-2">
+                              <label className="text-xs font-medium text-gray-600 min-w-[60px]">Vendor:</label>
+                              <VendorSelector
+                                value={task.vendorId}
+                                onChange={(vendorId) => handleVendorChange(task.id, vendorId)}
+                                compact={true}
+                                placeholder="Select vendor..."
+                              />
+                            </div>
+
+                            {/* Show assigned vendor info */}
+                            {task.vendor && (
+                              <div className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
+                                <span className="font-medium text-blue-700">{task.vendor.name}</span>
+                                {task.vendor.company && (
+                                  <span className="text-blue-600">({task.vendor.company})</span>
+                                )}
+                                <span className="text-blue-500">• {task.vendor.trade}</span>
+                              </div>
+                            )}
+
+                            {/* Show existing bids */}
+                            {task.bids && task.bids.length > 0 && (
+                              <div className="mt-2">
+                                {/* Accepted bid summary (always shown) */}
+                                {(() => {
+                                  const acceptedBid = task.bids.find((b: any) => b.status === 'accepted')
+                                  return acceptedBid && (
+                                    <div className="flex items-center justify-between text-sm p-2 rounded bg-green-50 border border-green-200 mb-2">
+                                      <div className="flex items-center gap-2">
+                                        <DollarSign className="w-3 h-3 text-gray-500" />
+                                        <span className="font-medium text-black">${acceptedBid.amount.toLocaleString()}</span>
+                                        <span className="text-gray-500">•</span>
+                                        <span className="text-gray-600">{acceptedBid.vendor?.name}</span>
+                                        <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded font-medium">
+                                          ✓ Accepted
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <button
+                                          onClick={() => handleReopenBid(acceptedBid.id)}
+                                          className="text-xs text-gray-500 hover:text-gray-700 underline"
+                                        >
+                                          Reopen
+                                        </button>
+                                        <button
+                                          onClick={() => handleDeleteBid(acceptedBid.id)}
+                                          className="text-xs text-red-500 hover:text-red-700"
+                                          title="Delete bid"
+                                        >
+                                          <Trash2 className="w-3 h-3" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )
+                                })()}
+
+                                {/* Toggle button */}
+                                <button
+                                  onClick={() => toggleBidsExpanded(task.id)}
+                                  className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 mb-1"
+                                >
+                                  {expandedBids[task.id] ? (
+                                    <>
+                                      <ChevronUp className="w-3 h-3" />
+                                      Hide Bids ({task.bids.length})
+                                    </>
+                                  ) : (
+                                    <>
+                                      <ChevronDown className="w-3 h-3" />
+                                      Show Bids ({task.bids.length})
+                                    </>
+                                  )}
+                                </button>
+
+                                {/* Full bid list (shown when expanded) */}
+                                {expandedBids[task.id] && (
+                                  <div className="space-y-1">
+                                    {task.bids.map((bid: any) => (
+                                      <div
+                                        key={bid.id}
+                                        className={`flex items-center justify-between text-sm p-2 rounded ${
+                                          bid.status === 'accepted'
+                                            ? 'bg-green-50 border border-green-200'
+                                            : 'bg-gray-50 border border-gray-200'
+                                        }`}
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <DollarSign className="w-3 h-3 text-gray-500" />
+                                          <span className="font-medium text-black">${bid.amount.toLocaleString()}</span>
+                                          <span className="text-gray-500">•</span>
+                                          <span className="text-gray-600">{bid.vendor?.name}</span>
+                                          {bid.estimatedCompletionDate && (
+                                            <>
+                                              <span className="text-gray-500">•</span>
+                                              <span className="text-gray-500 text-xs">
+                                                Due: {new Date(bid.estimatedCompletionDate).toLocaleDateString()}
+                                              </span>
+                                            </>
+                                          )}
+                                          {bid.attachmentUrl && (
+                                            <>
+                                              <span className="text-gray-500">•</span>
+                                              <a
+                                                href={bid.attachmentUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-blue-500 hover:text-blue-700 text-xs flex items-center gap-1"
+                                              >
+                                                <Paperclip className="w-3 h-3" />
+                                                {bid.attachmentName || 'View Document'}
+                                              </a>
+                                            </>
+                                          )}
+                                          {bid.status === 'accepted' && (
+                                            <>
+                                              <span className="text-gray-500">•</span>
+                                              <PaymentStatusBadge
+                                                status={bid.paymentStatus || 'unpaid'}
+                                                amount={bid.amount}
+                                                amountPaid={bid.amountPaid || 0}
+                                                onClick={() => setPaymentModalBid(bid)}
+                                              />
+                                            </>
+                                          )}
+                                        </div>
+
+                                        <div className="flex items-center gap-2">
+                                          {bid.status === 'accepted' ? (
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded font-medium">
+                                                ✓ Accepted
+                                              </span>
+                                              <button
+                                                onClick={() => handleReopenBid(bid.id)}
+                                                className="text-xs text-gray-500 hover:text-gray-700 underline"
+                                              >
+                                                Reopen
+                                              </button>
+                                              <button
+                                                onClick={() => handleDeleteBid(bid.id)}
+                                                className="text-xs text-red-500 hover:text-red-700"
+                                                title="Delete bid"
+                                              >
+                                                <Trash2 className="w-3 h-3" />
+                                              </button>
+                                            </div>
+                                          ) : bid.status === 'rejected' ? (
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">
+                                                Declined
+                                              </span>
+                                              <button
+                                                onClick={() => handleReopenBid(bid.id)}
+                                                className="text-xs text-gray-500 hover:text-gray-700 underline"
+                                              >
+                                                Reopen
+                                              </button>
+                                              <button
+                                                onClick={() => handleDeleteBid(bid.id)}
+                                                className="text-xs text-red-500 hover:text-red-700"
+                                                title="Delete bid"
+                                              >
+                                                <Trash2 className="w-3 h-3" />
+                                              </button>
+                                            </div>
+                                          ) : (
+                                            <div className="flex items-center gap-1">
+                                              <button
+                                                onClick={() => handleAcceptBid(bid.id)}
+                                                className="text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600"
+                                              >
+                                                Accept
+                                              </button>
+                                              <button
+                                                onClick={() => handleDeclineBid(bid.id)}
+                                                className="text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
+                                              >
+                                                Decline
+                                              </button>
+                                              <button
+                                                onClick={() => handleDeleteBid(bid.id)}
+                                                className="text-xs text-red-500 hover:text-red-700"
+                                                title="Delete bid"
+                                              >
+                                                <Trash2 className="w-3 h-3" />
+                                              </button>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Show "Add Bid" only if no accepted bid yet */}
+                            {(!task.bids || !task.bids.some((b: any) => b.status === 'accepted')) && (
+                              <button
+                                onClick={() => setShowBidFormForTask(task.id)}
+                                className="text-xs text-green-600 hover:text-green-700 flex items-center gap-1 mt-2"
+                              >
+                                <DollarSign className="w-3 h-3" />
+                                Add Bid
+                              </button>
+                            )}
+
+                            {/* Bid Form (shows when clicked) */}
+                            {showBidFormForTask === task.id && (
+                              <BidForm
+                                taskId={task.id}
+                                existingVendorId={task.vendorId}
+                                onSubmit={handleBidAdded}
+                                onCancel={() => setShowBidFormForTask(null)}
+                              />
+                            )}
+
                             <button
                               onClick={() => toggleTaskNotes(task.id)}
                               className="flex items-center gap-1 text-xs text-[#9caf88] hover:text-[#8a9d78] transition-colors"
@@ -1556,7 +2148,7 @@ export function ProjectsDashboard({
                                   ))
                                 }}
                                 onBlur={() => handleTaskUpdate(task.id, { description: selectedProject.tasks.find((t: any) => t.id === task.id)?.description })}
-                                placeholder="Add notes about this task..."
+                                placeholder="Add notes about this requirement..."
                                 rows={3}
                                 className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9caf88] focus:border-transparent resize-none"
                               />
@@ -1567,8 +2159,8 @@ export function ProjectsDashboard({
                     </div>
 
                     <form onSubmit={handleAddTask} className="space-y-2">
-                      <input type="text" name="title" placeholder="Task title" required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9caf88] text-sm" />
-                      <input type="text" name="description" placeholder="Description" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9caf88] text-sm" />
+                      <input type="text" name="title" placeholder="Requirement title" required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9caf88] text-sm text-black placeholder:text-gray-400" />
+                      <input type="text" name="description" placeholder="Description" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#9caf88] text-sm text-black placeholder:text-gray-400" />
 
                       {/* Phase Assignment Dropdown */}
                       {roadmap && roadmap.phases && roadmap.phases.length > 0 && (
@@ -1579,9 +2171,9 @@ export function ProjectsDashboard({
                           <select
                             value={selectedPhaseId}
                             onChange={(e) => setSelectedPhaseId(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-black"
                           >
-                            <option value="">No phase (general task)</option>
+                            <option value="">No phase (general requirement)</option>
                             {roadmap.phases.map((phase) => (
                               <option key={phase.id} value={phase.id}>
                                 {phase.name}
@@ -1591,7 +2183,7 @@ export function ProjectsDashboard({
                         </div>
                       )}
 
-                      <button type="submit" className="w-full px-4 py-2 bg-[#9caf88] hover:bg-[#8a9d78] text-white rounded-lg font-medium transition-colors text-sm">Add Task</button>
+                      <button type="submit" className="w-full px-4 py-2 bg-[#9caf88] hover:bg-[#8a9d78] text-white rounded-lg font-medium transition-colors text-sm">Add Requirement</button>
                     </form>
                   </div>
                 )}
@@ -1763,6 +2355,15 @@ export function ProjectsDashboard({
               </div>
             </div>
           </div>
+        )}
+
+        {/* Payment Modal */}
+        {paymentModalBid && (
+          <PaymentModal
+            bid={paymentModalBid}
+            onClose={() => setPaymentModalBid(null)}
+            onSave={(data) => handleUpdatePayment(paymentModalBid.id, data)}
+          />
         )}
       </div>
     </div>

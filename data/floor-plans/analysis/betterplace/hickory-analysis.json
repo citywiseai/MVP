@@ -1,0 +1,51 @@
+{
+  "planId": "hickory",
+  "metadata": {
+    "id": "hickory",
+    "source": "betterplace",
+    "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/hickory/",
+    "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2024/04/Hickory-749-SQ-FT-2-Bedroom-1-Bath-Floor-Plan-2.jpg",
+    "localImagePath": "hickory.jpg",
+    "squareFootage": 749,
+    "bedrooms": 2,
+    "bathrooms": 1,
+    "stories": 1,
+    "style": "ADU",
+    "scrapedAt": "2025-12-10T17:16:02.666Z"
+  },
+  "roomCount": 7,
+  "roomTypes": [
+    "kitchen",
+    "bedroom",
+    "bathroom",
+    "living room",
+    "dining room",
+    "laundry",
+    "linen closet"
+  ],
+  "layoutType": "hybrid",
+  "circulationPattern": "central-hall",
+  "entryType": "direct entry into open living area with central circulation spine",
+  "kitchenLocation": "left side of unit, adjacent to dining area and living space, galley-style layout",
+  "bedroomLayout": "split bedroom layout with bedrooms on opposite ends of the unit for privacy",
+  "bathroomPlacement": "single centrally located bathroom accessible from main circulation area, serves both bedrooms",
+  "storageFeatures": [
+    "linen closet",
+    "bedroom closets",
+    "kitchen pantry area"
+  ],
+  "efficiencyNotes": [
+    "galley kitchen maximizes counter and storage space",
+    "central utility core groups bathroom, laundry and linen storage",
+    "open living/dining reduces circulation space",
+    "split bedroom layout provides privacy",
+    "compact bathroom with efficient fixture placement"
+  ],
+  "uniqueFeatures": [
+    "washer/dryer placement in central utility area",
+    "refrigerator positioned at kitchen entrance",
+    "dining area acts as transition between kitchen and living",
+    "symmetrical bedroom placement"
+  ],
+  "dimensionNotes": "32' x 23'-4' overall footprint efficiently accommodates all spaces; bedrooms appear adequately sized for furniture placement; open living area feels spacious despite compact footprint; kitchen galley is narrow but functional"
+}

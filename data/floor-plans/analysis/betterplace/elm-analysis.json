@@ -1,0 +1,50 @@
+{
+  "planId": "elm",
+  "metadata": {
+    "id": "elm",
+    "source": "betterplace",
+    "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/elm/",
+    "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2024/04/Elm-400-SQ-FT-1-Bedroom-1-Bath-Floor-Plan-2.jpg",
+    "localImagePath": "elm.jpg",
+    "squareFootage": 400,
+    "bedrooms": 1,
+    "bathrooms": 1,
+    "stories": 1,
+    "style": "ADU",
+    "scrapedAt": "2025-12-10T17:17:42.210Z"
+  },
+  "roomCount": 7,
+  "roomTypes": [
+    "kitchen",
+    "bedroom",
+    "bathroom",
+    "living room",
+    "dining room",
+    "closet",
+    "laundry"
+  ],
+  "layoutType": "hybrid",
+  "circulationPattern": "open-flow",
+  "entryType": "direct entry into open living/dining area with no formal foyer",
+  "kitchenLocation": "upper right corner with adjacency to dining area and refrigerator alcove",
+  "bedroomLayout": "single bedroom positioned in upper left corner for privacy",
+  "bathroomPlacement": "centrally located full bathroom with direct access from main living area",
+  "storageFeatures": [
+    "walk-in closet",
+    "refrigerator alcove"
+  ],
+  "efficiencyNotes": [
+    "open living/dining area maximizes perceived space",
+    "compact galley-style kitchen with integrated appliances",
+    "washer/dryer placement near bathroom for shared plumbing",
+    "bedroom separated but adjacent to main living space",
+    "minimal hallway space reduces circulation waste"
+  ],
+  "uniqueFeatures": [
+    "integrated dining table in open concept area",
+    "dishwasher and appliances efficiently arranged in kitchen",
+    "angled entry wall creates interesting geometry",
+    "dedicated laundry space despite compact footprint"
+  ],
+  "dimensionNotes": "20'x20' square footprint efficiently divided with bedroom taking approximately 8'-6\" width, kitchen/dining occupying 10'-2.5\" section, and bathroom positioned centrally for optimal access from all areas"
+}

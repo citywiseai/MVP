@@ -1,0 +1,41 @@
+{
+  "analyzedCount": 30,
+  "layoutTypes": {
+    "hybrid": 28,
+    "open-concept": 1,
+    "traditional-separated": 1
+  },
+  "circulationPatterns": {
+    "central-hall": 19,
+    "open-flow": 6,
+    "linear": 5
+  },
+  "avgRooms": 8,
+  "sqftRange": {
+    "min": 400,
+    "max": 1200,
+    "avg": 764
+  },
+  "topStorageFeatures": [
+    {
+      "feature": "walk-in closet",
+      "count": 17
+    },
+    {
+      "feature": "pantry",
+      "count": 8
+    },
+    {
+      "feature": "multiple bedroom closets",
+      "count": 5
+    },
+    {
+      "feature": "laundry area",
+      "count": 5
+    },
+    {
+      "feature": "kitchen pantry area",
+      "count": 5
+    }
+  ]
+}

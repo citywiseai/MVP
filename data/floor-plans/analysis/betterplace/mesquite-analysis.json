@@ -1,0 +1,50 @@
+{
+  "planId": "mesquite",
+  "metadata": {
+    "id": "mesquite",
+    "source": "betterplace",
+    "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/mesquite/",
+    "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2024/04/Mesquite-880-SQ-FT-3-Bedroom-2-Bath-Floor-Plan-2.jpg",
+    "localImagePath": "mesquite.jpg",
+    "squareFootage": 880,
+    "bedrooms": 3,
+    "bathrooms": 2,
+    "stories": 1,
+    "style": "ADU",
+    "scrapedAt": "2025-12-10T17:15:23.608Z"
+  },
+  "roomCount": 9,
+  "roomTypes": [
+    "kitchen",
+    "bedroom",
+    "bathroom",
+    "living room",
+    "dining room",
+    "primary bedroom",
+    "closet",
+    "laundry"
+  ],
+  "layoutType": "hybrid",
+  "circulationPattern": "central-hall",
+  "entryType": "direct entry into open living area",
+  "kitchenLocation": "front left corner, adjacent to dining and living areas",
+  "bedroomLayout": "split bedroom layout with primary bedroom on right side, secondary bedroom on left side",
+  "bathroomPlacement": "ensuite bathroom for primary bedroom, shared hall bathroom centrally located near secondary bedroom",
+  "storageFeatures": [
+    "walk-in closet in primary bedroom",
+    "closet in secondary bedroom"
+  ],
+  "efficiencyNotes": [
+    "galley kitchen saves space",
+    "back-to-back bathrooms share plumbing",
+    "open living/dining/kitchen reduces circulation space",
+    "compact laundry area with washer/dryer placement",
+    "efficient use of corner spaces"
+  ],
+  "uniqueFeatures": [
+    "angled wall between living and primary bedroom creates interesting geometry",
+    "washer/dryer positioned between bathrooms for plumbing efficiency",
+    "kitchen peninsula provides workspace and separation"
+  ],
+  "dimensionNotes": "compact 880 sqft layout maximizes bedroom sizes while maintaining functional common areas, primary bedroom approximately 10'x11', secondary bedroom approximately 9'x11', open living area spans most of the front portion"
+}

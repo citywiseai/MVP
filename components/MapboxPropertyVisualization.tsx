@@ -7,16 +7,23 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import { toast } from 'sonner';
 import * as turf from '@turf/turf';
-import { ChevronDown, ChevronUp, Layers } from 'lucide-react';
+import { ChevronDown, ChevronUp, Layers, Download, Undo, Redo } from 'lucide-react';
 import ShapeBuilderPanel from './ShapeBuilderPanel';
 import { getTemplateById } from '@/lib/shape-templates';
 import { transformSvg } from '@/lib/svg-utils';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 // Check token availability
 console.log('🔑 Mapbox token:', process.env.NEXT_PUBLIC_MAPBOX_TOKEN?.substring(0, 20) + '...');
 
 // Snap threshold for edge snapping (roughly 1 foot in lat/lng degrees)
 const SNAP_THRESHOLD = 0.000003;
+
+// Grid configuration
+const GRID_SIZE_FEET = 5; // Default 5-foot grid
+const GRID_LINE_COLOR = '#94a3b8'; // Subtle gray
+const GRID_LINE_WIDTH = 0.5;
 
 interface MapboxPropertyVisualizationProps {
   parcelId: string;
@@ -101,8 +108,24 @@ export default function MapboxPropertyVisualization({
   // Snap guide lines state
   const [snapGuideLines, setSnapGuideLines] = useState<{ x: number | null; y: number | null }>({ x: null, y: null });
 
+  // Grid snapping state
+  const [snapToGrid, setSnapToGrid] = useState(true); // Default ON
+  const [gridOrigin, setGridOrigin] = useState<[number, number] | null>(null); // Southwest corner of property
+
   // Clipboard state for copy/paste
   const [clipboardShape, setClipboardShape] = useState<any | null>(null);
+  const [pasteCount, setPasteCount] = useState(0); // Track number of pastes for offset
+
+  // Undo/Redo history state
+  type HistoryAction = {
+    type: 'create' | 'delete' | 'update' | 'rotate' | 'flip' | 'duplicate';
+    shapeId: string;
+    before: any | null; // Previous state (null for create)
+    after: any | null;  // New state (null for delete)
+    description: string; // For toast messages
+  };
+  const [historyStack, setHistoryStack] = useState<HistoryAction[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1); // Current position in history (-1 = no history)
 
   // Measurement tool state
   const [measurementMode, setMeasurementMode] = useState<'off' | 'single' | 'polyline'>('off');
@@ -244,6 +267,24 @@ export default function MapboxPropertyVisualization({
 
     console.log('Polygon ring coords:', coordinates.length);
 
+    // VALIDATE: GeoJSON Polygon requires at least 4 positions (3 unique points + 1 closing point)
+    if (coordinates.length < 4) {
+      console.warn(`⚠️ Invalid boundary: only ${coordinates.length} coordinates (need 4+). Skipping render.`);
+      console.log(`📍 Showing property marker at center: [${centerLng}, ${centerLat}]`);
+
+      // Add a marker at the property location instead
+      new mapboxgl.Marker({ color: '#2563eb' })
+        .setLngLat([centerLng, centerLat])
+        .setPopup(
+          new mapboxgl.Popup({ offset: 25 })
+            .setHTML('<div class="text-sm font-semibold">Property Location</div><div class="text-xs text-gray-600">Boundary data unavailable</div>')
+        )
+        .addTo(map.current);
+
+      toast.error('Boundary data unavailable - showing property marker');
+      return;
+    }
+
     const geojson = {
       type: 'FeatureCollection',
       features: [{
@@ -290,7 +331,90 @@ export default function MapboxPropertyVisualization({
     });
 
     console.log('✅ Boundary layers added');
+
+    // Calculate and store grid origin (southwest corner of property)
+    if (localBoundaryCoords && localBoundaryCoords.length > 0) {
+      const lngs = localBoundaryCoords.map(c => c[0]);
+      const lats = localBoundaryCoords.map(c => c[1]);
+      const swCorner: [number, number] = [Math.min(...lngs), Math.min(...lats)];
+      setGridOrigin(swCorner);
+    }
   }, [localBoundaryCoords, centerLng, centerLat]);
+
+  // Add grid overlay
+  const addGridOverlay = useCallback(() => {
+    if (!map.current || !gridOrigin || !localBoundaryCoords || localBoundaryCoords.length === 0) return;
+
+    console.log('🔲 Adding grid overlay...');
+
+    // Convert grid size from feet to degrees
+    // 1 degree longitude ≈ 111,320 meters at equator
+    // 1 degree latitude ≈ 110,540 meters
+    const gridSizeMeters = GRID_SIZE_FEET * 0.3048;
+    const gridSizeLng = gridSizeMeters / 111320;
+    const gridSizeLat = gridSizeMeters / 110540;
+
+    // Get property bounds
+    const lngs = localBoundaryCoords.map(c => c[0]);
+    const lats = localBoundaryCoords.map(c => c[1]);
+    const minLng = Math.min(...lngs);
+    const maxLng = Math.max(...lngs);
+    const minLat = Math.min(...lats);
+    const maxLat = Math.max(...lats);
+
+    // Generate grid lines
+    const gridLines: any[] = [];
+
+    // Vertical lines (constant longitude)
+    for (let lng = gridOrigin[0]; lng <= maxLng + gridSizeLng; lng += gridSizeLng) {
+      gridLines.push({
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: [[lng, minLat - gridSizeLat], [lng, maxLat + gridSizeLat]]
+        }
+      });
+    }
+
+    // Horizontal lines (constant latitude)
+    for (let lat = gridOrigin[1]; lat <= maxLat + gridSizeLat; lat += gridSizeLat) {
+      gridLines.push({
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: [[minLng - gridSizeLng, lat], [maxLng + gridSizeLng, lat]]
+        }
+      });
+    }
+
+    const geojson = {
+      type: 'FeatureCollection',
+      features: gridLines
+    };
+
+    // Remove existing grid layers
+    if (map.current.getLayer('grid-lines')) map.current.removeLayer('grid-lines');
+    if (map.current.getSource('grid')) map.current.removeSource('grid');
+
+    // Add grid source and layer
+    map.current.addSource('grid', {
+      type: 'geojson',
+      data: geojson
+    });
+
+    map.current.addLayer({
+      id: 'grid-lines',
+      type: 'line',
+      source: 'grid',
+      paint: {
+        'line-color': GRID_LINE_COLOR,
+        'line-width': GRID_LINE_WIDTH,
+        'line-opacity': 0.5
+      }
+    }, 'boundary-line'); // Add below boundary line
+
+    console.log('✅ Grid overlay added');
+  }, [gridOrigin, localBoundaryCoords]);
 
   // Initialize map
   useEffect(() => {
@@ -973,6 +1097,769 @@ export default function MapboxPropertyVisualization({
     });
   }, [savedMeasurements, isMapReady, highlightedMeasurementId]);
 
+  // Rotate shape 90 degrees (clockwise or counter-clockwise)
+  const rotateShape = async (degrees: number) => {
+    if (!expandedShapeId || !map.current) return;
+
+    const shapeToRotate = drawnShapes.find(s => s.id === expandedShapeId);
+    if (!shapeToRotate) return;
+
+    try {
+      console.log(`🔄 Rotating shape ${degrees}°:`, shapeToRotate.name);
+
+      // Get coordinates
+      const coords = Array.isArray(shapeToRotate.coordinates[0]?.[0])
+        ? shapeToRotate.coordinates[0]
+        : shapeToRotate.coordinates;
+
+      // Calculate centroid (center point)
+      const centerLng = coords.reduce((sum: number, c: [number, number]) => sum + c[0], 0) / coords.length;
+      const centerLat = coords.reduce((sum: number, c: [number, number]) => sum + c[1], 0) / coords.length;
+
+      // Rotate coordinates around center
+      const angleRad = (degrees * Math.PI) / 180;
+      const newCoordinates = coords.map((coord: [number, number]) => {
+        const dx = coord[0] - centerLng;
+        const dy = coord[1] - centerLat;
+        const rotatedX = dx * Math.cos(angleRad) - dy * Math.sin(angleRad);
+        const rotatedY = dx * Math.sin(angleRad) + dy * Math.cos(angleRad);
+        return [centerLng + rotatedX, centerLat + rotatedY];
+      });
+
+      // Update rotationAngle property
+      const currentRotation = shapeToRotate.rotationAngle || 0;
+      const newRotation = (currentRotation + degrees) % 360;
+
+      // Save to database
+      const response = await fetch(`/api/projects/${projectId}/shapes/${shapeToRotate.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          coordinates: newCoordinates,
+          rotationAngle: newRotation,
+          properties: {
+            ...shapeToRotate.properties,
+            rotation: newRotation
+          }
+        })
+      });
+
+      if (response.ok) {
+        // Update local state
+        setDrawnShapes(prev => prev.map(s =>
+          s.id === shapeToRotate.id
+            ? { ...s, coordinates: newCoordinates, rotationAngle: newRotation, properties: { ...s.properties, rotation: newRotation } }
+            : s
+        ));
+
+        // Add to history
+        addToHistory({
+          type: 'rotate',
+          shapeId: shapeToRotate.id,
+          before: {
+            name: shapeToRotate.name,
+            shapeType: shapeToRotate.shapeType,
+            coordinates: coords,
+            area: shapeToRotate.area,
+            perimeter: shapeToRotate.perimeter,
+            properties: shapeToRotate.properties
+          },
+          after: {
+            name: shapeToRotate.name,
+            shapeType: shapeToRotate.shapeType,
+            coordinates: newCoordinates,
+            area: shapeToRotate.area,
+            perimeter: shapeToRotate.perimeter,
+            properties: { ...shapeToRotate.properties, rotation: newRotation }
+          },
+          description: `Rotated ${shapeToRotate.name} ${Math.abs(degrees)}° ${degrees > 0 ? 'CW' : 'CCW'}`
+        });
+
+        // Update SVG overlay if it exists
+        const overlay = svgOverlays.current.get(shapeToRotate.id);
+        if (overlay) {
+          overlay.coordinates = newCoordinates;
+          overlay.properties = { ...overlay.properties, rotation: newRotation };
+          updateSvgOverlayPosition(shapeToRotate.id);
+        }
+
+        // Reload shapes to ensure SVG overlays are updated
+        setTimeout(() => {
+          loadShapesFromDatabase();
+        }, 100);
+
+        const direction = degrees > 0 ? 'CW' : 'CCW';
+        toast.success(`Rotated ${Math.abs(degrees)}° ${direction}`, { duration: 1000 });
+      } else {
+        throw new Error('Failed to rotate shape');
+      }
+    } catch (error) {
+      console.error('Error rotating shape:', error);
+      toast.error('Error rotating shape');
+    }
+  };
+
+  // Flip shape horizontally or vertically
+  const flipShape = async (direction: 'horizontal' | 'vertical') => {
+    if (!expandedShapeId || !map.current) return;
+
+    const shapeToFlip = drawnShapes.find(s => s.id === expandedShapeId);
+    if (!shapeToFlip) return;
+
+    try {
+      console.log(`🔄 Flipping shape ${direction}:`, shapeToFlip.name);
+
+      // Get coordinates
+      const coords = Array.isArray(shapeToFlip.coordinates[0]?.[0])
+        ? shapeToFlip.coordinates[0]
+        : shapeToFlip.coordinates;
+
+      // Calculate centroid (center point)
+      const centerLng = coords.reduce((sum: number, c: [number, number]) => sum + c[0], 0) / coords.length;
+      const centerLat = coords.reduce((sum: number, c: [number, number]) => sum + c[1], 0) / coords.length;
+
+      // Flip coordinates around center axis
+      const newCoordinates = coords.map((coord: [number, number]) => {
+        if (direction === 'horizontal') {
+          // Mirror across vertical axis (left becomes right)
+          const dx = coord[0] - centerLng;
+          return [centerLng - dx, coord[1]];
+        } else {
+          // Mirror across horizontal axis (top becomes bottom)
+          const dy = coord[1] - centerLat;
+          return [coord[0], centerLat - dy];
+        }
+      });
+
+      // Update flip properties
+      const updatedProperties = {
+        ...shapeToFlip.properties,
+        [`flip${direction === 'horizontal' ? 'Horizontal' : 'Vertical'}`]:
+          !shapeToFlip.properties?.[`flip${direction === 'horizontal' ? 'Horizontal' : 'Vertical'}`]
+      };
+
+      // Save to database
+      const response = await fetch(`/api/projects/${projectId}/shapes/${shapeToFlip.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          coordinates: newCoordinates,
+          properties: updatedProperties
+        })
+      });
+
+      if (response.ok) {
+        // Update local state
+        setDrawnShapes(prev => prev.map(s =>
+          s.id === shapeToFlip.id
+            ? { ...s, coordinates: newCoordinates, properties: updatedProperties }
+            : s
+        ));
+
+        // Add to history
+        addToHistory({
+          type: 'flip',
+          shapeId: shapeToFlip.id,
+          before: {
+            name: shapeToFlip.name,
+            shapeType: shapeToFlip.shapeType,
+            coordinates: coords,
+            area: shapeToFlip.area,
+            perimeter: shapeToFlip.perimeter,
+            properties: shapeToFlip.properties
+          },
+          after: {
+            name: shapeToFlip.name,
+            shapeType: shapeToFlip.shapeType,
+            coordinates: newCoordinates,
+            area: shapeToFlip.area,
+            perimeter: shapeToFlip.perimeter,
+            properties: updatedProperties
+          },
+          description: `Flipped ${shapeToFlip.name} ${direction === 'horizontal' ? 'horizontally' : 'vertically'}`
+        });
+
+        // Update SVG overlay if it exists
+        const overlay = svgOverlays.current.get(shapeToFlip.id);
+        if (overlay) {
+          overlay.coordinates = newCoordinates;
+          overlay.properties = updatedProperties;
+          updateSvgOverlayPosition(shapeToFlip.id);
+        }
+
+        // Reload shapes to ensure SVG overlays are updated
+        setTimeout(() => {
+          loadShapesFromDatabase();
+        }, 100);
+
+        const axis = direction === 'horizontal' ? 'horizontally' : 'vertically';
+        toast.success(`Flipped ${axis}`, { duration: 1000 });
+      } else {
+        throw new Error('Failed to flip shape');
+      }
+    } catch (error) {
+      console.error('Error flipping shape:', error);
+      toast.error('Error flipping shape');
+    }
+  };
+
+  // Export to PDF function
+  const exportToPDF = async () => {
+    if (!map.current || !mapContainer.current) return;
+
+    try {
+      toast.info('Generating PDF...', { duration: 2000 });
+
+      // Create PDF document
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      let yPosition = 20;
+
+      // Header
+      pdf.setFontSize(20);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Property Measurement Report', pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 15;
+
+      // Property Summary
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Property Summary', 15, yPosition);
+      yPosition += 8;
+
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      const summaryData = [
+        ['Address:', parcel?.address || 'N/A'],
+        ['APN:', parcel?.apn || 'N/A'],
+        ['Lot Size:', parcel?.lotSizeSqft ? `${parcel.lotSizeSqft.toLocaleString()} sq ft` : 'N/A'],
+        ['Zoning:', parcel?.zoning || 'N/A'],
+        ['Date:', new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })]
+      ];
+
+      summaryData.forEach(([label, value]) => {
+        pdf.text(`${label} ${value}`, 20, yPosition);
+        yPosition += 6;
+      });
+
+      yPosition += 5;
+
+      // Capture map screenshot
+      const mapCanvas = map.current.getCanvas();
+      const mapImage = mapCanvas.toDataURL('image/png');
+
+      // Add map image to PDF
+      const imgWidth = pageWidth - 30;
+      const imgHeight = (mapCanvas.height / mapCanvas.width) * imgWidth;
+
+      // Check if we need a new page
+      if (yPosition + imgHeight > pageHeight - 20) {
+        pdf.addPage();
+        yPosition = 20;
+      }
+
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Map View', 15, yPosition);
+      yPosition += 8;
+
+      pdf.addImage(mapImage, 'PNG', 15, yPosition, imgWidth, Math.min(imgHeight, 100));
+      yPosition += Math.min(imgHeight, 100) + 10;
+
+      // Shapes Table
+      if (drawnShapes.length > 0) {
+        if (yPosition > pageHeight - 60) {
+          pdf.addPage();
+          yPosition = 20;
+        }
+
+        pdf.setFontSize(14);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Drawn Shapes', 15, yPosition);
+        yPosition += 8;
+
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'normal');
+
+        // Table headers
+        const colWidths = [60, 30, 30, 30, 30];
+        const startX = 15;
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Name', startX, yPosition);
+        pdf.text('Type', startX + colWidths[0], yPosition);
+        pdf.text('Area (sqft)', startX + colWidths[0] + colWidths[1], yPosition);
+        pdf.text('Perimeter (ft)', startX + colWidths[0] + colWidths[1] + colWidths[2], yPosition);
+        yPosition += 6;
+
+        // Draw line under headers
+        pdf.line(startX, yPosition - 2, pageWidth - 15, yPosition - 2);
+        yPosition += 2;
+
+        // Table rows
+        pdf.setFont('helvetica', 'normal');
+        drawnShapes.forEach((shape) => {
+          if (yPosition > pageHeight - 15) {
+            pdf.addPage();
+            yPosition = 20;
+          }
+
+          const name = shape.name.length > 25 ? shape.name.substring(0, 22) + '...' : shape.name;
+          const type = shape.shapeType || 'N/A';
+          const area = shape.area ? Math.round(shape.area).toLocaleString() : 'N/A';
+          const perimeter = shape.perimeter ? Math.round(shape.perimeter).toLocaleString() : 'N/A';
+
+          pdf.text(name, startX, yPosition);
+          pdf.text(type, startX + colWidths[0], yPosition);
+          pdf.text(area, startX + colWidths[0] + colWidths[1], yPosition);
+          pdf.text(perimeter, startX + colWidths[0] + colWidths[1] + colWidths[2], yPosition);
+          yPosition += 6;
+        });
+
+        yPosition += 5;
+      }
+
+      // Setback Summary
+      if (yPosition > pageHeight - 50) {
+        pdf.addPage();
+        yPosition = 20;
+      }
+
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Setback Requirements', 15, yPosition);
+      yPosition += 8;
+
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      const setbackData = [
+        ['Front:', `${setbacks.front} ft`],
+        ['Rear:', `${setbacks.rear} ft`],
+        ['Left:', `${setbacks.left} ft`],
+        ['Right:', `${setbacks.right} ft`]
+      ];
+
+      setbackData.forEach(([label, value]) => {
+        pdf.text(`${label} ${value}`, 20, yPosition);
+        yPosition += 6;
+      });
+
+      // Setback compliance
+      if (shapeViolations.size > 0) {
+        yPosition += 3;
+        pdf.setTextColor(220, 38, 38); // Red
+        pdf.text(`⚠ ${shapeViolations.size} shape(s) violate setback requirements`, 20, yPosition);
+        pdf.setTextColor(0, 0, 0); // Reset to black
+        yPosition += 6;
+      } else if (drawnShapes.length > 0) {
+        yPosition += 3;
+        pdf.setTextColor(22, 163, 74); // Green
+        pdf.text('✓ All shapes comply with setback requirements', 20, yPosition);
+        pdf.setTextColor(0, 0, 0); // Reset to black
+        yPosition += 6;
+      }
+
+      yPosition += 5;
+
+      // Measurements Table
+      if (savedMeasurements.length > 0) {
+        if (yPosition > pageHeight - 50) {
+          pdf.addPage();
+          yPosition = 20;
+        }
+
+        pdf.setFontSize(14);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Measurements', 15, yPosition);
+        yPosition += 8;
+
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'normal');
+
+        // Table headers
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Name', 20, yPosition);
+        pdf.text('Distance', 120, yPosition);
+        yPosition += 6;
+
+        pdf.line(15, yPosition - 2, pageWidth - 15, yPosition - 2);
+        yPosition += 2;
+
+        // Table rows
+        pdf.setFont('helvetica', 'normal');
+        savedMeasurements.forEach((measurement) => {
+          if (yPosition > pageHeight - 15) {
+            pdf.addPage();
+            yPosition = 20;
+          }
+
+          const name = measurement.name.length > 30 ? measurement.name.substring(0, 27) + '...' : measurement.name;
+          const distance = measurement.displayDistance || `${Math.round(measurement.totalDistance)} ft`;
+
+          pdf.text(name, 20, yPosition);
+          pdf.text(distance, 120, yPosition);
+          yPosition += 6;
+        });
+      }
+
+      // Footer on last page
+      const totalPages = pdf.internal.pages.length - 1; // First page is always empty
+      for (let i = 1; i <= totalPages; i++) {
+        pdf.setPage(i);
+        pdf.setFontSize(8);
+        pdf.setTextColor(128, 128, 128);
+        pdf.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+        pdf.text('Generated by CityWise', pageWidth - 15, pageHeight - 10, { align: 'right' });
+      }
+
+      // Generate filename
+      const filename = `property-report-${parcel?.apn || 'export'}-${new Date().toISOString().split('T')[0]}.pdf`;
+
+      // Save PDF
+      pdf.save(filename);
+
+      toast.success('PDF exported successfully!', { duration: 2000 });
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      toast.error('Failed to export PDF');
+    }
+  };
+
+  // Add action to history stack
+  const addToHistory = useCallback((action: HistoryAction) => {
+    setHistoryStack(prev => {
+      // Remove any actions after current index (when undoing then doing new action)
+      const newStack = prev.slice(0, historyIndex + 1);
+      // Add new action
+      newStack.push(action);
+      // Limit to 50 actions
+      if (newStack.length > 50) {
+        newStack.shift();
+        return newStack;
+      }
+      return newStack;
+    });
+    setHistoryIndex(prev => Math.min(prev + 1, 49)); // Max index is 49 (50 items, 0-indexed)
+  }, [historyIndex]);
+
+  // Undo function
+  const undo = useCallback(async () => {
+    if (historyIndex < 0 || !map.current || !draw.current) return;
+
+    const action = historyStack[historyIndex];
+    console.log('⏪ Undoing:', action.description, action);
+
+    try {
+      switch (action.type) {
+        case 'create':
+          // Undo create = delete the shape
+          if (action.shapeId) {
+            // Remove from map
+            draw.current.delete(action.shapeId);
+            // Remove from database
+            await fetch(`/api/projects/${projectId}/shapes/${action.shapeId}`, {
+              method: 'DELETE',
+            });
+            // Remove from state
+            setDrawnShapes(prev => prev.filter(s => s.id !== action.shapeId));
+            // Remove SVG overlay
+            const overlay = svgOverlays.current.get(action.shapeId);
+            if (overlay) {
+              overlay.element.remove();
+              svgOverlays.current.delete(action.shapeId);
+            }
+          }
+          break;
+
+        case 'delete':
+          // Undo delete = recreate the shape
+          if (action.before) {
+            // Add to map
+            const feature = {
+              id: action.shapeId,
+              type: 'Feature',
+              geometry: {
+                type: 'Polygon',
+                coordinates: [action.before.coordinates]
+              },
+              properties: action.before.properties || {}
+            };
+            draw.current.add(feature);
+
+            // Save to database
+            const response = await fetch(`/api/projects/${projectId}/shapes`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                id: action.shapeId,
+                name: action.before.name,
+                shapeType: action.before.shapeType,
+                coordinates: action.before.coordinates,
+                area: action.before.area,
+                perimeter: action.before.perimeter,
+                properties: action.before.properties
+              }),
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              setDrawnShapes(prev => [...prev, data.shape]);
+              // Reload shapes to get SVG overlays
+              setTimeout(() => loadShapesFromDatabase(), 100);
+            }
+          }
+          break;
+
+        case 'update':
+        case 'rotate':
+        case 'flip':
+        case 'duplicate':
+          // Undo update/transform = restore previous coordinates and properties
+          if (action.before) {
+            // Update map
+            const feature = draw.current.get(action.shapeId);
+            if (feature) {
+              feature.geometry.coordinates = [action.before.coordinates];
+              feature.properties = action.before.properties || {};
+              draw.current.add(feature as any);
+            }
+
+            // Update database
+            const response = await fetch(`/api/projects/${projectId}/shapes/${action.shapeId}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                coordinates: action.before.coordinates,
+                properties: action.before.properties,
+                area: action.before.area,
+                perimeter: action.before.perimeter
+              }),
+            });
+
+            if (response.ok) {
+              // Update state
+              setDrawnShapes(prev => prev.map(s =>
+                s.id === action.shapeId
+                  ? { ...s, coordinates: action.before.coordinates, properties: action.before.properties }
+                  : s
+              ));
+              // Reload shapes to update SVG overlays
+              setTimeout(() => loadShapesFromDatabase(), 100);
+            }
+          }
+          break;
+      }
+
+      setHistoryIndex(prev => prev - 1);
+      toast.success(`Undo: ${action.description}`, { duration: 1500 });
+    } catch (error) {
+      console.error('Error undoing action:', error);
+      toast.error('Failed to undo action');
+    }
+  }, [historyIndex, historyStack, projectId, loadShapesFromDatabase]);
+
+  // Redo function
+  const redo = useCallback(async () => {
+    if (historyIndex >= historyStack.length - 1 || !map.current || !draw.current) return;
+
+    const action = historyStack[historyIndex + 1];
+    console.log('⏩ Redoing:', action.description, action);
+
+    try {
+      switch (action.type) {
+        case 'create':
+          // Redo create = recreate the shape
+          if (action.after) {
+            const feature = {
+              id: action.shapeId,
+              type: 'Feature',
+              geometry: {
+                type: 'Polygon',
+                coordinates: [action.after.coordinates]
+              },
+              properties: action.after.properties || {}
+            };
+            draw.current.add(feature);
+
+            const response = await fetch(`/api/projects/${projectId}/shapes`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                id: action.shapeId,
+                name: action.after.name,
+                shapeType: action.after.shapeType,
+                coordinates: action.after.coordinates,
+                area: action.after.area,
+                perimeter: action.after.perimeter,
+                properties: action.after.properties
+              }),
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              setDrawnShapes(prev => [...prev, data.shape]);
+              setTimeout(() => loadShapesFromDatabase(), 100);
+            }
+          }
+          break;
+
+        case 'delete':
+          // Redo delete = delete the shape again
+          if (action.shapeId) {
+            draw.current.delete(action.shapeId);
+            await fetch(`/api/projects/${projectId}/shapes/${action.shapeId}`, {
+              method: 'DELETE',
+            });
+            setDrawnShapes(prev => prev.filter(s => s.id !== action.shapeId));
+            const overlay = svgOverlays.current.get(action.shapeId);
+            if (overlay) {
+              overlay.element.remove();
+              svgOverlays.current.delete(action.shapeId);
+            }
+          }
+          break;
+
+        case 'update':
+        case 'rotate':
+        case 'flip':
+        case 'duplicate':
+          // Redo update/transform = apply the new coordinates and properties
+          if (action.after) {
+            const feature = draw.current.get(action.shapeId);
+            if (feature) {
+              feature.geometry.coordinates = [action.after.coordinates];
+              feature.properties = action.after.properties || {};
+              draw.current.add(feature as any);
+            }
+
+            const response = await fetch(`/api/projects/${projectId}/shapes/${action.shapeId}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                coordinates: action.after.coordinates,
+                properties: action.after.properties,
+                area: action.after.area,
+                perimeter: action.after.perimeter
+              }),
+            });
+
+            if (response.ok) {
+              setDrawnShapes(prev => prev.map(s =>
+                s.id === action.shapeId
+                  ? { ...s, coordinates: action.after.coordinates, properties: action.after.properties }
+                  : s
+              ));
+              setTimeout(() => loadShapesFromDatabase(), 100);
+            }
+          }
+          break;
+      }
+
+      setHistoryIndex(prev => prev + 1);
+      toast.success(`Redo: ${action.description}`, { duration: 1500 });
+    } catch (error) {
+      console.error('Error redoing action:', error);
+      toast.error('Failed to redo action');
+    }
+  }, [historyIndex, historyStack, projectId, loadShapesFromDatabase]);
+
+  // Duplicate shape function (10-foot offset to the right)
+  const duplicateShape = async () => {
+    if (!expandedShapeId || !map.current || !draw.current) return;
+
+    const shapeToDuplicate = drawnShapes.find(s => s.id === expandedShapeId);
+    if (!shapeToDuplicate) return;
+
+    try {
+      console.log('🔁 Duplicating shape:', shapeToDuplicate.name);
+
+      // 10 feet offset to the right (east)
+      const offsetLng = 0.000027; // ~10 feet
+      const offsetLat = 0; // No vertical offset
+
+      // Handle different coordinate formats
+      const isNested = Array.isArray(shapeToDuplicate.coordinates[0]?.[0]);
+      let newCoordinates: any;
+
+      if (isNested) {
+        newCoordinates = shapeToDuplicate.coordinates.map((ring: any[]) =>
+          ring.map((coord: [number, number]) => [
+            coord[0] + offsetLng,
+            coord[1] + offsetLat
+          ])
+        );
+      } else {
+        newCoordinates = shapeToDuplicate.coordinates.map((coord: [number, number]) => [
+          coord[0] + offsetLng,
+          coord[1] + offsetLat
+        ]);
+      }
+
+      // Apply grid snapping if enabled
+      if (snapToGrid && gridOrigin) {
+        newCoordinates = snapShapeToGrid(newCoordinates);
+      }
+
+      // Calculate area and perimeter for new position
+      const turfCoordinates = isNested ? newCoordinates : [newCoordinates];
+      const geoJson = {
+        type: 'Feature',
+        geometry: {
+          type: 'Polygon',
+          coordinates: turfCoordinates
+        },
+        properties: {}
+      };
+
+      const area = turf.area(geoJson.geometry) * 10.7639; // m² to sqft
+      const perimeter = turf.length(geoJson, { units: 'feet' });
+
+      // Create new shape object
+      const newShape = {
+        name: `${shapeToDuplicate.name} (copy)`,
+        shapeType: shapeToDuplicate.shapeType,
+        coordinates: newCoordinates,
+        area: area,
+        perimeter: perimeter,
+        rotationAngle: shapeToDuplicate.rotationAngle || 0,
+        properties: shapeToDuplicate.properties || {}
+      };
+
+      // Save to database
+      const response = await fetch(`/api/projects/${projectId}/shapes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newShape)
+      });
+
+      if (response.ok) {
+        const savedShape = await response.json();
+        console.log('✅ Duplicated shape saved:', savedShape.id);
+
+        // Add to drawn shapes state
+        setDrawnShapes(prev => [...prev, savedShape]);
+
+        // If original shape had an SVG overlay (templateId), create one for the duplicate
+        if (savedShape.properties?.templateId) {
+          const template = getTemplateById(savedShape.properties.templateId);
+          if (template && map.current && mapContainer.current) {
+            // SVG overlay will be created when shapes are loaded
+            setTimeout(() => {
+              loadShapesFromDatabase();
+            }, 100);
+          }
+        }
+
+        toast.success(`Duplicated: ${shapeToDuplicate.name}`);
+      } else {
+        throw new Error('Failed to duplicate shape');
+      }
+    } catch (error) {
+      console.error('Error duplicating shape:', error);
+      toast.error('Error duplicating shape');
+    }
+  };
+
   // Paste shape function
   const pasteShape = async () => {
     if (!clipboardShape || !map.current || !draw.current) return;
@@ -984,9 +1871,26 @@ export default function MapboxPropertyVisualization({
       console.log('📋 Coordinates[0] is array?:', Array.isArray(clipboardShape.coordinates[0]));
       console.log('📋 Coordinates[0][0] is array?:', Array.isArray(clipboardShape.coordinates[0]?.[0]));
 
-      // Offset coordinates to make the pasted shape visible (roughly 30 feet)
-      const offsetLng = 0.0001; // ~30 feet east
-      const offsetLat = -0.0001; // ~30 feet south
+      // Get center of current viewport
+      const mapCenter = map.current.getCenter();
+
+      // Calculate the original shape's center (centroid)
+      const coords = Array.isArray(clipboardShape.coordinates[0]?.[0])
+        ? clipboardShape.coordinates[0]
+        : clipboardShape.coordinates;
+
+      const originalCenterLng = coords.reduce((sum: number, c: [number, number]) => sum + c[0], 0) / coords.length;
+      const originalCenterLat = coords.reduce((sum: number, c: [number, number]) => sum + c[1], 0) / coords.length;
+
+      // Calculate offset for multiple pastes (10 feet per paste to avoid stacking)
+      const multiPasteOffset = pasteCount * 0.000027; // ~10 feet east per paste
+      setPasteCount(prev => prev + 1); // Increment for next paste
+
+      // Calculate offset from original position to map center, plus multi-paste offset
+      const offsetLng = (mapCenter.lng - originalCenterLng) + multiPasteOffset;
+      const offsetLat = mapCenter.lat - originalCenterLat;
+
+      console.log('📋 Paste offset - Lng:', offsetLng, 'Lat:', offsetLat, 'Multi-paste count:', pasteCount);
 
       // Handle different coordinate formats
       // Database stores coordinates as [[lng, lat], ...] (flat array)
@@ -998,7 +1902,7 @@ export default function MapboxPropertyVisualization({
 
       if (isNested) {
         // Coordinates are [[[lng, lat], ...]] - nested array (MapboxDraw format)
-        console.log('📋 Offsetting nested coordinates');
+        console.log('📋 Offsetting nested coordinates to map center');
         newCoordinates = clipboardShape.coordinates.map((ring: any[]) =>
           ring.map((coord: [number, number]) => [
             coord[0] + offsetLng,
@@ -1007,7 +1911,7 @@ export default function MapboxPropertyVisualization({
         );
       } else {
         // Coordinates are [[lng, lat], ...] - flat array (database format)
-        console.log('📋 Offsetting flat coordinates');
+        console.log('📋 Offsetting flat coordinates to map center');
         newCoordinates = clipboardShape.coordinates.map((coord: [number, number]) => [
           coord[0] + offsetLng,
           coord[1] + offsetLat
@@ -1130,7 +2034,7 @@ export default function MapboxPropertyVisualization({
           }
         }
 
-        toast.success(`Pasted: ${savedShape.name}`);
+        toast.success(`Pasted: ${savedShape.name}`, { duration: 1500 });
 
         // Expand the newly pasted shape
         setExpandedShapeId(savedShape.id);
@@ -1152,7 +2056,7 @@ export default function MapboxPropertyVisualization({
       // Debug: Log every key press
       console.log('⌨️ Key pressed:', e.key, 'metaKey:', e.metaKey, 'ctrlKey:', e.ctrlKey, 'shiftKey:', e.shiftKey);
 
-      // Handle copy/paste for shapes (works in any mode)
+      // Handle copy/paste/duplicate for shapes (works in any mode)
       // Copy: Cmd+C or Ctrl+C
       if ((e.metaKey || e.ctrlKey) && e.key === 'c' && !e.shiftKey) {
         console.log('📋 Copy triggered');
@@ -1165,8 +2069,9 @@ export default function MapboxPropertyVisualization({
           console.log('📋 shapeToCopy found:', shapeToCopy);
           if (shapeToCopy) {
             setClipboardShape(shapeToCopy);
+            setPasteCount(0); // Reset paste counter when copying new shape
             console.log('📋 Copied shape to clipboard:', shapeToCopy.name);
-            toast.success(`Copied: ${shapeToCopy.name}`);
+            toast.success(`Copied: ${shapeToCopy.name}`, { duration: 1500 });
             e.preventDefault();
           } else {
             console.log('❌ Shape not found in drawnShapes');
@@ -1188,6 +2093,84 @@ export default function MapboxPropertyVisualization({
           pasteShape();
         } else {
           console.log('❌ No clipboardShape - nothing to paste');
+        }
+        return;
+      }
+
+      // Duplicate: Cmd+D or Ctrl+D
+      if ((e.metaKey || e.ctrlKey) && e.key === 'd' && !e.shiftKey) {
+        console.log('🔁 Duplicate triggered');
+        console.log('🔁 expandedShapeId:', expandedShapeId);
+
+        if (expandedShapeId) {
+          e.preventDefault(); // Prevent browser bookmark dialog
+          duplicateShape();
+        } else {
+          console.log('❌ No expandedShapeId - no shape selected');
+        }
+        return;
+      }
+
+      // Undo: Cmd+Z or Ctrl+Z
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+        console.log('⏪ Undo triggered');
+        if (historyIndex >= 0) {
+          e.preventDefault();
+          undo();
+        } else {
+          console.log('❌ No history to undo');
+        }
+        return;
+      }
+
+      // Redo: Cmd+Shift+Z or Ctrl+Shift+Z
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && e.shiftKey) {
+        console.log('⏩ Redo triggered');
+        if (historyIndex < historyStack.length - 1) {
+          e.preventDefault();
+          redo();
+        } else {
+          console.log('❌ No history to redo');
+        }
+        return;
+      }
+
+      // Rotate 90° Clockwise: R
+      if (e.key === 'r' && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
+        console.log('🔄 Rotate CW triggered');
+        if (expandedShapeId) {
+          e.preventDefault();
+          rotateShape(90);
+        }
+        return;
+      }
+
+      // Rotate 90° Counter-Clockwise: Shift+R
+      if (e.key === 'R' && e.shiftKey && !e.metaKey && !e.ctrlKey) {
+        console.log('🔄 Rotate CCW triggered');
+        if (expandedShapeId) {
+          e.preventDefault();
+          rotateShape(-90);
+        }
+        return;
+      }
+
+      // Flip Horizontal: F
+      if (e.key === 'f' && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
+        console.log('🔄 Flip horizontal triggered');
+        if (expandedShapeId) {
+          e.preventDefault();
+          flipShape('horizontal');
+        }
+        return;
+      }
+
+      // Flip Vertical: Shift+F
+      if (e.key === 'F' && e.shiftKey && !e.metaKey && !e.ctrlKey) {
+        console.log('🔄 Flip vertical triggered');
+        if (expandedShapeId) {
+          e.preventDefault();
+          flipShape('vertical');
         }
         return;
       }
@@ -1218,7 +2201,7 @@ export default function MapboxPropertyVisualization({
       console.log('🎯 Removing keydown listener from window');
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [measurementMode, measurementPoints, expandedShapeId, drawnShapes, clipboardShape]);
+  }, [measurementMode, measurementPoints, expandedShapeId, drawnShapes, clipboardShape, duplicateShape, pasteShape, rotateShape, flipShape, undo, redo, historyIndex, historyStack]);
 
   // Setback violation detection functions
   const checkShapeSetbackViolation = useCallback((shape: any): boolean => {
@@ -1411,6 +2394,32 @@ export default function MapboxPropertyVisualization({
 
     return { minX, maxX, minY, maxY };
   }, []);
+
+  // Helper function to snap a coordinate to the nearest grid point
+  const snapCoordinateToGrid = useCallback((coord: [number, number]): [number, number] => {
+    if (!snapToGrid || !gridOrigin) return coord;
+
+    // Convert grid size from feet to degrees
+    const gridSizeMeters = GRID_SIZE_FEET * 0.3048;
+    const gridSizeLng = gridSizeMeters / 111320;
+    const gridSizeLat = gridSizeMeters / 110540;
+
+    // Calculate offset from grid origin
+    const offsetLng = coord[0] - gridOrigin[0];
+    const offsetLat = coord[1] - gridOrigin[1];
+
+    // Round to nearest grid point
+    const snappedLng = gridOrigin[0] + Math.round(offsetLng / gridSizeLng) * gridSizeLng;
+    const snappedLat = gridOrigin[1] + Math.round(offsetLat / gridSizeLat) * gridSizeLat;
+
+    return [snappedLng, snappedLat];
+  }, [snapToGrid, gridOrigin]);
+
+  // Helper function to snap all coordinates in a shape to grid
+  const snapShapeToGrid = useCallback((coordinates: [number, number][]): [number, number][] => {
+    if (!snapToGrid || !gridOrigin) return coordinates;
+    return coordinates.map(coord => snapCoordinateToGrid(coord));
+  }, [snapToGrid, gridOrigin, snapCoordinateToGrid]);
 
   // Helper function to find snap points for a moving shape
   const getSnapPoints = useCallback((movingShapeCoords: any, movingShapeId: string) => {
@@ -1623,6 +2632,22 @@ export default function MapboxPropertyVisualization({
         setDrawnShapes(prev => [...prev, savedShape]);
         toast.success(`${shape.name} saved`);
 
+        // Add to history
+        addToHistory({
+          type: 'create',
+          shapeId: savedShape.id,
+          before: null, // No previous state for creation
+          after: {
+            name: savedShape.name,
+            shapeType: savedShape.shapeType,
+            coordinates: savedShape.coordinates,
+            area: savedShape.area,
+            perimeter: savedShape.perimeter,
+            properties: savedShape.properties
+          },
+          description: `Created ${savedShape.name}`
+        });
+
         // If this is a template shape, add SVG overlay
         if (isFromTemplate && map.current && mapContainer.current) {
           // Check if overlay already exists (duplicate prevention)
@@ -1772,8 +2797,19 @@ export default function MapboxPropertyVisualization({
   // Debounce timer for saving shape coordinates
   const saveTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
+  // Ref to store coordinates before update (for undo/redo)
+  const beforeUpdateCoordinates = useRef<Map<string, [number, number][]>>(new Map());
+
   // Save shape coordinates to database (debounced to avoid excessive API calls)
   const saveShapeCoordinates = useCallback(async (shapeId: string, coordinates: [number, number][]) => {
+    // Capture "before" state for history (only on first update, not subsequent debounced calls)
+    if (!beforeUpdateCoordinates.current.has(shapeId)) {
+      const currentShape = drawnShapes.find(s => s.id === shapeId);
+      if (currentShape?.coordinates) {
+        beforeUpdateCoordinates.current.set(shapeId, currentShape.coordinates);
+      }
+    }
+
     // Clear existing timer for this shape
     const existingTimer = saveTimers.current.get(shapeId);
     if (existingTimer) {
@@ -1784,6 +2820,10 @@ export default function MapboxPropertyVisualization({
     const timer = setTimeout(async () => {
       console.log('💾 Saving shape coordinates to database:', shapeId);
       try {
+        // Get before state for history
+        const beforeCoords = beforeUpdateCoordinates.current.get(shapeId);
+        const currentShape = drawnShapes.find(s => s.id === shapeId);
+
         const response = await fetch(`/api/projects/${projectId}/shapes/${shapeId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -1795,15 +2835,46 @@ export default function MapboxPropertyVisualization({
         }
 
         console.log('✅ Shape coordinates saved successfully:', shapeId);
+
+        // Add to history if we have before state
+        if (beforeCoords && currentShape) {
+          addToHistory({
+            type: 'update',
+            shapeId: shapeId,
+            before: {
+              name: currentShape.name,
+              shapeType: currentShape.shapeType,
+              coordinates: beforeCoords,
+              area: currentShape.area,
+              perimeter: currentShape.perimeter,
+              properties: currentShape.properties
+            },
+            after: {
+              name: currentShape.name,
+              shapeType: currentShape.shapeType,
+              coordinates: coordinates,
+              area: currentShape.area,
+              perimeter: currentShape.perimeter,
+              properties: currentShape.properties
+            },
+            description: `Moved ${currentShape.name}`
+          });
+
+          // Clear the before state
+          beforeUpdateCoordinates.current.delete(shapeId);
+        }
+
         saveTimers.current.delete(shapeId);
       } catch (error) {
         console.error('❌ Error saving shape coordinates:', error);
         toast.error('Failed to save shape position');
+        // Clear the before state on error too
+        beforeUpdateCoordinates.current.delete(shapeId);
       }
     }, 1000); // 1 second debounce
 
     saveTimers.current.set(shapeId, timer);
-  }, [projectId]);
+  }, [projectId, drawnShapes, addToHistory]);
 
   const handleShapeUpdate = useCallback((e: any) => {
     console.log('🔄 Shape updated, features:', e.features?.length);
@@ -1815,7 +2886,22 @@ export default function MapboxPropertyVisualization({
     e.features?.forEach((feature: any) => {
       if (!feature.geometry || !draw.current) return;
 
-      const coords = feature.geometry.coordinates[0];
+      let coords = feature.geometry.coordinates[0];
+
+      // FIRST: Apply grid snapping if enabled
+      if (snapToGrid && gridOrigin) {
+        const snappedCoords = snapShapeToGrid(coords);
+        feature.geometry.coordinates[0] = snappedCoords;
+        coords = snappedCoords;
+
+        // Update the feature in MapboxDraw
+        const allFeatures = draw.current.getAll();
+        const featureToUpdate = allFeatures.features.find((f: any) => f.id === feature.id);
+        if (featureToUpdate) {
+          featureToUpdate.geometry.coordinates[0] = snappedCoords;
+          draw.current.set(allFeatures);
+        }
+      }
 
       // Find the shape ID for this feature
       const shapeEntry = Array.from(svgOverlays.current.entries()).find(
@@ -1823,8 +2909,8 @@ export default function MapboxPropertyVisualization({
       );
       const movingShapeId = shapeEntry ? shapeEntry[0] : feature.id;
 
-      // Get snap points for this shape
-      const { snapX, snapY, snapInfo } = getSnapPoints(coords, movingShapeId);
+      // SECOND: Get snap points for edge snapping (if grid snap didn't apply)
+      const { snapX, snapY, snapInfo } = !snapToGrid ? getSnapPoints(coords, movingShapeId) : { snapX: null, snapY: null, snapInfo: null };
 
       // If we have snap points, adjust the coordinates
       if (snapX !== null || snapY !== null) {
@@ -1922,7 +3008,7 @@ export default function MapboxPropertyVisualization({
         console.error('Available overlays:', Array.from(svgOverlays.current.keys()));
       }
     });
-  }, [cleanupOrphanOverlays, getSnapPoints, getShapeBounds, setSnapGuideLines, updateSvgOverlayPosition, setDrawnShapes, saveShapeCoordinates, drawnShapes]);
+  }, [cleanupOrphanOverlays, getSnapPoints, getShapeBounds, setSnapGuideLines, updateSvgOverlayPosition, setDrawnShapes, saveShapeCoordinates, drawnShapes, snapToGrid, gridOrigin, snapShapeToGrid]);
 
   // Re-register draw.update listener when handleShapeUpdate changes
   // This ensures the handler always has access to the latest drawnShapes and other state
@@ -1951,6 +3037,9 @@ export default function MapboxPropertyVisualization({
       try {
         const shapeId = feature.id;
 
+        // Capture shape data BEFORE deleting for undo
+        const shapeToDelete = drawnShapes.find(s => s.id === shapeId);
+
         // Remove from state
         setDrawnShapes(prev => prev.filter(s => s.id !== shapeId));
 
@@ -1966,13 +3055,31 @@ export default function MapboxPropertyVisualization({
           method: 'DELETE'
         });
 
+        // Add to history
+        if (shapeToDelete) {
+          addToHistory({
+            type: 'delete',
+            shapeId: shapeId,
+            before: {
+              name: shapeToDelete.name,
+              shapeType: shapeToDelete.shapeType,
+              coordinates: shapeToDelete.coordinates,
+              area: shapeToDelete.area,
+              perimeter: shapeToDelete.perimeter,
+              properties: shapeToDelete.properties
+            },
+            after: null, // Shape no longer exists
+            description: `Deleted ${shapeToDelete.name}`
+          });
+        }
+
         toast.success('Shape deleted');
       } catch (error) {
         console.error('Error deleting shape:', error);
         toast.error('Failed to delete shape');
       }
     }
-  }, [projectId]);
+  }, [projectId, drawnShapes, addToHistory]);
 
   const handleAddShapeFromInput = () => {
     if (!shapeWidth || !shapeLength) {
@@ -2039,7 +3146,14 @@ export default function MapboxPropertyVisualization({
     }
 
     // Get center of map
-    const center = map.current.getCenter();
+    let center = map.current.getCenter();
+
+    // Snap center to grid if enabled
+    if (snapToGrid && gridOrigin) {
+      const snappedCenter = snapCoordinateToGrid([center.lng, center.lat]);
+      center = { lng: snappedCenter[0], lat: snappedCenter[1] };
+      console.log('🔲 Snapped template center to grid:', center);
+    }
 
     // Convert feet to meters
     const widthM = shape.width * 0.3048;
@@ -2370,10 +3484,21 @@ export default function MapboxPropertyVisualization({
       // Fallback to polygon calculation only if Regrid data is missing
       const regridLotSize = parcel?.lotSizeSqFt;
 
-      const turfCoords = boundaryCoords.map(c => [c[1], c[0]]);
-      const closedCoords = [...turfCoords, turfCoords[0]];
-      const boundaryPolygon = turf.polygon([closedCoords]);
-      const calculatedLotSize = turf.area(boundaryPolygon) * 10.7639; // m² to sqft (fallback)
+      // VALIDATE: Check if boundary coordinates exist and have enough points before turf.js operations
+      let calculatedLotSize = 0;
+      if (boundaryCoords && Array.isArray(boundaryCoords) && boundaryCoords.length >= 3) {
+        try {
+          const turfCoords = boundaryCoords.map(c => [c[1], c[0]]);
+          const closedCoords = [...turfCoords, turfCoords[0]];
+          const boundaryPolygon = turf.polygon([closedCoords]);
+          calculatedLotSize = turf.area(boundaryPolygon) * 10.7639; // m² to sqft (fallback)
+        } catch (polygonError) {
+          console.warn('⚠️ Failed to calculate lot size from polygon:', polygonError);
+          calculatedLotSize = 0;
+        }
+      } else {
+        console.warn('⚠️ Invalid boundary coords for lot size calculation:', boundaryCoords?.length || 0, 'points');
+      }
 
       // Prefer Regrid data over calculated polygon area
       const lotSizeSqFt = regridLotSize || calculatedLotSize;
@@ -3326,6 +4451,15 @@ export default function MapboxPropertyVisualization({
       // 1. Add property boundary first (bottom layer)
       addPropertyBoundary();
 
+      // 2. Add grid overlay if in draw/edit mode
+      if (viewMode === 'draw' || viewMode === 'edit') {
+        setTimeout(() => {
+          if (map.current?.isStyleLoaded()) {
+            addGridOverlay();
+          }
+        }, 100);
+      }
+
       // 2. Add setbacks after a small delay to ensure style is fully settled
       setTimeout(() => {
         if (map.current?.isStyleLoaded()) {
@@ -3404,7 +4538,29 @@ export default function MapboxPropertyVisualization({
     } catch (error) {
       console.error('Error re-adding map layers:', error);
     }
-  }, [savedMeasurements, addPropertyBoundary, updateSetbacks]);
+  }, [savedMeasurements, addPropertyBoundary, updateSetbacks, addGridOverlay, viewMode]);
+
+  // Control grid visibility based on view mode
+  useEffect(() => {
+    if (!map.current || !isMapReady) return;
+
+    const shouldShowGrid = viewMode === 'draw' || viewMode === 'edit';
+
+    if (shouldShowGrid) {
+      // Add grid if not present
+      if (!map.current.getLayer('grid-lines')) {
+        addGridOverlay();
+      }
+    } else {
+      // Remove grid in view/measure modes
+      if (map.current.getLayer('grid-lines')) {
+        map.current.removeLayer('grid-lines');
+      }
+      if (map.current.getSource('grid')) {
+        map.current.removeSource('grid');
+      }
+    }
+  }, [viewMode, isMapReady, addGridOverlay]);
 
   // Render saved measurements on map
   const renderSavedMeasurements = useCallback(() => {
@@ -4127,10 +5283,10 @@ export default function MapboxPropertyVisualization({
 
   }, [isMapReady, localBoundaryCoords, setbacks, drawnShapes.length]);
 
-  // Calculate metrics when shapes or setbacks change
+  // Calculate metrics when shapes, setbacks, or parcel data changes
   useEffect(() => {
     calculatePropertyMetrics();
-  }, [drawnShapes, setbacks, localBoundaryCoords]);
+  }, [drawnShapes, setbacks, localBoundaryCoords, parcel]);
 
   // Apply layer visibility changes
   useEffect(() => {
@@ -4906,22 +6062,28 @@ export default function MapboxPropertyVisualization({
   };
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen w-full max-w-full overflow-x-hidden">
       {/* Top Bar with Property Stats */}
-      <div className="flex gap-4 p-4 bg-white border-b">
+      <div className="flex flex-wrap gap-4 p-4 bg-white border-b">
         <div className="bg-gray-50 rounded-lg p-3">
-          <div className="text-xs text-gray-600">Lot Size</div>
-          <div className="text-lg font-bold">{propertyMetrics.lotSize.toLocaleString()} sq ft</div>
-        </div>
-        <div className="bg-gray-50 rounded-lg p-3">
-          <div className="text-xs text-gray-600">Max Allowed Coverage</div>
-          <div className="text-lg font-bold text-green-600">{propertyMetrics.buildableArea.toLocaleString()} sq ft</div>
-          <div className="text-xs text-gray-500">
-            ({parcel?.zoning || 'R1-10'} - {((propertyMetrics.buildableArea / propertyMetrics.lotSize) * 100).toFixed(0)}% max)
+          <div className="text-xs text-black font-semibold">Lot Size</div>
+          <div className="text-lg font-bold text-black">
+            {propertyMetrics.lotSize > 0 ? `${propertyMetrics.lotSize.toLocaleString()} sq ft` : 'Not available'}
           </div>
         </div>
         <div className="bg-gray-50 rounded-lg p-3">
-          <div className="text-xs text-gray-600">Existing Buildings</div>
+          <div className="text-xs text-black font-semibold">Max Allowed Coverage</div>
+          <div className="text-lg font-bold text-green-600">
+            {propertyMetrics.buildableArea > 0 ? `${propertyMetrics.buildableArea.toLocaleString()} sq ft` : 'Not available'}
+          </div>
+          <div className="text-xs text-gray-500">
+            {propertyMetrics.lotSize > 0
+              ? `(${parcel?.zoning || 'R1-10'} - ${((propertyMetrics.buildableArea / propertyMetrics.lotSize) * 100).toFixed(0)}% max)`
+              : '--'}
+          </div>
+        </div>
+        <div className="bg-gray-50 rounded-lg p-3">
+          <div className="text-xs text-black font-semibold">Existing Buildings</div>
           <div className="text-lg font-bold text-blue-600">
             {propertyMetrics.existingBuildings > 0
               ? `${propertyMetrics.existingBuildings.toLocaleString()} sq ft`
@@ -4929,18 +6091,20 @@ export default function MapboxPropertyVisualization({
           </div>
         </div>
         <div className="bg-gray-50 rounded-lg p-3">
-          <div className="text-xs text-gray-600">New Structures</div>
+          <div className="text-xs text-black font-semibold">New Structures</div>
           <div className="text-lg font-bold text-purple-600">{propertyMetrics.drawnShapes.toLocaleString()} sq ft</div>
         </div>
         <div className="bg-gray-50 rounded-lg p-3">
-          <div className="text-xs text-gray-600">Total Coverage</div>
+          <div className="text-xs text-black font-semibold">Total Coverage</div>
           <div className="text-lg font-bold text-orange-600">{propertyMetrics.currentCoverage.toLocaleString()} sq ft</div>
           <div className="text-xs text-gray-500">
-            ({((propertyMetrics.currentCoverage / propertyMetrics.lotSize) * 100).toFixed(1)}% of lot)
+            {propertyMetrics.lotSize > 0
+              ? `(${((propertyMetrics.currentCoverage / propertyMetrics.lotSize) * 100).toFixed(1)}% of lot)`
+              : '-- '}
           </div>
         </div>
         <div className="bg-gray-50 rounded-lg p-3">
-          <div className="text-xs text-gray-600">Remaining Space</div>
+          <div className="text-xs text-black font-semibold">Remaining Space</div>
           <div className={`text-lg font-bold ${propertyMetrics.remainingArea > 0 ? 'text-green-600' : 'text-red-600'}`}>
             {propertyMetrics.remainingArea.toLocaleString()} sq ft
           </div>
@@ -4949,13 +6113,53 @@ export default function MapboxPropertyVisualization({
           </div>
         </div>
 
+        {/* Undo/Redo Buttons */}
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={undo}
+            disabled={historyIndex < 0}
+            className={`px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${
+              historyIndex >= 0
+                ? 'bg-gray-500 text-white hover:bg-gray-600'
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            }`}
+            title={historyIndex >= 0 ? `Undo: ${historyStack[historyIndex]?.description}` : 'Nothing to undo'}
+          >
+            <Undo className="w-4 h-4" />
+            Undo
+          </button>
+          <button
+            onClick={redo}
+            disabled={historyIndex >= historyStack.length - 1}
+            className={`px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${
+              historyIndex < historyStack.length - 1
+                ? 'bg-gray-500 text-white hover:bg-gray-600'
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            }`}
+            title={historyIndex < historyStack.length - 1 ? `Redo: ${historyStack[historyIndex + 1]?.description}` : 'Nothing to redo'}
+          >
+            <Redo className="w-4 h-4" />
+            Redo
+          </button>
+        </div>
+
+        {/* Export to PDF Button */}
+        <button
+          onClick={exportToPDF}
+          className="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-green-600 transition-colors"
+          title="Export measurements to PDF"
+        >
+          <Download className="w-4 h-4" />
+          Export to PDF
+        </button>
+
         {/* Smart Shape Builder Toggle */}
         <button
           onClick={() => {
             setViewMode(viewMode === 'draw' ? 'view' : 'draw');
             setMeasurementMode('off'); // Deactivate measurement when toggling Shape Builder
           }}
-          className="ml-auto px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium"
+          className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
         >
           {viewMode === 'draw' ? 'Hide' : 'Show'} Shape Builder
         </button>
@@ -5044,6 +6248,24 @@ export default function MapboxPropertyVisualization({
                   />
                   <span className="text-sm text-gray-700">Edge Labels</span>
                 </label>
+
+                {/* Snap to Grid - only show in draw/edit mode */}
+                {(viewMode === 'draw' || viewMode === 'edit') && (
+                  <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-50 cursor-pointer transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={snapToGrid}
+                      onChange={(e) => {
+                        setSnapToGrid(e.target.checked);
+                        toast.info(e.target.checked ? 'Grid snapping enabled' : 'Grid snapping disabled', { duration: 1000 });
+                      }}
+                      className="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer"
+                    />
+                    <span className="text-sm text-gray-700 font-medium">
+                      Snap to Grid ({GRID_SIZE_FEET}ft)
+                    </span>
+                  </label>
+                )}
 
                 {/* Drawn Shapes */}
                 <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-50 cursor-pointer transition-colors">
@@ -5299,11 +6521,11 @@ export default function MapboxPropertyVisualization({
       </div>
 
       {/* Three Cards Row: Setbacks | Drawn Shapes | Measurements */}
-      <div className="grid grid-cols-3 gap-4 p-4 bg-gray-50 border-t">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 bg-gray-50 border-t w-full max-w-full">
         {/* Setback Requirements Card */}
         <div className="bg-white rounded-lg shadow p-4">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-bold text-sm">Setback Requirements</h3>
+            <h3 className="font-bold text-sm text-black">Setback Requirements</h3>
             <button
               onClick={() => setShowSetbacks(!showSetbacks)}
               className="text-xs px-2 py-1 bg-green-500 text-white rounded"
@@ -5315,7 +6537,7 @@ export default function MapboxPropertyVisualization({
           {showSetbacks && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-600 font-medium">Front Street</span>
+                <span className="text-xs text-black font-semibold">Front Street</span>
                 <div className="flex items-center gap-1">
                   <input
                     type="number"
@@ -5330,7 +6552,7 @@ export default function MapboxPropertyVisualization({
                 </div>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-600 font-medium">Rear (Back)</span>
+                <span className="text-xs text-black font-semibold">Rear (Back)</span>
                 <div className="flex items-center gap-1">
                   <input
                     type="number"
@@ -5345,7 +6567,7 @@ export default function MapboxPropertyVisualization({
                 </div>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-600 font-medium">Side Left</span>
+                <span className="text-xs text-black font-semibold">Side Left</span>
                 <div className="flex items-center gap-1">
                   <input
                     type="number"
@@ -5360,7 +6582,7 @@ export default function MapboxPropertyVisualization({
                 </div>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-600 font-medium">Side Right</span>
+                <span className="text-xs text-black font-semibold">Side Right</span>
                 <div className="flex items-center gap-1">
                   <input
                     type="number"
@@ -5393,7 +6615,7 @@ export default function MapboxPropertyVisualization({
         {/* Drawn Shapes Card */}
         <div className="bg-white rounded-lg shadow p-4">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-bold text-sm">Drawn Shapes ({drawnShapes.length})</h3>
+            <h3 className="font-bold text-sm text-black">Drawn Shapes ({drawnShapes.length})</h3>
             <button
               onClick={() => setShowShapeBuilder(true)}
               className="text-xs text-blue-500 hover:underline"
@@ -5404,7 +6626,7 @@ export default function MapboxPropertyVisualization({
 
           <div className="space-y-0 max-h-40 overflow-y-auto border border-gray-200 rounded">
             {drawnShapes.length === 0 ? (
-              <div className="text-xs text-gray-500 text-center py-4">
+              <div className="text-xs text-black text-center py-4">
                 No shapes drawn yet.<br />
                 Click "Add" to create shapes
               </div>
@@ -5429,7 +6651,7 @@ export default function MapboxPropertyVisualization({
                     }}
                   >
                     <div className="flex items-center gap-2 flex-1">
-                      <div className="text-sm font-medium">{shape.name}</div>
+                      <div className="text-sm font-medium text-black">{shape.name}</div>
                       <div className="text-xs text-gray-500">
                         {Math.round(shape.area || 0).toLocaleString()} sq ft
                       </div>
@@ -5473,7 +6695,7 @@ export default function MapboxPropertyVisualization({
                           type="text"
                           value={editingShapeData.name}
                           onChange={(e) => setEditingShapeData(prev => prev ? {...prev, name: e.target.value} : null)}
-                          className="w-full text-sm border border-gray-300 rounded px-2 py-1"
+                          className="w-full text-sm border border-gray-300 rounded px-2 py-1 text-black placeholder:text-gray-400"
                           onClick={(e) => e.stopPropagation()}
                         />
                       </div>
@@ -5486,7 +6708,7 @@ export default function MapboxPropertyVisualization({
                             type="number"
                             value={editingShapeData.width}
                             onChange={(e) => setEditingShapeData(prev => prev ? {...prev, width: e.target.value} : null)}
-                            className="w-full text-sm border border-gray-300 rounded px-2 py-1"
+                            className="w-full text-sm border border-gray-300 rounded px-2 py-1 text-black"
                             onClick={(e) => e.stopPropagation()}
                           />
                         </div>
@@ -5496,7 +6718,7 @@ export default function MapboxPropertyVisualization({
                             type="number"
                             value={editingShapeData.length}
                             onChange={(e) => setEditingShapeData(prev => prev ? {...prev, length: e.target.value} : null)}
-                            className="w-full text-sm border border-gray-300 rounded px-2 py-1"
+                            className="w-full text-sm border border-gray-300 rounded px-2 py-1 text-black"
                             onClick={(e) => e.stopPropagation()}
                           />
                         </div>
@@ -5505,6 +6727,53 @@ export default function MapboxPropertyVisualization({
                       {/* Calculated area */}
                       <div className="text-xs text-gray-500">
                         Area: {(parseFloat(editingShapeData.width || '0') * parseFloat(editingShapeData.length || '0')).toFixed(0)} sq ft
+                      </div>
+
+                      {/* Transformation buttons */}
+                      <div className="space-y-2">
+                        <div className="text-xs text-gray-500 font-medium">Transform</div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              rotateShape(90);
+                            }}
+                            className="text-xs bg-gray-100 text-gray-700 py-1.5 rounded hover:bg-gray-200 flex items-center justify-center gap-1"
+                            title="Rotate 90° clockwise (R)"
+                          >
+                            ↻ 90° CW
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              rotateShape(-90);
+                            }}
+                            className="text-xs bg-gray-100 text-gray-700 py-1.5 rounded hover:bg-gray-200 flex items-center justify-center gap-1"
+                            title="Rotate 90° counter-clockwise (Shift+R)"
+                          >
+                            ↺ 90° CCW
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              flipShape('horizontal');
+                            }}
+                            className="text-xs bg-gray-100 text-gray-700 py-1.5 rounded hover:bg-gray-200 flex items-center justify-center gap-1"
+                            title="Flip horizontal (F)"
+                          >
+                            ⇄ Flip H
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              flipShape('vertical');
+                            }}
+                            className="text-xs bg-gray-100 text-gray-700 py-1.5 rounded hover:bg-gray-200 flex items-center justify-center gap-1"
+                            title="Flip vertical (Shift+F)"
+                          >
+                            ⇅ Flip V
+                          </button>
+                        </div>
                       </div>
 
                       {/* Action buttons */}
@@ -5616,7 +6885,7 @@ export default function MapboxPropertyVisualization({
         {/* Measurements Card */}
         <div className="bg-white rounded-lg shadow p-4">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-bold text-sm">Measurements ({savedMeasurements.length})</h3>
+            <h3 className="font-bold text-sm text-black">Measurements ({savedMeasurements.length})</h3>
             <button
               onClick={() => setMeasurementMode(measurementMode === 'off' ? 'polyline' : 'off')}
               className={`text-xs ${measurementMode !== 'off' ? 'text-red-500' : 'text-blue-500'}`}
@@ -5651,7 +6920,7 @@ export default function MapboxPropertyVisualization({
 
           <div className="space-y-2 max-h-40 overflow-y-auto">
             {savedMeasurements.length === 0 ? (
-              <div className="text-xs text-gray-500 text-center py-4">
+              <div className="text-xs text-black text-center py-4">
                 No measurements saved yet.<br />
                 Use "Single Line" or "Polyline" buttons to measure
               </div>
@@ -5765,7 +7034,7 @@ export default function MapboxPropertyVisualization({
                                   if (e.key === 'Escape') setEditingMeasurementId(null);
                                 }}
                                 onClick={(e) => e.stopPropagation()}
-                                className="flex-1 px-2 py-1 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="flex-1 px-2 py-1 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder:text-gray-400"
                                 autoFocus
                               />
                             ) : (
@@ -5794,7 +7063,7 @@ export default function MapboxPropertyVisualization({
                                   if (e.key === 'Escape') setEditingMeasurementDistanceId(null);
                                 }}
                                 onClick={(e) => e.stopPropagation()}
-                                className="w-32 px-2 py-1 border rounded text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-32 px-2 py-1 border rounded text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
                                 autoFocus
                               />
                             ) : (
@@ -5917,17 +7186,17 @@ export default function MapboxPropertyVisualization({
 
       {/* Property Inspector Card - Bottom Section */}
       <div className="bg-white border-t p-4">
-        <h3 className="font-bold mb-2 text-sm">Property Inspector</h3>
-        <div className="text-xs text-gray-600 mb-3">Real-time analysis & validation</div>
+        <h3 className="font-bold font-semibold mb-2 text-sm text-black">Property Inspector</h3>
+        <div className="text-xs text-gray-700 mb-3">Real-time analysis & validation</div>
 
         <div className="grid grid-cols-4 gap-6">
           {/* Overall Status */}
           <div>
-            <div className="text-xs font-medium text-gray-600 mb-2">Overall Status</div>
+            <div className="text-xs font-medium text-black mb-2">Overall Status</div>
             {shapeViolations.size === 0 && shapeIntersections.size === 0 ? (
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                <span className="text-sm font-medium">All Pass</span>
+                <span className="text-sm font-medium text-green-600">All Pass</span>
               </div>
             ) : (
               <div className="space-y-2">
@@ -5984,26 +7253,26 @@ export default function MapboxPropertyVisualization({
 
           {/* Property Stats */}
           <div>
-            <div className="text-xs font-medium text-gray-600 mb-2">Property Stats</div>
-            <div className="text-sm space-y-1">
+            <div className="text-xs font-medium text-black mb-2">Property Stats</div>
+            <div className="text-sm text-black space-y-1">
               <div>Lot Size: {propertyMetrics.lotSize.toLocaleString()} sq ft</div>
             </div>
           </div>
 
           {/* Setback Values */}
           <div>
-            <div className="text-xs font-medium text-gray-600 mb-2">Setback Values</div>
-            <div className="text-sm space-y-1">
+            <div className="text-xs font-medium text-black mb-2">Setback Values</div>
+            <div className="text-sm text-black space-y-1">
               <div>Front: {setbacks.front} ft</div>
             </div>
           </div>
 
           {/* Code Compliance */}
           <div>
-            <div className="text-xs font-medium text-gray-600 mb-2">Code Compliance</div>
+            <div className="text-xs font-medium text-black mb-2">Code Compliance</div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-green-500"></div>
-              <span className="text-sm">Front Setback</span>
+              <span className="text-sm text-black">Front Setback</span>
             </div>
           </div>
         </div>

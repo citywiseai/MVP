@@ -91,7 +91,7 @@ export default async function ParcelDetailPage({
               <p className="font-medium">{parcel.zoningCode}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Lot Size</p>
+              <p className="text-sm text-gray-900">Lot Size</p>
               <p className="font-medium">{parcel.lotSizeSqFt.toLocaleString()} sq ft</p>
             </div>
             <div>

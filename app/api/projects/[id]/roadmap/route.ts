@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { generateRoadmap } from '@/lib/roadmap-generator';
+import { PROJECT_PHASES, PHASE_STATUS } from '@/lib/phases';
 
 export async function GET(
   request: NextRequest,
@@ -68,20 +68,30 @@ export async function POST(
       return NextResponse.json({ error: 'Roadmap already exists' }, { status: 400 });
     }
 
-    // Generate roadmap phases
-    const phaseTemplates = generateRoadmap(project.projectType || 'ADU');
-
-    // Create roadmap with phases
+    // Create roadmap with standard project phases
     const roadmap = await prisma.projectRoadmap.create({
       data: {
         projectId: id,
         phases: {
-          create: phaseTemplates
+          create: PROJECT_PHASES.map((phase) => ({
+            name: phase.name,
+            order: phase.order,
+            status: phase.order === 1 ? PHASE_STATUS.IN_PROGRESS : PHASE_STATUS.WAITING,
+            estimatedDuration: phase.duration,
+            description: phase.description,
+            startDate: phase.order === 1 ? new Date() : null,
+            services: [],
+            dependencies: [],
+            progress: 0,
+          }))
         }
       },
       include: {
         phases: {
-          orderBy: { order: 'asc' }
+          orderBy: { order: 'asc' },
+          include: {
+            tasks: true
+          }
         }
       }
     });

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';;
 import { auth } from '@/lib/auth';
 import { getRequirementsForProject, parseProjectDataToDetails } from '@/lib/requirements';
+import { logProjectCreation } from '@/lib/audit-logger';
 
 
 
@@ -121,7 +122,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { projectData } = await req.json();
+    const { projectData, analysisId } = await req.json();
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email! },
@@ -167,6 +168,33 @@ export async function POST(req: NextRequest) {
     let parcelId = null;
     if (projectData.parcelData) {
       console.log('📦 Creating parcel from Scout data');
+      console.log('📍 Parcel data received:', {
+        apn: projectData.parcelData.apn,
+        address: projectData.parcelData.address,
+        city: projectData.parcelData.city,
+        zipCode: projectData.parcelData.zip,
+        zoning: projectData.parcelData.zoning,
+        lotSizeSqFt: projectData.parcelData.lotSizeSqFt,
+        hasBoundaryCoordinates: !!projectData.parcelData.boundaryCoordinates,
+        hasBoundaryRings: !!projectData.parcelData.boundaryRings,
+        boundaryCoordinatesType: typeof projectData.parcelData.boundaryCoordinates,
+        boundaryCoordinatesLength: projectData.parcelData.boundaryCoordinates?.length || 0,
+        boundaryRingsLength: projectData.parcelData.boundaryRings?.length || 0
+      });
+
+      // Detailed boundary data logging
+      if (projectData.parcelData.boundaryCoordinates) {
+        console.log('📍 Boundary coordinates preview:',
+          typeof projectData.parcelData.boundaryCoordinates === 'string'
+            ? projectData.parcelData.boundaryCoordinates.substring(0, 100)
+            : Array.isArray(projectData.parcelData.boundaryCoordinates)
+              ? `Array with ${projectData.parcelData.boundaryCoordinates.length} points`
+              : 'Unknown format'
+        );
+      } else {
+        console.log('⚠️  NO BOUNDARY COORDINATES - setbacks will not work!');
+      }
+
       try {
         const parcel = await prisma.parcel.create({
           data: {
@@ -176,17 +204,23 @@ export async function POST(req: NextRequest) {
             state: projectData.parcelData.state || 'AZ',
             zipCode: projectData.parcelData.zip,
             zoning: projectData.parcelData.zoning,
-            lotSizeSqFt: projectData.parcelData.lotSize,
+            lotSizeSqFt: projectData.parcelData.lotSizeSqFt,
             latitude: projectData.parcelData.latitude,
             longitude: projectData.parcelData.longitude,
             boundaryCoordinates: projectData.parcelData.boundaryCoordinates,
-            existingSqFt: projectData.parcelData.buildingSize,
+            existingSqFt: projectData.parcelData.buildingSqFt,
           }
         });
         parcelId = parcel.id;
         console.log('✅ Parcel created:', parcel.id);
+        console.log('✅ Boundary coordinates saved:', !!parcel.boundaryCoordinates, 'Length:',
+          typeof parcel.boundaryCoordinates === 'string'
+            ? JSON.parse(parcel.boundaryCoordinates).length
+            : parcel.boundaryCoordinates?.length || 0
+        );
       } catch (parcelError) {
         console.error('⚠️ Error creating parcel:', parcelError);
+        console.error('Parcel error details:', parcelError instanceof Error ? parcelError.message : String(parcelError));
         // Continue without parcel if creation fails
       }
     }
@@ -206,6 +240,69 @@ export async function POST(req: NextRequest) {
 
     console.log('✅ Project created:', project.id);
 
+    // Link site analysis to project if analysisId provided
+    if (analysisId) {
+      try {
+        await prisma.siteAnalysis.update({
+          where: { id: analysisId },
+          data: { projectId: project.id },
+        });
+        console.log('✅ Linked site analysis to project:', analysisId);
+      } catch (linkError) {
+        console.error('⚠️ Failed to link site analysis:', linkError);
+        // Don't fail project creation if linking fails
+      }
+    }
+
+    // Log project creation in audit trail
+    await logProjectCreation(
+      project.id,
+      {
+        source: analysisId ? 'site-analysis' : 'scout',
+        initialScope: projectData.projectType ? [projectData.projectType] : [],
+        ...(analysisId && { analysisId })
+      },
+      user.email
+    );
+
+    // Create roadmap and phases automatically
+    console.log('📍 Creating roadmap and phases...');
+    try {
+      const roadmap = await prisma.projectRoadmap.create({
+        data: {
+          projectId: project.id,
+        }
+      });
+
+      const PROJECT_PHASES = [
+        { order: 1, name: "Discovery", duration: "2-4 weeks", description: "Initial site assessment and data collection" },
+        { order: 2, name: "Design", duration: "3-6 weeks", description: "Architectural design and preliminary plans" },
+        { order: 3, name: "Engineering", duration: "4-6 weeks", description: "Engineering calculations and compliance verification" },
+        { order: 4, name: "Permit Submission", duration: "1-2 weeks", description: "Compile and submit permit application package" },
+        { order: 5, name: "City Review", duration: "4-12 weeks", description: "City plan check and review process" },
+        { order: 6, name: "Approval", duration: "1-2 weeks", description: "Permit approved and ready for construction" },
+      ];
+
+      await prisma.roadmapPhase.createMany({
+        data: PROJECT_PHASES.map((phase) => ({
+          roadmapId: roadmap.id,
+          name: phase.name,
+          order: phase.order,
+          status: phase.order === 1 ? 'in_progress' : 'waiting',
+          estimatedDuration: phase.duration,
+          description: phase.description,
+          startDate: phase.order === 1 ? new Date() : null,
+          services: [],
+          dependencies: [],
+        }))
+      });
+
+      console.log('✅ Created roadmap with 6 phases');
+    } catch (roadmapError) {
+      console.error('⚠️ Error creating roadmap:', roadmapError);
+      // Don't fail project creation if roadmap fails
+    }
+
     try {
       console.log('🔍 Parsing project details from conversation');
       const projectDetails = parseProjectDataToDetails(projectData);
@@ -222,9 +319,11 @@ export async function POST(req: NextRequest) {
             description: req.description,
             status: 'pending',
             projectId: project.id,
+            category: req.category || 'general', // Add category for cascade deletion
+            isActive: true, // Mark as active
           }))
         });
-        
+
         console.log('✅ Created', requirements.length, 'tasks successfully');
       } else {
         console.log('⚠️ No requirements generated');

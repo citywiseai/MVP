@@ -1,0 +1,50 @@
+{
+  "planId": "fir",
+  "metadata": {
+    "id": "fir",
+    "source": "betterplace",
+    "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/fir/",
+    "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2025/04/Fir-400-SQ-FT-1-Bedroom-1-Bath-Floor-Plan-2.jpg",
+    "localImagePath": "fir.jpg",
+    "squareFootage": 400,
+    "bedrooms": 1,
+    "bathrooms": 1,
+    "stories": 1,
+    "style": "ADU",
+    "scrapedAt": "2025-12-10T17:17:28.583Z"
+  },
+  "roomCount": 7,
+  "roomTypes": [
+    "living room",
+    "kitchen",
+    "bedroom",
+    "bathroom",
+    "walk-in closet",
+    "laundry",
+    "closet"
+  ],
+  "layoutType": "hybrid",
+  "circulationPattern": "linear",
+  "entryType": "direct entry into living room with no formal foyer",
+  "kitchenLocation": "left side of unit, adjacent to living room in open arrangement",
+  "bedroomLayout": "single bedroom located on right side, separated from main living areas",
+  "bathroomPlacement": "centrally located hall bathroom serving bedroom and main living areas",
+  "storageFeatures": [
+    "walk-in closet",
+    "closet",
+    "laundry area"
+  ],
+  "efficiencyNotes": [
+    "galley kitchen maximizes counter and storage space",
+    "combined laundry and utility area saves space",
+    "open living/kitchen reduces circulation space",
+    "compact bathroom with efficient fixture placement",
+    "walk-in closet provides generous storage for small unit"
+  ],
+  "uniqueFeatures": [
+    "separate walk-in closet adjacent to bedroom",
+    "dedicated laundry area with washer/dryer placement",
+    "compact 25' x 16' footprint maximizes 400 sqft"
+  ],
+  "dimensionNotes": "Overall dimensions 25'-0\" x 16'-0\", bedroom appears approximately 10' x 9', kitchen is galley style approximately 3' wide, living area takes advantage of open concept to feel larger than actual square footage"
+}

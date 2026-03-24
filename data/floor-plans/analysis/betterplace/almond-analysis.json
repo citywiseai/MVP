@@ -1,0 +1,52 @@
+{
+  "planId": "almond",
+  "metadata": {
+    "id": "almond",
+    "source": "betterplace",
+    "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/almond/",
+    "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2025/04/Almond-700-SQ-FT-2-Bedroom-1-Bath-Floor-Plan-2.jpg",
+    "localImagePath": "almond.jpg",
+    "squareFootage": 700,
+    "bedrooms": 2,
+    "bathrooms": 1,
+    "stories": 1,
+    "style": "ADU",
+    "scrapedAt": "2025-12-10T17:16:08.937Z"
+  },
+  "roomCount": 8,
+  "roomTypes": [
+    "kitchen",
+    "bedroom",
+    "bathroom",
+    "living room",
+    "dining room",
+    "laundry",
+    "closet",
+    "pantry"
+  ],
+  "layoutType": "hybrid",
+  "circulationPattern": "central-hall",
+  "entryType": "direct entry into open living area with immediate access to kitchen and dining",
+  "kitchenLocation": "northwest corner with pantry adjacent, opens to dining area creating L-shaped cooking/eating zone",
+  "bedroomLayout": "split bedroom layout with bedrooms on opposite sides of central bathroom/utility core",
+  "bathroomPlacement": "single centrally located bathroom shared between both bedrooms, accessible from hallway",
+  "storageFeatures": [
+    "walk-in closets in both bedrooms",
+    "pantry adjacent to kitchen",
+    "laundry/utility room"
+  ],
+  "efficiencyNotes": [
+    "galley-style kitchen maximizes counter space",
+    "central utility core consolidates plumbing",
+    "open living/dining reduces circulation space",
+    "split bedroom layout provides privacy",
+    "pantry and laundry rooms maximize storage"
+  ],
+  "uniqueFeatures": [
+    "dishwasher and refrigerator positioned for efficient kitchen workflow",
+    "stairs to potential loft/upper level",
+    "washer/dryer centrally located for convenience",
+    "bench seating area in bathroom"
+  ],
+  "dimensionNotes": "compact 32'5\" x 25'6\" footprint with efficient 12'3\" deep bedrooms, generous 22'9\" open living area, and well-proportioned kitchen work triangle"
+}

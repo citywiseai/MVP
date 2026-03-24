@@ -1,0 +1,53 @@
+{
+  "planId": "cypress",
+  "metadata": {
+    "id": "cypress",
+    "source": "betterplace",
+    "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/cypress/",
+    "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2024/04/Cypress-1192-SQ-FT-4-Bedroom-2-Bath-Floor-Plan-2.jpg",
+    "localImagePath": "cypress.jpg",
+    "squareFootage": 1192,
+    "bedrooms": 4,
+    "bathrooms": 2,
+    "stories": 1,
+    "style": "ADU",
+    "scrapedAt": "2025-12-10T17:14:10.324Z"
+  },
+  "roomCount": 11,
+  "roomTypes": [
+    "kitchen",
+    "dining",
+    "living room",
+    "bedroom",
+    "bathroom",
+    "walk-in closet",
+    "closet",
+    "laundry"
+  ],
+  "layoutType": "hybrid",
+  "circulationPattern": "central-hall",
+  "entryType": "direct entry into open living area with central hallway access to private zones",
+  "kitchenLocation": "front left corner with adjacent dining area, open to living room",
+  "bedroomLayout": "split bedroom layout with 3 bedrooms clustered on bottom and 1 bedroom separated on top right",
+  "bathroomPlacement": "back-to-back bathrooms sharing plumbing wall - one full bath centrally located, one full bath serving bedroom zone",
+  "storageFeatures": [
+    "walk-in closet",
+    "multiple bedroom closets",
+    "kitchen pantry",
+    "laundry area"
+  ],
+  "efficiencyNotes": [
+    "back-to-back bathrooms share plumbing",
+    "open kitchen-dining-living reduces circulation space",
+    "galley-style kitchen maximizes counter space",
+    "central hallway minimizes wasted corridor space",
+    "laundry integrated with storage area"
+  ],
+  "uniqueFeatures": [
+    "4 bedrooms in compact 1192 sqft footprint",
+    "washer/dryer centrally located between bedroom zones",
+    "walk-in closet (W.I.C.) provides generous storage",
+    "open concept public areas contrast with private bedroom wing"
+  ],
+  "dimensionNotes": "compact bedrooms averaging 9'-10' width, efficient use of 38'-6\" x 31'-0\" footprint, generous living area relative to bedroom sizes, bathrooms are compact but functional"
+}

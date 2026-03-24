@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import Link from 'next/link'
+import ProjectAuditHistory from './ProjectAuditHistory'
 
 const prisma = new PrismaClient()
 
@@ -39,7 +40,15 @@ export default async function ProjectDetailPage({ params }: PageProps) {
     <div className="min-h-screen bg-gradient-to-br from-[#1e3a5f] via-[#2c4f6f] to-[#1e3a5f] py-8">
       <div className="max-w-6xl mx-auto px-4">
         <div className="bg-white rounded-2xl shadow-2xl p-8">
-          <h1 className="text-3xl font-bold text-[#1e3a5f] mb-6">{project.name}</h1>
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-3xl font-bold text-[#1e3a5f]">{project.name}</h1>
+            <Link
+              href={`/projects/${project.id}/edit`}
+              className="px-4 py-2 bg-[#1e3a5f] text-white rounded-lg hover:bg-[#2c4f6f] transition-colors"
+            >
+              Edit Project
+            </Link>
+          </div>
           
           {project.parcel && (
             <div className="mb-8 p-6 bg-gray-50 rounded-lg">
@@ -80,6 +89,11 @@ export default async function ProjectDetailPage({ params }: PageProps) {
               </div>
             </div>
           )}
+
+          {/* Audit History Section */}
+          <div className="mb-8">
+            <ProjectAuditHistory projectId={project.id} />
+          </div>
 
           <div className="mt-8">
             <Link href="/projects" className="inline-block px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">

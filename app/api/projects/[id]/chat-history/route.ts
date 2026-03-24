@@ -45,7 +45,7 @@ export async function GET(
       include: {
         user: {
           select: {
-ame: true,
+            name: true,
             email: true
           }
         }
@@ -58,6 +58,57 @@ ame: true,
     console.error('Chat history API error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+// DELETE - Clear all chat history for a project
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await auth()
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { id: projectId } = await params
+
+    // Verify user has access to this project
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      include: {
+        org: {
+          include: {
+            memberships: {
+              where: {
+                user: {
+                  email: session.user.email!
+                }
+              }
+            }
+          }
+        }
+      }
+    })
+
+    if (!project || project.org.memberships.length === 0) {
+      return NextResponse.json({ error: 'Project not found or access denied' }, { status: 404 })
+    }
+
+    // Delete all chat messages for this project
+    await prisma.chatMessage.deleteMany({
+      where: { projectId }
+    })
+
+    return NextResponse.json({ success: true })
+
+  } catch (error) {
+    console.error('Error clearing chat history:', error)
+    return NextResponse.json(
+      { error: 'Failed to clear chat history' },
       { status: 500 }
     )
   }

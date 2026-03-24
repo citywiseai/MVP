@@ -46,3 +46,9 @@ next-env.d.ts
 check_projects.sql
 update_setbacks.sh
 .env.production.local
+
+# floor plan scraper - exclude images but keep metadata
+/data/floor-plans/images/**/*.jpg
+/data/floor-plans/images/**/*.png
+/data/floor-plans/images/**/*.webp
+/data/floor-plans/images/**/*.jpeg

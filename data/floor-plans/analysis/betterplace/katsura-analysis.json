@@ -1,0 +1,56 @@
+{
+  "planId": "katsura",
+  "metadata": {
+    "id": "katsura",
+    "source": "betterplace",
+    "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/katsura/",
+    "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2025/04/Katsura-500-SQ-FT-1-Bedroom-1-Bath-Floor-Plan-2.jpg",
+    "localImagePath": "katsura.jpg",
+    "squareFootage": 500,
+    "bedrooms": 1,
+    "bathrooms": 1,
+    "stories": 1,
+    "style": "ADU",
+    "scrapedAt": "2025-12-10T17:17:03.506Z"
+  },
+  "roomCount": 9,
+  "roomTypes": [
+    "bedroom",
+    "bathroom",
+    "walk-in closet",
+    "kitchen",
+    "living room",
+    "dining room",
+    "pantry",
+    "laundry",
+    "closet"
+  ],
+  "layoutType": "hybrid",
+  "circulationPattern": "open-flow",
+  "entryType": "direct entry into open living space with immediate access to all areas",
+  "kitchenLocation": "centrally located along right wall, adjacent to dining area and with easy access to living room",
+  "bedroomLayout": "single bedroom positioned in upper right corner for privacy, separated from main living areas",
+  "bathroomPlacement": "single full bathroom in upper left corner with adjacent walk-in closet, convenient to bedroom but also accessible from main living areas",
+  "storageFeatures": [
+    "walk-in closet",
+    "pantry",
+    "coat closet",
+    "laundry area with washer/dryer"
+  ],
+  "efficiencyNotes": [
+    "open concept living/dining/kitchen maximizes perceived space",
+    "compact galley-style kitchen layout",
+    "centralized plumbing with bathroom and laundry in same area",
+    "angled transitions between spaces optimize flow",
+    "multi-functional dining area serves as transition between kitchen and living"
+  ],
+  "dimensionNotes": "compact 22'-5\" square footprint with efficient room proportions - bedroom approximately 10'x11', open living area spans most of the lower portion, bathroom and closet areas appropriately sized for function without excess space",
+  "uniqueFeatures": [
+    "angled wall transitions create visual interest and optimize space usage",
+    "walk-in closet (W.I.C.) provides significant storage in small footprint",
+    "separate pantry adds valuable kitchen storage",
+    "dishwasher integrated into compact kitchen design",
+    "dual TV locations in bedroom and living room"
+  ],
+  "circulationEfficiency": "minimal hallway space with most circulation through functional areas, maximizing usable square footage"
+}

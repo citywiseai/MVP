@@ -1,0 +1,52 @@
+{
+  "planId": "chestnut",
+  "metadata": {
+    "id": "chestnut",
+    "source": "betterplace",
+    "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/chestnut/",
+    "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2025/04/Chestnut-600-SQ-FT-3-Bedroom-2-Bath-Floor-Plan-2.jpg",
+    "localImagePath": "chestnut.jpg",
+    "squareFootage": 600,
+    "bedrooms": 3,
+    "bathrooms": 2,
+    "stories": 1,
+    "style": "ADU",
+    "scrapedAt": "2025-12-10T17:16:35.401Z"
+  },
+  "roomCount": 8,
+  "roomTypes": [
+    "kitchen",
+    "bedroom",
+    "bathroom",
+    "living room",
+    "dining room",
+    "laundry",
+    "closet",
+    "built-in storage"
+  ],
+  "layoutType": "hybrid",
+  "circulationPattern": "central-hall",
+  "entryType": "direct entry into open kitchen/dining area with immediate access to main living spaces",
+  "kitchenLocation": "upper center of unit, open to dining area, with built-in bench seating and appliances along wall",
+  "bedroomLayout": "single bedroom located in lower left corner, separated from main living areas",
+  "bathroomPlacement": "single full bathroom in upper left corner, adjacent to kitchen with efficient plumbing grouping",
+  "storageFeatures": [
+    "closet adjacent to bedroom",
+    "built-in bench with storage",
+    "laundry area with W/D"
+  ],
+  "efficiencyNotes": [
+    "galley-style kitchen maximizes counter space",
+    "bathroom and kitchen share plumbing wall",
+    "open kitchen/dining/living reduces circulation space",
+    "built-in seating eliminates need for additional furniture",
+    "compact laundry area centrally located"
+  ],
+  "uniqueFeatures": [
+    "integrated dining bench seating",
+    "very compact 600 sqft layout",
+    "single bedroom design despite listed as 3BR",
+    "W/D placement in central circulation area"
+  ],
+  "dimensionNotes": "Overall dimensions 27'-11.25\" x 21'-10\", bedroom approximately 10'x10', very compact bathroom, open living area maximizes perceived space despite small footprint"
+}

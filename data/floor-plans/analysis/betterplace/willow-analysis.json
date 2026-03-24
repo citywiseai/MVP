@@ -1,0 +1,52 @@
+{
+  "planId": "willow",
+  "metadata": {
+    "id": "willow",
+    "source": "betterplace",
+    "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/willow/",
+    "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2024/04/Willow-450-SQ-FT-1-Bedroom-1-Bath-Floor-Plan-2.jpg",
+    "localImagePath": "willow.jpg",
+    "squareFootage": 450,
+    "bedrooms": 1,
+    "bathrooms": 1,
+    "stories": 1,
+    "style": "ADU",
+    "scrapedAt": "2025-12-10T17:17:16.625Z"
+  },
+  "roomCount": 8,
+  "roomTypes": [
+    "bedroom",
+    "bathroom",
+    "kitchen",
+    "living room",
+    "dining room",
+    "closet",
+    "pantry",
+    "laundry"
+  ],
+  "layoutType": "hybrid",
+  "circulationPattern": "open-flow",
+  "entryType": "direct entry into open living/dining area",
+  "kitchenLocation": "northeast corner with peninsula layout, adjacent to dining area",
+  "bedroomLayout": "single bedroom positioned in southwest corner for privacy",
+  "bathroomPlacement": "centrally located full bathroom accessible from main living area",
+  "storageFeatures": [
+    "walk-in closet in bedroom",
+    "pantry in kitchen area",
+    "washer/dryer closet"
+  ],
+  "efficiencyNotes": [
+    "open concept living/dining maximizes perceived space",
+    "galley-style kitchen with peninsula saves space",
+    "centralized bathroom serves all areas",
+    "compact washer/dryer placement",
+    "bedroom closet maximizes storage in small footprint"
+  ],
+  "uniqueFeatures": [
+    "kitchen peninsula creates natural separation without walls",
+    "bathroom positioned to serve as buffer between public and private spaces",
+    "dedicated laundry area despite small footprint",
+    "separate pantry storage"
+  ],
+  "dimensionNotes": "bedroom is generous at approximately 11' x 9', open living/dining area spans majority of width for spacious feel, kitchen is compact but functional with adequate counter space"
+}

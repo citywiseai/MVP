@@ -1,0 +1,54 @@
+{
+  "planId": "mahogany",
+  "metadata": {
+    "id": "mahogany",
+    "source": "betterplace",
+    "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/mahogany/",
+    "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2024/04/Mahogany-1200-SQ-FT-3-Bedroom-2-Bath-Floor-Plan-4.jpg",
+    "localImagePath": "mahogany.jpg",
+    "squareFootage": 1200,
+    "bedrooms": 3,
+    "bathrooms": 2,
+    "stories": 1,
+    "style": "ADU",
+    "scrapedAt": "2025-12-10T17:14:03.167Z"
+  },
+  "roomCount": 10,
+  "roomTypes": [
+    "bedroom",
+    "bathroom",
+    "living room",
+    "kitchen",
+    "dining room",
+    "hall",
+    "walk-in closet",
+    "built-in storage",
+    "laundry area"
+  ],
+  "layoutType": "hybrid",
+  "circulationPattern": "central-hall",
+  "entryType": "Entry appears to be into living area with central hall access to bedroom wing",
+  "kitchenLocation": "Central location with adjacency to dining area and living room, galley-style layout",
+  "bedroomLayout": "split bedroom layout with primary bedroom separated from two secondary bedrooms clustered together",
+  "bathroomPlacement": "back-to-back bathrooms share plumbing wall - one ensuite with primary bedroom, one hall bath serving secondary bedrooms",
+  "storageFeatures": [
+    "walk-in closet",
+    "built-in storage",
+    "multiple bedroom closets",
+    "laundry area with washer/dryer"
+  ],
+  "efficiencyNotes": [
+    "back-to-back bathrooms share plumbing",
+    "galley kitchen maximizes counter space",
+    "central hall minimizes circulation waste",
+    "built-in storage integrated into living area",
+    "compact rectangular footprint"
+  ],
+  "uniqueFeatures": [
+    "primary bedroom positioned for privacy",
+    "kitchen centrally located for easy access from all areas",
+    "built-in storage spans width of living area",
+    "compact 44'-3.5\" x 29'-1\" overall dimensions"
+  ],
+  "dimensionNotes": "Efficient rectangular plan with primary bedroom (13'-1.25\" wide) taking full depth, secondary bedrooms are modest but functional, living area is generous for the overall footprint, galley kitchen is narrow but well-planned"
+}

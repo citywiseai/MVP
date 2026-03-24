@@ -1,7 +1,13 @@
 import OpenAI from 'openai'
+import Anthropic from '@anthropic-ai/sdk'
+import { getChecklist } from './documentChecklists'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || 'demo-key'
+})
+
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY
 })
 
 export async function analyzeZoning(params: {
@@ -372,10 +378,23 @@ export async function chatWithProjectAI(params: {
     projectType: string
     propertyType: string
     jurisdiction: string
+    fullAddress?: string
+    description?: string
     squareFootage: number
     scopeOfWork: string
     hillsideGrade: boolean
     onSeptic: boolean
+    parcel?: {
+      zoning?: string
+      lotSizeSqFt?: number
+      address?: string
+      city?: string
+      state?: string
+      county?: string
+      zoningRules?: any[]
+    } | null
+    municipalRequirements?: any[]
+    phoenixZoning?: any | null
   }
   currentRequirements: Array<{
     discipline: string
@@ -387,92 +406,316 @@ export async function chatWithProjectAI(params: {
     role: 'user' | 'assistant'
     content: string
   }>
+  permitTimeline?: any
 }) {
-  const { projectData, currentRequirements, userMessage, conversationHistory } = params
+  const { projectData, currentRequirements, userMessage, conversationHistory, permitTimeline } = params
 
-  // If no API key is set, return a demo response
-  if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'demo-key') {
-    return {
-      response: `Thank you for your question about "${userMessage}". This is a demo response. 
+  console.log('🧠 AI chatWithProjectAI - Called with:')
+  console.log('🧠 AI - projectData.phoenixZoning:', projectData?.phoenixZoning)
+  console.log('🧠 AI - projectData.jurisdiction:', projectData?.jurisdiction)
+  console.log('🧠 AI - projectData.parcel?.zoning:', projectData?.parcel?.zoning)
 
-Based on your project details, here are some considerations:
-- Your ${projectData.projectType} project in ${projectData.jurisdiction}
-- Property type: ${projectData.propertyType}
-- Size: ${projectData.squareFootage} sq ft
+  // Helper function to build zoning context
+  // IMPORTANT: Only show data that exists in database - NO GUESSING OR DEFAULTS
+  const buildZoningContext = (zoning: any) => {
+    if (!zoning) {
+      return 'NO ZONING DATA AVAILABLE IN DATABASE - Cannot provide specific zoning regulations. Recommend contacting Phoenix Planning & Development at (602) 262-7811.'
+    }
 
-I would recommend discussing with your local building department for specific requirements. Add your OpenAI API key to get real AI assistance.`,
-      updatedRequirements: currentRequirements,
-      requirementsChanged: false
+    // Helper to format values - explicit about what's missing
+    const formatValue = (value: any, unit: string = '', defaultText: string = 'NOT IN DATABASE') => {
+      if (value === null || value === undefined) {
+        return defaultText
+      }
+      if (typeof value === 'number') {
+        return `${value}${unit}`
+      }
+      return `${value}${unit}`
+    }
+
+    // Format percentages explicitly
+    const formatPercent = (value: any) => {
+      if (value === null || value === undefined) {
+        return 'NOT IN DATABASE - verify with city'
+      }
+      return `${(value * 100).toFixed(0)}%`
+    }
+
+    // Calculate open space from lot coverage if lot coverage exists
+    const openSpacePercent = zoning.lotCoverageMax !== null && zoning.lotCoverageMax !== undefined
+      ? formatPercent(1 - zoning.lotCoverageMax)
+      : 'NOT IN DATABASE - verify with city'
+
+    return `
+
+=== VERIFIED PHOENIX ZONING DATA FOR ${zoning.zoningDistrict} ===
+Source: CityWise Database (Phoenix Zoning Ordinance Section 622)
+
+SETBACK REQUIREMENTS (VERIFIED):
+- Front Setback: ${formatValue(zoning.frontSetback, ' feet')}
+- Side Setback: ${formatValue(zoning.sideSetback, ' feet')}
+- Rear Setback: ${formatValue(zoning.rearSetback, ' feet')}
+
+HEIGHT LIMITS (VERIFIED):
+- Maximum Building Height: ${formatValue(zoning.maxHeight, ' feet')}
+
+LOT COVERAGE (VERIFIED):
+- Maximum Lot Coverage: ${formatPercent(zoning.lotCoverageMax)}
+- Minimum Open Space Required: ${openSpacePercent}
+
+ADU REGULATIONS (VERIFIED):
+- ADUs Allowed: ${zoning.aduAllowed === true ? 'YES' : zoning.aduAllowed === false ? 'NO' : 'NOT IN DATABASE'}
+- Maximum Number of ADUs: ${formatValue(zoning.maxADUs, '', 'NOT IN DATABASE')}
+- ADU Max Size: ${formatValue(zoning.aduMaxSize, ' sq ft', 'NOT IN DATABASE')}
+  (Note: Whichever is LESS: 1,000-1,200 sq ft OR 50% of primary dwelling size)
+- ADU Max Height: ${formatValue(zoning.aduMaxHeight, ' feet', 'NOT IN DATABASE')}
+  (Note: Whichever is LESS: 30 feet OR height of primary dwelling)
+- ADU Min Setback: ${formatValue(zoning.aduMinSetback, ' feet', 'NOT IN DATABASE')}
+- ADU Parking Required: NO - Phoenix does not require additional parking for ADUs (as of 2024)
+
+NOTE: Values marked "NOT IN DATABASE" require verification with Phoenix Planning & Development.
+Contact: (602) 262-7811 or planning.development@phoenix.gov
+`
+  }
+
+  // Helper function to build permit timeline context
+  const buildPermitTimelineContext = (timeline: any): string => {
+    if (!timeline) return '\nNO PERMIT TIMELINE DATA AVAILABLE - Recommend contacting the city planning department for current processing times.';
+
+    const totalDays = timeline.planReviewDays +
+      (timeline.revisionDays * timeline.typicalRevisions) +
+      timeline.approvalDays;
+    const totalWeeks = Math.ceil(totalDays / 5);
+
+    return `
+
+=== PERMIT TIMELINE ESTIMATE ===
+Jurisdiction: ${timeline.jurisdiction.toUpperCase()}
+Project Type: ${timeline.permitType.replace(/_/g, ' ').toUpperCase()}
+
+TIMELINE (Business Days):
+- Initial Plan Review: ${timeline.planReviewDays} days
+- Revision Cycles: ${timeline.typicalRevisions} typical (${timeline.revisionDays} days each)
+- Final Approval: ${timeline.approvalDays} days
+- Inspection Lead Time: ${timeline.inspectionDays} days
+- ESTIMATED TOTAL: ${totalWeeks} weeks (${totalDays} business days)
+
+PERMIT FEES:
+- Base Fee: $${timeline.baseFee}
+- Per Square Foot: $${timeline.feePerSqFt}/sqft
+${timeline.expeditedAvailable
+      ? `- Expedited Review: Available for +$${timeline.expeditedFee}`
+      : '- Expedited Review: Not available in this jurisdiction'}
+
+NOTES: ${timeline.notes || 'None'}
+
+NOTE: These are typical timeframes. Actual processing may vary based on project complexity and current workload.
+`;
+  };
+
+  // Helper function to build document checklist context
+  const buildDocumentChecklistContext = (projectType: string): string => {
+    // Determine project type from scope
+    const scope = projectData.scopeOfWork?.toLowerCase() || projectData.description?.toLowerCase() || '';
+    let checklistType = 'ADDITION';
+
+    if (scope.includes('adu')) {
+      checklistType = 'ADU';
+    } else if (scope.includes('new construction') || scope.includes('new home')) {
+      checklistType = 'NEW_CONSTRUCTION';
+    } else if (scope.includes('remodel')) {
+      checklistType = 'REMODEL';
+    }
+
+    const checklist = getChecklist(checklistType);
+    if (!checklist) return '\nNo document checklist available for this project type.';
+
+    let context = `\n=== DOCUMENT CHECKLIST FOR ${checklistType.replace(/_/g, ' ')} ===\n`;
+
+    context += '\nREQUIRED DOCUMENTS:\n';
+    checklist.required.forEach((doc, i) => {
+      context += `${i + 1}. ${doc.name} - ${doc.description}\n`;
+    });
+
+    if (checklist.conditional.length > 0) {
+      context += '\nCONDITIONAL DOCUMENTS (may be required):\n';
+      checklist.conditional.forEach((doc, i) => {
+        context += `${i + 1}. ${doc.name} - ${doc.description}\n   (Required if: ${doc.condition})\n`;
+      });
+    }
+
+    context += '\nAT PROJECT COMPLETION:\n';
+    checklist.atCompletion.forEach((doc, i) => {
+      context += `${i + 1}. ${doc.name} - ${doc.description}\n`;
+    });
+
+    return context;
+  };
+
+  // Build parcel context
+  let parcelContext = ''
+  if (projectData.parcel) {
+    parcelContext = `
+PROPERTY & ZONING DETAILS:
+- Address: ${projectData.fullAddress || projectData.parcel.address || 'Not specified'}
+- Zoning Code: ${projectData.parcel.zoning || 'Not specified'}
+- Lot Size: ${projectData.parcel.lotSizeSqFt ? `${projectData.parcel.lotSizeSqFt.toLocaleString()} sq ft` : 'Not specified'}
+- City: ${projectData.parcel.city || 'Not specified'}
+- County: ${projectData.parcel.county || 'Not specified'}`
+
+    if (projectData.parcel.zoningRules && Array.isArray(projectData.parcel.zoningRules)) {
+      const rules = projectData.parcel.zoningRules.map((r: any) =>
+        `  - ${r.field}: ${r.value} ${r.unit || ''}`
+      ).join('\n')
+      if (rules) {
+        parcelContext += `\n\nZONING RULES:\n${rules}`
+      }
     }
   }
 
-  const systemPrompt = `You are a building code and permit expert helping with a construction project. 
+  // Build Phoenix zoning context
+  const phoenixZoningContext = projectData.phoenixZoning ? buildZoningContext(projectData.phoenixZoning) : ''
+
+  console.log('🧠 AI - Built phoenixZoningContext:', phoenixZoningContext ? 'YES (length: ' + phoenixZoningContext.length + ')' : 'EMPTY')
+  if (phoenixZoningContext) {
+    console.log('🧠 AI - Zoning context preview:', phoenixZoningContext.substring(0, 200))
+  }
+
+  // Build permit timeline context
+  const timelineContext = buildPermitTimelineContext(permitTimeline)
+  console.log('🧠 AI - Built timelineContext:', timelineContext ? 'YES' : 'EMPTY')
+
+  // Build document checklist context
+  const checklistContext = buildDocumentChecklistContext(projectData.projectType)
+  console.log('🧠 AI - Built checklistContext:', checklistContext ? 'YES' : 'EMPTY')
+
+  // Build municipal requirements context
+  let municipalContext = ''
+  if (projectData.municipalRequirements && projectData.municipalRequirements.length > 0) {
+    municipalContext = `\n\nMUNICIPAL REQUIREMENTS DATABASE (${projectData.jurisdiction}):\n`
+    municipalContext += projectData.municipalRequirements.map((req: any) =>
+      `- ${req.name}: ${req.description}${req.typicalTimeframe ? ` (Typical timeframe: ${req.typicalTimeframe})` : ''}`
+    ).join('\n')
+  }
+
+  // As-Built documentation context
+  const asBuiltContext = `
+
+AS-BUILT DRAWINGS REQUIREMENT:
+As-built drawings are REQUIRED by ${projectData.jurisdiction || 'Phoenix'} for permit closeout and certificate of occupancy.
+
+What Are As-Built Drawings?
+- Revised blueprints showing the project exactly as constructed (not as originally designed)
+- Must include all field changes and modifications made during construction
+- Document final dimensions, geometry, and location of all elements
+- Show any material substitutions from original plans
+- Include updated electrical, plumbing, and structural details
+
+Why Required?
+- Required for permit closeout and final inspection approval
+- Needed for certificate of occupancy
+- Creates accurate record for future reference and renovations
+- Ensures municipal records reflect actual construction
+
+Who Prepares Them?
+- Typically prepared by the contractor or project architect
+- Based on field measurements and construction documentation
+- Must be stamped/signed by licensed professional (if required by jurisdiction)
+
+Timeline:
+- Prepared upon project completion (typically 1-2 weeks after construction)
+- Submitted before final inspection
+- Must be approved before certificate of occupancy is issued
+
+Important Notes:
+- Required for ALL construction projects (additions, ADUs, remodels, new construction)
+- Must show actual conditions, not original design intent
+- Digital and/or paper copies may be required
+- Part of project closeout documentation package`
+
+  const systemPrompt = `You are Scout, an expert building code and zoning advisor for ${projectData.jurisdiction || 'the local jurisdiction'}. You provide accurate, specific guidance based on actual zoning regulations and municipal requirements.
 
 PROJECT DETAILS:
-- Name: ${projectData.name}
-- Type: ${projectData.projectType}
-- Property: ${projectData.propertyType}
+- Project Name: ${projectData.name}
+- Project Type: ${projectData.projectType}
+- Property Type: ${projectData.propertyType}
 - Jurisdiction: ${projectData.jurisdiction}
-- Size: ${projectData.squareFootage} sq ft
-- Hillside: ${projectData.hillsideGrade ? 'Yes' : 'No'}
-- Septic: ${projectData.onSeptic ? 'Yes' : 'No'}
-- Scope: ${projectData.scopeOfWork}
+- Size: ${projectData.squareFootage || 0} sq ft
+- Hillside Property: ${projectData.hillsideGrade ? 'Yes' : 'No'}
+- Septic System: ${projectData.onSeptic ? 'Yes' : 'No'}
+- Scope of Work: ${projectData.scopeOfWork || projectData.description || 'Not specified'}
+${parcelContext}${phoenixZoningContext}${municipalContext}${asBuiltContext}${timelineContext}${checklistContext}
 
 CURRENT ENGINEERING REQUIREMENTS:
 ${currentRequirements.map(req => `- ${req.discipline}: ${req.required ? 'Required' : 'Optional'} - ${req.notes}`).join('\n')}
 
-Your role is to:
-1. Answer questions about building codes, permits, and engineering requirements
-2. Suggest modifications to engineering requirements based on new information
-3. Provide practical advice for this specific project and jurisdiction
+YOUR ROLE:
+You are Scout, a zoning and permit assistant that provides VERIFIED information from the CityWise database. Your primary responsibility is accuracy - never guess or use general knowledge for zoning regulations.
 
-If the user's question suggests changes to engineering requirements, provide:
-1. A helpful response to their question
-2. Updated requirements list if changes are needed
-3. Explanation of why requirements changed
+CRITICAL RULES - ABSOLUTELY NO EXCEPTIONS:
+1. ONLY provide information explicitly stated in the verified data sections above
+2. If a value shows "NOT IN DATABASE" or "NOT AVAILABLE" - tell the user it's not available and recommend verification
+3. NEVER estimate, guess, or use general knowledge about zoning regulations, timelines, or fees
+4. NEVER use values that aren't explicitly shown in the verified data above
+5. Always cite the specific jurisdiction and data source
 
-Respond in JSON format:
-{
-  "response": "Your helpful answer to the user's question",
-  "updatedRequirements": [array of requirements if changes needed, or null if no changes],
-  "requirementsChanged": boolean,
-  "explanation": "Why requirements changed (if applicable)"
-}`
+WHEN ANSWERING QUESTIONS:
+- Lot Coverage: ONLY use the exact percentage from "Maximum Lot Coverage" above - if it says "NOT IN DATABASE", tell the user
+- Setbacks: ONLY use the exact feet from "Front/Side/Rear Setback" above - if missing, tell the user
+- Heights: ONLY use the exact feet from "Maximum Building Height" above - if missing, tell the user
+- ADUs: ONLY use values from "ADU REGULATIONS" section above - if missing, tell the user
+- Permit Timeline: ONLY use the exact weeks/days from "PERMIT TIMELINE ESTIMATE" above - if missing, tell the user
+- Permit Fees: ONLY use the exact fees from "PERMIT FEES" section - calculate total based on base fee + (sqft × per sqft fee)
+- Documents: ONLY list documents from "DOCUMENT CHECKLIST" section - separate required vs conditional clearly
+- Expedited Review: ONLY state availability if explicitly shown in timeline data
+
+IF DATA IS MISSING:
+Respond: "I don't have verified data for [specific item] in our database. For accurate information, please contact Phoenix Planning & Development at (602) 262-7811 or planning.development@phoenix.gov"
+
+CORRECT RESPONSE EXAMPLE:
+User: "What's my max lot coverage?"
+You: "For your R1-10 zoned property, the maximum lot coverage is 40% with a minimum of 60% open space required."
+
+INCORRECT RESPONSE EXAMPLE (NEVER DO THIS):
+User: "What's my max lot coverage?"
+You: "For R1-10 zoning, it's typically 50%..." ❌ WRONG - this is a hallucination!
+
+Always be helpful, but prioritize accuracy over being helpful. If you don't have the data, say so clearly.`
 
   try {
-    const messages = [
-      { role: 'system' as const, content: systemPrompt },
-      ...conversationHistory,
-      { role: 'user' as const, content: userMessage }
-    ]
+    // Build conversation history for Claude
+    const messages: Array<{ role: 'user' | 'assistant', content: string }> = []
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4',
-      messages,
-      temperature: 0.3,
-      max_tokens: 1500
+    // Add conversation history
+    conversationHistory.forEach(msg => {
+      messages.push({
+        role: msg.role,
+        content: msg.content
+      })
     })
 
-    const content = response.choices[0].message.content || '{}'
-    
-    try {
-      const aiResponse = JSON.parse(content)
-      return {
-        response: aiResponse.response || 'I apologize, but I had trouble processing your question.',
-        updatedRequirements: aiResponse.updatedRequirements || currentRequirements,
-        requirementsChanged: aiResponse.requirementsChanged || false,
-        explanation: aiResponse.explanation || null
-      }
-    } catch (parseError) {
-      console.error('Error parsing AI response:', parseError)
-      return {
-        response: content.replace(/```json|```/g, '').trim(),
-        updatedRequirements: currentRequirements,
-        requirementsChanged: false
-      }
+    // Add current user message
+    messages.push({
+      role: 'user',
+      content: userMessage
+    })
+
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2000,
+      system: systemPrompt,
+      messages
+    })
+
+    const content = response.content[0].type === 'text' ? response.content[0].text : ''
+
+    return {
+      response: content || 'I apologize, but I had trouble processing your question.',
+      updatedRequirements: currentRequirements,
+      requirementsChanged: false
     }
   } catch (error) {
-    console.error('Error in AI chat:', error)
+    console.error('Error in Claude chat:', error)
     return {
       response: 'I apologize, but I encountered an error processing your question. Please try again.',
       updatedRequirements: currentRequirements,

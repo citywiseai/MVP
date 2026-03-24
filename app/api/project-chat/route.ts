@@ -9,7 +9,14 @@ export async function POST(request: NextRequest) {
   try {
     const session = await auth()
     const body = await request.json()
-    const { projectData, currentRequirements, userMessage, conversationHistory, projectId } = body
+    const { projectData, currentRequirements, userMessage, conversationHistory, projectId, permitTimeline } = body
+
+    console.log('🤖 Scout API - Received request')
+    console.log('🤖 Scout API - Body keys:', Object.keys(body))
+    console.log('🤖 Scout API - projectData keys:', Object.keys(projectData || {}))
+    console.log('🤖 Scout API - projectData.phoenixZoning:', projectData?.phoenixZoning)
+    console.log('🤖 Scout API - projectData.parcel:', projectData?.parcel)
+    console.log('🤖 Scout API - permitTimeline:', permitTimeline)
 
     if (!projectData || !currentRequirements || !userMessage || !projectId) {
       return NextResponse.json(
@@ -22,10 +29,14 @@ export async function POST(request: NextRequest) {
       projectData,
       currentRequirements,
       userMessage,
-      conversationHistory: conversationHistory || []
+      conversationHistory: conversationHistory || [],
+      permitTimeline
     })
 
-    // Save the chat message to database
+    // Save the chat messages to database (both user and assistant)
+    let savedUserMessage = null
+    let savedAssistantMessage = null
+
     if (session?.user) {
       try {
         const user = await prisma.user.findUnique({
@@ -33,11 +44,21 @@ export async function POST(request: NextRequest) {
         })
 
         if (user) {
-          await prisma.chatMessage.create({
+          // Save user message
+          savedUserMessage = await prisma.chatMessage.create({
             data: {
-              message: userMessage,
-              response: result.response,
+              content: userMessage,
               role: 'user',
+              projectId,
+              userId: user.id
+            }
+          })
+
+          // Save assistant response
+          savedAssistantMessage = await prisma.chatMessage.create({
+            data: {
+              content: result.response,
+              role: 'assistant',
               projectId,
               userId: user.id
             }
@@ -49,7 +70,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json(result)
+    return NextResponse.json({
+      ...result,
+      savedMessages: {
+        user: savedUserMessage ? { id: savedUserMessage.id, content: savedUserMessage.content, createdAt: savedUserMessage.createdAt } : null,
+        assistant: savedAssistantMessage ? { id: savedAssistantMessage.id, content: savedAssistantMessage.content, createdAt: savedAssistantMessage.createdAt } : null
+      }
+    })
 
   } catch (error) {
     console.error('Project chat API error:', error)

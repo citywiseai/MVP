@@ -19,7 +19,16 @@ export async function GET(
       include: {
         parcel: true,
         engineeringReqs: true,
-        tasks: true,
+        tasks: {
+          include: {
+            vendor: true,
+            phase: true,
+            bids: {
+              include: { vendor: true },
+              orderBy: { createdAt: 'desc' }
+            }
+          }
+        },
         notes: true,
       }
     })
@@ -76,6 +85,8 @@ export async function PATCH(
     if (body.clientName !== undefined) updateData.clientName = body.clientName
     if (body.tags !== undefined) updateData.tags = body.tags
     if (body.archivedAt !== undefined) updateData.archivedAt = body.archivedAt ? new Date(body.archivedAt) : null
+    if (body.budget !== undefined) updateData.budget = body.budget ? parseFloat(body.budget) : null
+    if (body.budgetNotes !== undefined) updateData.budgetNotes = body.budgetNotes
 
     // Update project
     const updatedProject = await prisma.project.update({
@@ -84,7 +95,16 @@ export async function PATCH(
       include: {
         parcel: true,
         engineeringReqs: true,
-        tasks: true,
+        tasks: {
+          include: {
+            vendor: true,
+            phase: true,
+            bids: {
+              include: { vendor: true },
+              orderBy: { createdAt: 'desc' }
+            }
+          }
+        },
         notes: true,
       }
     })

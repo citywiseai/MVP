@@ -1,9 +1,11 @@
-export type PhaseStatus = 'waiting' | 'in_progress' | 'completed';
+export type PhaseStatus = 'waiting' | 'in_progress' | 'completed' | 'skipped';
 
 export type PhaseName =
   | 'Discovery & Site Analysis'
   | 'Design & Planning'
+  | 'Design Planning'
   | 'Engineering & Compliance'
+  | 'Engineering Compliance'
   | 'Permit Package Preparation'
   | 'City Review'
   | 'Permit Issuance';
@@ -20,18 +22,29 @@ export interface RezioService {
   description: string;
 }
 
+export interface PhaseTask {
+  id: string;
+  title: string;
+  status: string;
+  priority: string;
+}
+
 export interface RoadmapPhase {
   id: string;
-  name: PhaseName;
+  name: string;
   order: number;
   status: PhaseStatus;
   estimatedDuration: string;
-  startDate?: Date;
-  endDate?: Date;
+  startDate?: Date | string | null;
+  endDate?: Date | string | null;
   services: RezioService[];
   progress: number;
   description?: string;
   dependencies: string[];
+  tasks?: PhaseTask[];
+  taskCount?: number;
+  completedTaskCount?: number;
+  taskProgress?: number;
 }
 
 export interface ProjectRoadmap {

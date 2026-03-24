@@ -1,0 +1,49 @@
+{
+  "planId": "palm",
+  "metadata": {
+    "id": "palm",
+    "source": "betterplace",
+    "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/palm/",
+    "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2025/04/Palm-500-SQ-FT-1-Bedroom-1-Bath-Floor-Plan-2.jpg",
+    "localImagePath": "palm.jpg",
+    "squareFootage": 500,
+    "bedrooms": 1,
+    "bathrooms": 1,
+    "stories": 1,
+    "style": "ADU",
+    "scrapedAt": "2025-12-10T17:16:49.045Z"
+  },
+  "roomCount": 7,
+  "roomTypes": [
+    "bedroom",
+    "bathroom",
+    "kitchen",
+    "dining room",
+    "living room",
+    "laundry",
+    "closet"
+  ],
+  "layoutType": "hybrid",
+  "circulationPattern": "linear",
+  "entryType": "direct entry into living space without dedicated foyer",
+  "kitchenLocation": "northwest corner with linear galley layout, adjacent to dining area",
+  "bedroomLayout": "single bedroom located in northeast corner, separated from main living area",
+  "bathroomPlacement": "single full bathroom centrally located between bedroom and living areas",
+  "storageFeatures": [
+    "walk-in closet adjacent to bedroom",
+    "closet in living area"
+  ],
+  "efficiencyNotes": [
+    "galley kitchen maximizes counter and storage space",
+    "linear circulation minimizes wasted hallway space",
+    "open dining/living area creates sense of spaciousness",
+    "centralized plumbing location reduces costs",
+    "washer/dryer integrated into kitchen area"
+  ],
+  "uniqueFeatures": [
+    "angled entry door creates interesting geometric flow",
+    "bedroom positioned for privacy from main living areas",
+    "compact but complete kitchen with full appliance suite including dishwasher"
+  ],
+  "dimensionNotes": "20' x 23' overall footprint efficiently utilizes every square foot with appropriately scaled rooms for ADU living - bedroom is generous for the unit size, kitchen is compact but functional, and open living/dining maximizes perceived space"
+}

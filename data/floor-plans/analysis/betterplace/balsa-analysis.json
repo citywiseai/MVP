@@ -1,0 +1,49 @@
+{
+  "planId": "balsa",
+  "metadata": {
+    "id": "balsa",
+    "source": "betterplace",
+    "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/balsa/",
+    "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2024/04/Balsa-400-SQ-FT-1-Bedroom-1-Bath-Floor-Plan-2.jpg",
+    "localImagePath": "balsa.jpg",
+    "squareFootage": 400,
+    "bedrooms": 1,
+    "bathrooms": 1,
+    "stories": 1,
+    "style": "ADU",
+    "scrapedAt": "2025-12-10T17:17:48.707Z"
+  },
+  "roomCount": 6,
+  "roomTypes": [
+    "kitchen",
+    "living room",
+    "bedroom",
+    "bathroom",
+    "closet",
+    "laundry"
+  ],
+  "layoutType": "open-concept",
+  "circulationPattern": "open-flow",
+  "entryType": "direct entry into open kitchen/living area",
+  "kitchenLocation": "front left corner, open to living area with peninsula/island configuration",
+  "bedroomLayout": "single bedroom positioned in rear right corner for privacy",
+  "bathroomPlacement": "centrally located between bedroom and living areas for efficient access",
+  "storageFeatures": [
+    "bedroom closet",
+    "kitchen pantry area"
+  ],
+  "efficiencyNotes": [
+    "open kitchen-living layout maximizes perceived space",
+    "compact galley-style kitchen with peninsula",
+    "centralized bathroom serves entire unit",
+    "washer/dryer integrated into bathroom area",
+    "minimal circulation space due to open plan"
+  ],
+  "uniqueFeatures": [
+    "kitchen peninsula creates defined cooking zone while maintaining openness",
+    "compact all-in-one bathroom with integrated laundry",
+    "bedroom positioned for maximum privacy despite small footprint",
+    "efficient rectangular footprint"
+  ],
+  "dimensionNotes": "25' x 16' overall footprint maximizes usable space within compact ADU constraints, bedroom approximately 10'4\" wide, open living/kitchen area spans full width for spacious feel"
+}

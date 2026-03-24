@@ -1,0 +1,52 @@
+{
+  "planId": "olive",
+  "metadata": {
+    "id": "olive",
+    "source": "betterplace",
+    "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/olive/",
+    "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2025/04/Olive-500-SQ-FT-1-Bedroom-1-Bath-Floor-Plan-2.jpg",
+    "localImagePath": "olive.jpg",
+    "squareFootage": 500,
+    "bedrooms": 1,
+    "bathrooms": 1,
+    "stories": 1,
+    "style": "ADU",
+    "scrapedAt": "2025-12-10T17:16:56.723Z"
+  },
+  "roomCount": 8,
+  "roomTypes": [
+    "living room",
+    "dining room",
+    "kitchen",
+    "bedroom",
+    "bathroom",
+    "laundry",
+    "closet",
+    "walk-in closet"
+  ],
+  "layoutType": "hybrid",
+  "circulationPattern": "linear",
+  "entryType": "direct entry into living area without formal foyer",
+  "kitchenLocation": "southwest corner with galley layout, adjacent to dining area",
+  "bedroomLayout": "single bedroom positioned in northeast corner for privacy",
+  "bathroomPlacement": "centrally located shared bathroom with adjacent walk-in closet",
+  "storageFeatures": [
+    "walk-in closet",
+    "bedroom closet",
+    "laundry area"
+  ],
+  "efficiencyNotes": [
+    "galley kitchen maximizes counter and storage space",
+    "open living/dining area reduces circulation space",
+    "central bathroom serves entire unit efficiently",
+    "laundry integrated into kitchen area",
+    "walk-in closet provides substantial storage in compact footprint"
+  ],
+  "uniqueFeatures": [
+    "washer/dryer placement in kitchen area",
+    "angled wall creating visual separation between spaces",
+    "bench seating in walk-in closet",
+    "TV area designated in living room"
+  ],
+  "dimensionNotes": "compact 28'-1\" x 17'-9\" footprint with bedroom taking up significant portion (10'-0\" width), kitchen kept narrow but functional, bathroom efficiently sized at approximately 6'-0\" x 8'-0\""
+}

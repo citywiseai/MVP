@@ -1,0 +1,53 @@
+{
+  "planId": "torrey-pine",
+  "metadata": {
+    "id": "torrey-pine",
+    "source": "betterplace",
+    "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/torrey-pine/",
+    "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2024/04/Torrey-Pine-1192-SQ-FT-3-Bedroom-2-Bath-Floor-Plan-2.jpg",
+    "localImagePath": "torrey-pine.jpg",
+    "squareFootage": 1192,
+    "bedrooms": 3,
+    "bathrooms": 2,
+    "stories": 1,
+    "style": "ADU",
+    "scrapedAt": "2025-12-10T17:14:17.346Z"
+  },
+  "roomCount": 10,
+  "roomTypes": [
+    "kitchen",
+    "bedroom",
+    "bathroom",
+    "living room",
+    "dining room",
+    "laundry",
+    "closet",
+    "pantry"
+  ],
+  "layoutType": "hybrid",
+  "circulationPattern": "central-hall",
+  "entryType": "direct entry into living area with central circulation spine",
+  "kitchenLocation": "northeast corner with adjacent dining area and pantry, connected to living space",
+  "bedroomLayout": "split bedroom layout with master bedroom separated on west side, two secondary bedrooms clustered on south side",
+  "bathroomPlacement": "back-to-back bathrooms sharing central plumbing wall - ensuite master bath and shared hall bathroom",
+  "storageFeatures": [
+    "walk-in closet",
+    "pantry",
+    "laundry room",
+    "bedroom closets"
+  ],
+  "efficiencyNotes": [
+    "back-to-back bathrooms share plumbing to reduce costs",
+    "galley kitchen maximizes counter space",
+    "central hallway minimizes circulation space",
+    "laundry room centrally located for efficiency",
+    "pantry provides additional kitchen storage"
+  ],
+  "uniqueFeatures": [
+    "angled walls create visual interest and space definition",
+    "separate dining area despite compact footprint",
+    "dedicated laundry room rather than closet",
+    "multiple closets throughout"
+  ],
+  "dimensionNotes": "compact but well-proportioned rooms with living area taking largest allocation, bedrooms appropriately sized for ADU scale, efficient use of 44'-8\" x 26'-8\" footprint"
+}

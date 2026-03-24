@@ -1,0 +1,51 @@
+{
+  "planId": "oak",
+  "metadata": {
+    "id": "oak",
+    "source": "betterplace",
+    "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/oak/",
+    "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2024/04/Oak-650-SQ-FT-2-Bedroom-1-Bath-Floor-Plan-2.jpg",
+    "localImagePath": "oak.jpg",
+    "squareFootage": 650,
+    "bedrooms": 2,
+    "bathrooms": 1,
+    "stories": 1,
+    "style": "ADU",
+    "scrapedAt": "2025-12-10T17:16:26.983Z"
+  },
+  "roomCount": 9,
+  "roomTypes": [
+    "kitchen",
+    "bedroom",
+    "bathroom",
+    "living room",
+    "hall",
+    "closet",
+    "laundry"
+  ],
+  "layoutType": "traditional-separated",
+  "circulationPattern": "central-hall",
+  "entryType": "entry directly into central hall with immediate access to all main areas",
+  "kitchenLocation": "positioned in upper right corner with island layout, adjacent to living area",
+  "bedroomLayout": "split bedroom layout with bedrooms positioned on opposite sides of the unit for privacy",
+  "bathroomPlacement": "single shared hall bathroom centrally located between bedrooms",
+  "storageFeatures": [
+    "walk-in closet",
+    "bedroom closets",
+    "linen closet"
+  ],
+  "efficiencyNotes": [
+    "central hall eliminates wasted circulation space",
+    "kitchen island provides additional prep and storage",
+    "compact bathroom serves both bedrooms efficiently",
+    "washer/dryer unit integrated near hall",
+    "TV placement in hall serves multiple areas"
+  ],
+  "uniqueFeatures": [
+    "angled hall configuration creates interesting flow pattern",
+    "kitchen island in compact space maximizes function",
+    "TV mounted in hallway serves both living and circulation areas",
+    "refrigerator positioned separately from main kitchen run"
+  ],
+  "dimensionNotes": "overall dimensions 31'-0.5\" x 21'-3.5\", bedrooms are identically sized at 10' x 10', kitchen occupies 14' x portion of depth, efficient rectangular footprint maximizes usable space"
+}

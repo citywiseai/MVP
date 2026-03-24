@@ -1,0 +1,1696 @@
+{
+  "source": "betterplace",
+  "analyzedCount": 30,
+  "totalPlans": 30,
+  "analyzedAt": "2025-12-10T17:57:22.663Z",
+  "layoutTypes": {
+    "hybrid": 28,
+    "open-concept": 1,
+    "traditional-separated": 1
+  },
+  "circulationPatterns": {
+    "central-hall": 19,
+    "open-flow": 6,
+    "linear": 5
+  },
+  "commonFeatures": {
+    "built-in dishwasher and appliances in kitchen": 1,
+    "washer/dryer placement in central hall": 1,
+    "angled entry wall creates interesting geometry": 3,
+    "both bedrooms have equal size and amenities": 1,
+    "dishwasher and refrigerator positioned for efficient kitchen workflow": 1,
+    "stairs to potential loft/upper level": 1,
+    "washer/dryer centrally located for convenience": 1,
+    "bench seating area in bathroom": 1,
+    "kitchen island serves as room divider": 1,
+    "compact 500 sqft design maximizes functionality": 1,
+    "bedroom positioned for privacy from main living areas": 2,
+    "kitchen peninsula creates defined cooking zone while maintaining openness": 1,
+    "compact all-in-one bathroom with integrated laundry": 1,
+    "bedroom positioned for maximum privacy despite small footprint": 1,
+    "efficient rectangular footprint": 1,
+    "dedicated laundry room rather than closet": 4,
+    "each bedroom has generous walk-in closet": 1,
+    "pantry separate from kitchen for additional storage": 1,
+    "dining area centrally located for traffic flow": 1,
+    "large outdoor patio with dining furniture": 1,
+    "angled entry from patio creates interesting flow": 1,
+    "compact storage room doubles as laundry area": 1,
+    "kitchen positioned to overlook living area": 1,
+    "Walk-in closet in master bedroom unusual for 880 sqft unit": 1,
+    "Separate utility/laundry room rather than stacked in closet": 1,
+    "Two full bathrooms in compact footprint": 1,
+    "Kitchen island or peninsula for additional workspace": 1,
+    "integrated dining bench seating": 1,
+    "very compact 600 sqft layout": 1,
+    "single bedroom design despite listed as 3BR": 1,
+    "W/D placement in central circulation area": 1,
+    "L-shaped overall footprint": 1,
+    "central laundry room with washer/dryer placement": 1,
+    "walk-in closet accessed through W.I.C. label": 1,
+    "kitchen peninsula configuration": 1,
+    "4 bedrooms in compact 1192 sqft footprint": 1,
+    "washer/dryer centrally located between bedroom zones": 1,
+    "walk-in closet (W.I.C.) provides generous storage": 1,
+    "open concept public areas contrast with private bedroom wing": 1,
+    "integrated dining table in open concept area": 1,
+    "dishwasher and appliances efficiently arranged in kitchen": 1,
+    "dedicated laundry space despite compact footprint": 1,
+    "separate walk-in closet adjacent to bedroom": 1,
+    "dedicated laundry area with washer/dryer placement": 1,
+    "compact 25' x 16' footprint maximizes 400 sqft": 1,
+    "washer/dryer placement in central utility area": 1,
+    "refrigerator positioned at kitchen entrance": 1,
+    "dining area acts as transition between kitchen and living": 1,
+    "symmetrical bedroom placement": 1,
+    "angled wall transitions create visual interest and optimize space usage": 1,
+    "walk-in closet (W.I.C.) provides significant storage in small footprint": 1,
+    "separate pantry adds valuable kitchen storage": 1,
+    "dishwasher integrated into compact kitchen design": 1,
+    "dual TV locations in bedroom and living room": 1,
+    "primary bedroom positioned for privacy": 1,
+    "kitchen centrally located for easy access from all areas": 1,
+    "built-in storage spans width of living area": 1,
+    "compact 44'-3.5\" x 29'-1\" overall dimensions": 1,
+    "kitchen island provides additional counter space and storage": 1,
+    "split bedroom plan ensures privacy": 1,
+    "separate W.I.C. (walk-in closet) and W.C. (water closet) in master suite": 1,
+    "patio extends living space outdoors": 1,
+    "dining area positioned centrally for open feel": 1,
+    "washer/dryer placement in bathroom corridor": 1,
+    "both bedrooms have generous closet space": 1,
+    "angled wall between living and primary bedroom creates interesting geometry": 1,
+    "washer/dryer positioned between bathrooms for plumbing efficiency": 1,
+    "kitchen peninsula provides workspace and separation": 1,
+    "angled hall configuration creates interesting flow pattern": 1,
+    "kitchen island in compact space maximizes function": 1,
+    "TV mounted in hallway serves both living and circulation areas": 1,
+    "refrigerator positioned separately from main kitchen run": 1,
+    "washer/dryer placement in kitchen area": 1,
+    "angled wall creating visual separation between spaces": 1,
+    "bench seating in walk-in closet": 1,
+    "TV area designated in living room": 1,
+    "angled entry door creates interesting geometric flow": 1,
+    "compact but complete kitchen with full appliance suite including dishwasher": 1,
+    "central refrigerator placement between kitchen and dining": 1,
+    "angled entry hall creates interesting geometry": 1,
+    "dishwasher integrated into kitchen island/peninsula": 1,
+    "each bedroom has direct bathroom access": 1,
+    "fireplace as focal point between living and dining": 1,
+    "TV niche built into fireplace wall": 1,
+    "washer/dryer placement adjacent to kitchen": 1,
+    "each bedroom has private bathroom access": 1,
+    "pantry positioned for kitchen efficiency": 1,
+    "covered patio extends living space outdoors": 1,
+    "kitchen island with seating for casual dining": 1,
+    "fireplace focal point in living area": 1,
+    "multiple closets in each bedroom": 1,
+    "kitchen island with dishwasher and cooktop": 1,
+    "separate pantry room": 1,
+    "bench seating in bathroom": 1,
+    "angled entry transitions": 1,
+    "dedicated laundry room despite compact size": 1,
+    "kitchen island in small ADU layout": 1,
+    "generous pantry space": 1,
+    "bedroom positioned away from kitchen noise": 1,
+    "dedicated laundry room with washer/dryer placement": 1,
+    "kitchen peninsula design maximizes work surface": 1,
+    "central spine circulation pattern": 1,
+    "multiple closet access points": 1,
+    "angled walls create visual interest and optimize space usage": 1,
+    "integrated laundry with kitchen area": 1,
+    "three bedrooms in compact 749 sqft footprint": 1,
+    "two full bathrooms for a small ADU": 1,
+    "angled walls create visual interest and space definition": 1,
+    "separate dining area despite compact footprint": 1,
+    "multiple closets throughout": 1,
+    "kitchen peninsula creates natural separation without walls": 1,
+    "bathroom positioned to serve as buffer between public and private spaces": 1,
+    "dedicated laundry area despite small footprint": 1,
+    "separate pantry storage": 1
+  },
+  "analyses": [
+    {
+      "planId": "alder",
+      "metadata": {
+        "id": "alder",
+        "source": "betterplace",
+        "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/alder/",
+        "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2024/04/Alder-800-SQ-FT-2-Bedroom-2-Bath-Floor-Plan-2.jpg",
+        "localImagePath": "alder.jpg",
+        "squareFootage": 800,
+        "bedrooms": 2,
+        "bathrooms": 2,
+        "stories": 1,
+        "style": "ADU",
+        "scrapedAt": "2025-12-10T17:15:30.151Z"
+      },
+      "roomCount": 10,
+      "roomTypes": [
+        "kitchen",
+        "bedroom",
+        "bathroom",
+        "living room",
+        "dining room",
+        "pantry",
+        "closet",
+        "entry",
+        "laundry"
+      ],
+      "layoutType": "hybrid",
+      "circulationPattern": "central-hall",
+      "entryType": "defined entry foyer connecting to open living area",
+      "kitchenLocation": "northwest corner, open to dining and living areas with pantry adjacent",
+      "bedroomLayout": "split bedroom layout with bedrooms on opposite ends of unit",
+      "bathroomPlacement": "two full bathrooms - one ensuite with right bedroom, one shared hall bath accessible from living area",
+      "storageFeatures": [
+        "pantry",
+        "walk-in closets in both bedrooms",
+        "laundry area"
+      ],
+      "efficiencyNotes": [
+        "galley kitchen maximizes counter and storage space",
+        "back-to-back bathrooms share plumbing wall",
+        "open living/dining/kitchen reduces circulation space",
+        "central laundry location serves both bedrooms",
+        "compact entry transitions efficiently to main living space"
+      ],
+      "uniqueFeatures": [
+        "built-in dishwasher and appliances in kitchen",
+        "washer/dryer placement in central hall",
+        "angled entry wall creates interesting geometry",
+        "both bedrooms have equal size and amenities"
+      ],
+      "dimensionNotes": "overall dimensions 30'-11\" x 25'-10\", bedrooms are identically sized at 9'-6\" wide, central circulation area is 5'-0\" wide, compact but well-proportioned rooms throughout"
+    },
+    {
+      "planId": "almond",
+      "metadata": {
+        "id": "almond",
+        "source": "betterplace",
+        "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/almond/",
+        "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2025/04/Almond-700-SQ-FT-2-Bedroom-1-Bath-Floor-Plan-2.jpg",
+        "localImagePath": "almond.jpg",
+        "squareFootage": 700,
+        "bedrooms": 2,
+        "bathrooms": 1,
+        "stories": 1,
+        "style": "ADU",
+        "scrapedAt": "2025-12-10T17:16:08.937Z"
+      },
+      "roomCount": 8,
+      "roomTypes": [
+        "kitchen",
+        "bedroom",
+        "bathroom",
+        "living room",
+        "dining room",
+        "laundry",
+        "closet",
+        "pantry"
+      ],
+      "layoutType": "hybrid",
+      "circulationPattern": "central-hall",
+      "entryType": "direct entry into open living area with immediate access to kitchen and dining",
+      "kitchenLocation": "northwest corner with pantry adjacent, opens to dining area creating L-shaped cooking/eating zone",
+      "bedroomLayout": "split bedroom layout with bedrooms on opposite sides of central bathroom/utility core",
+      "bathroomPlacement": "single centrally located bathroom shared between both bedrooms, accessible from hallway",
+      "storageFeatures": [
+        "walk-in closets in both bedrooms",
+        "pantry adjacent to kitchen",
+        "laundry/utility room"
+      ],
+      "efficiencyNotes": [
+        "galley-style kitchen maximizes counter space",
+        "central utility core consolidates plumbing",
+        "open living/dining reduces circulation space",
+        "split bedroom layout provides privacy",
+        "pantry and laundry rooms maximize storage"
+      ],
+      "uniqueFeatures": [
+        "dishwasher and refrigerator positioned for efficient kitchen workflow",
+        "stairs to potential loft/upper level",
+        "washer/dryer centrally located for convenience",
+        "bench seating area in bathroom"
+      ],
+      "dimensionNotes": "compact 32'5\" x 25'6\" footprint with efficient 12'3\" deep bedrooms, generous 22'9\" open living area, and well-proportioned kitchen work triangle"
+    },
+    {
+      "planId": "aspen",
+      "metadata": {
+        "id": "aspen",
+        "source": "betterplace",
+        "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/aspen/",
+        "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2024/04/Aspen-500-SQ-FT-1-Bedroom-1-Bath-Floor-Plan-2.jpg",
+        "localImagePath": "aspen.jpg",
+        "squareFootage": 500,
+        "bedrooms": 1,
+        "bathrooms": 1,
+        "stories": 1,
+        "style": "ADU",
+        "scrapedAt": "2025-12-10T17:17:10.065Z"
+      },
+      "roomCount": 7,
+      "roomTypes": [
+        "kitchen",
+        "bedroom",
+        "bathroom",
+        "living room",
+        "hall",
+        "closet",
+        "laundry"
+      ],
+      "layoutType": "hybrid",
+      "circulationPattern": "central-hall",
+      "entryType": "direct entry into living room with central hallway access",
+      "kitchenLocation": "rear right corner with island, adjacent to living room",
+      "bedroomLayout": "single bedroom positioned in upper right quadrant with direct hall access",
+      "bathroomPlacement": "single full bathroom in upper left area accessed via central hallway",
+      "storageFeatures": [
+        "bedroom closet",
+        "hall closet"
+      ],
+      "efficiencyNotes": [
+        "central hallway minimizes circulation space",
+        "kitchen island provides additional counter and storage",
+        "compact bathroom with standard fixtures",
+        "washer/dryer positioned near bathroom for plumbing efficiency",
+        "open living area maximizes perceived space"
+      ],
+      "uniqueFeatures": [
+        "angled entry wall creates interesting geometry",
+        "kitchen island serves as room divider",
+        "compact 500 sqft design maximizes functionality",
+        "bedroom positioned for privacy from main living areas"
+      ],
+      "dimensionNotes": "Overall footprint is 22'-5\" x 22'-6\" creating an efficient square layout with well-proportioned rooms despite the compact size"
+    },
+    {
+      "planId": "balsa",
+      "metadata": {
+        "id": "balsa",
+        "source": "betterplace",
+        "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/balsa/",
+        "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2024/04/Balsa-400-SQ-FT-1-Bedroom-1-Bath-Floor-Plan-2.jpg",
+        "localImagePath": "balsa.jpg",
+        "squareFootage": 400,
+        "bedrooms": 1,
+        "bathrooms": 1,
+        "stories": 1,
+        "style": "ADU",
+        "scrapedAt": "2025-12-10T17:17:48.707Z"
+      },
+      "roomCount": 6,
+      "roomTypes": [
+        "kitchen",
+        "living room",
+        "bedroom",
+        "bathroom",
+        "closet",
+        "laundry"
+      ],
+      "layoutType": "open-concept",
+      "circulationPattern": "open-flow",
+      "entryType": "direct entry into open kitchen/living area",
+      "kitchenLocation": "front left corner, open to living area with peninsula/island configuration",
+      "bedroomLayout": "single bedroom positioned in rear right corner for privacy",
+      "bathroomPlacement": "centrally located between bedroom and living areas for efficient access",
+      "storageFeatures": [
+        "bedroom closet",
+        "kitchen pantry area"
+      ],
+      "efficiencyNotes": [
+        "open kitchen-living layout maximizes perceived space",
+        "compact galley-style kitchen with peninsula",
+        "centralized bathroom serves entire unit",
+        "washer/dryer integrated into bathroom area",
+        "minimal circulation space due to open plan"
+      ],
+      "uniqueFeatures": [
+        "kitchen peninsula creates defined cooking zone while maintaining openness",
+        "compact all-in-one bathroom with integrated laundry",
+        "bedroom positioned for maximum privacy despite small footprint",
+        "efficient rectangular footprint"
+      ],
+      "dimensionNotes": "25' x 16' overall footprint maximizes usable space within compact ADU constraints, bedroom approximately 10'4\" wide, open living/kitchen area spans full width for spacious feel"
+    },
+    {
+      "planId": "banyan",
+      "metadata": {
+        "id": "banyan",
+        "source": "betterplace",
+        "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/banyan/",
+        "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2025/03/Banyan-1000-SQ-FT-3-Bedroom-2-Bath-Floor-Plan-2.jpg",
+        "localImagePath": "banyan.jpg",
+        "squareFootage": 1000,
+        "bedrooms": 3,
+        "bathrooms": 2,
+        "stories": 1,
+        "style": "ADU",
+        "scrapedAt": "2025-12-10T17:14:44.089Z"
+      },
+      "roomCount": 11,
+      "roomTypes": [
+        "kitchen",
+        "bedroom",
+        "bathroom",
+        "living room",
+        "dining room",
+        "laundry",
+        "closet",
+        "pantry"
+      ],
+      "layoutType": "hybrid",
+      "circulationPattern": "central-hall",
+      "entryType": "direct entry into open living/dining area from bottom of plan",
+      "kitchenLocation": "right side of unit, adjacent to dining area with pantry access",
+      "bedroomLayout": "split bedroom layout with master bedroom on right side and two secondary bedrooms on left side",
+      "bathroomPlacement": "ensuite bathroom for master bedroom, shared hall bathroom serving two secondary bedrooms",
+      "storageFeatures": [
+        "walk-in closets in all bedrooms",
+        "pantry adjacent to kitchen",
+        "laundry room with washer/dryer"
+      ],
+      "efficiencyNotes": [
+        "back-to-back bathroom plumbing shares wall",
+        "central laundry room efficiently placed",
+        "open kitchen-dining connection saves space",
+        "compact galley-style kitchen layout",
+        "built-in storage maximizes space"
+      ],
+      "uniqueFeatures": [
+        "dedicated laundry room rather than closet",
+        "each bedroom has generous walk-in closet",
+        "pantry separate from kitchen for additional storage",
+        "dining area centrally located for traffic flow"
+      ],
+      "dimensionNotes": "40x25 foot rectangular footprint with bedrooms appearing similarly sized, open living/dining area takes up significant central space, efficient corridor minimizes wasted circulation area"
+    },
+    {
+      "planId": "birch",
+      "metadata": {
+        "id": "birch",
+        "source": "betterplace",
+        "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/birch/",
+        "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2024/04/Birch-400-SQ-FT-Studio-1-Bath-Floor-Plan-2.jpg",
+        "localImagePath": "birch.jpg",
+        "squareFootage": 400,
+        "bathrooms": 1,
+        "stories": 1,
+        "style": "ADU",
+        "scrapedAt": "2025-12-10T17:17:35.040Z"
+      },
+      "roomCount": 7,
+      "roomTypes": [
+        "kitchen",
+        "bedroom",
+        "bathroom",
+        "living room",
+        "closet",
+        "storage/laundry",
+        "patio"
+      ],
+      "layoutType": "hybrid",
+      "circulationPattern": "open-flow",
+      "entryType": "direct entry into open living area from patio",
+      "kitchenLocation": "upper right corner, adjacent to living area with kitchen island",
+      "bedroomLayout": "single bedroom positioned in lower left corner for privacy",
+      "bathroomPlacement": "centrally located full bathroom with adjacent closet and storage room",
+      "storageFeatures": [
+        "walk-in closet",
+        "storage room with W/D",
+        "kitchen pantry area"
+      ],
+      "efficiencyNotes": [
+        "open living/kitchen concept maximizes space",
+        "centralized plumbing with bathroom and laundry adjacent",
+        "kitchen island provides additional counter and storage",
+        "patio extends living space outdoors"
+      ],
+      "uniqueFeatures": [
+        "large outdoor patio with dining furniture",
+        "angled entry from patio creates interesting flow",
+        "compact storage room doubles as laundry area",
+        "kitchen positioned to overlook living area"
+      ],
+      "dimensionNotes": "20' x 20' main structure with 6'-8\" patio extension, bedroom approximately 10'-7\" x 10'-7\", open living area takes up majority of remaining space"
+    },
+    {
+      "planId": "cherry",
+      "metadata": {
+        "id": "cherry",
+        "source": "betterplace",
+        "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/cherry/",
+        "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2025/04/Cherry-880-SQ-FT-2-Bedroom-2-Bath-Floor-Plan-2.jpg",
+        "localImagePath": "cherry.jpg",
+        "squareFootage": 880,
+        "bedrooms": 2,
+        "bathrooms": 2,
+        "stories": 1,
+        "style": "ADU",
+        "scrapedAt": "2025-12-10T17:15:16.458Z"
+      },
+      "roomCount": 10,
+      "roomTypes": [
+        "living room",
+        "dining room",
+        "kitchen",
+        "bedroom",
+        "bathroom",
+        "walk-in closet",
+        "closet",
+        "laundry"
+      ],
+      "layoutType": "hybrid",
+      "circulationPattern": "central-hall",
+      "entryType": "Direct entry into living area with immediate access to main circulation space",
+      "kitchenLocation": "Central location adjacent to dining area and main circulation corridor, with easy access to living space",
+      "bedroomLayout": "Split bedroom layout with bedrooms on opposite sides of the unit for privacy",
+      "bathroomPlacement": "Two full bathrooms strategically placed - one ensuite with master bedroom, one shared hall bath accessible from main living areas",
+      "storageFeatures": [
+        "walk-in closet",
+        "multiple bedroom closets",
+        "kitchen pantry area",
+        "utility closet"
+      ],
+      "efficiencyNotes": [
+        "Back-to-back bathroom placement shares plumbing",
+        "Galley-style kitchen maximizes counter and storage space",
+        "Central hallway minimizes wasted circulation space",
+        "Compact laundry area integrated near kitchen",
+        "Open dining/living connection saves space"
+      ],
+      "uniqueFeatures": [
+        "Walk-in closet in master bedroom unusual for 880 sqft unit",
+        "Separate utility/laundry room rather than stacked in closet",
+        "Two full bathrooms in compact footprint",
+        "Kitchen island or peninsula for additional workspace"
+      ],
+      "dimensionNotes": "Rectangular footprint approximately 41'5\" x 26'7\", bedrooms are generously sized for the overall square footage, kitchen appears galley-style but with good counter space, bathrooms are compact but functional"
+    },
+    {
+      "planId": "chestnut",
+      "metadata": {
+        "id": "chestnut",
+        "source": "betterplace",
+        "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/chestnut/",
+        "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2025/04/Chestnut-600-SQ-FT-3-Bedroom-2-Bath-Floor-Plan-2.jpg",
+        "localImagePath": "chestnut.jpg",
+        "squareFootage": 600,
+        "bedrooms": 3,
+        "bathrooms": 2,
+        "stories": 1,
+        "style": "ADU",
+        "scrapedAt": "2025-12-10T17:16:35.401Z"
+      },
+      "roomCount": 8,
+      "roomTypes": [
+        "kitchen",
+        "bedroom",
+        "bathroom",
+        "living room",
+        "dining room",
+        "laundry",
+        "closet",
+        "built-in storage"
+      ],
+      "layoutType": "hybrid",
+      "circulationPattern": "central-hall",
+      "entryType": "direct entry into open kitchen/dining area with immediate access to main living spaces",
+      "kitchenLocation": "upper center of unit, open to dining area, with built-in bench seating and appliances along wall",
+      "bedroomLayout": "single bedroom located in lower left corner, separated from main living areas",
+      "bathroomPlacement": "single full bathroom in upper left corner, adjacent to kitchen with efficient plumbing grouping",
+      "storageFeatures": [
+        "closet adjacent to bedroom",
+        "built-in bench with storage",
+        "laundry area with W/D"
+      ],
+      "efficiencyNotes": [
+        "galley-style kitchen maximizes counter space",
+        "bathroom and kitchen share plumbing wall",
+        "open kitchen/dining/living reduces circulation space",
+        "built-in seating eliminates need for additional furniture",
+        "compact laundry area centrally located"
+      ],
+      "uniqueFeatures": [
+        "integrated dining bench seating",
+        "very compact 600 sqft layout",
+        "single bedroom design despite listed as 3BR",
+        "W/D placement in central circulation area"
+      ],
+      "dimensionNotes": "Overall dimensions 27'-11.25\" x 21'-10\", bedroom approximately 10'x10', very compact bathroom, open living area maximizes perceived space despite small footprint"
+    },
+    {
+      "planId": "cottonwood",
+      "metadata": {
+        "id": "cottonwood",
+        "source": "betterplace",
+        "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/cottonwood/",
+        "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2025/04/Cottonwood-1000-SQ-FT-2-Bedroom-2-Bath-Floor-Plan-2.jpg",
+        "localImagePath": "cottonwood.jpg",
+        "squareFootage": 1000,
+        "bedrooms": 2,
+        "bathrooms": 2,
+        "stories": 1,
+        "style": "ADU",
+        "scrapedAt": "2025-12-10T17:14:37.672Z"
+      },
+      "roomCount": 10,
+      "roomTypes": [
+        "kitchen",
+        "bedroom",
+        "bathroom",
+        "living room",
+        "dining room",
+        "laundry",
+        "walk-in closet",
+        "pantry",
+        "closet"
+      ],
+      "layoutType": "hybrid",
+      "circulationPattern": "linear",
+      "entryType": "direct entry into open living/dining area",
+      "kitchenLocation": "northeast corner, adjacent to dining room and pantry",
+      "bedroomLayout": "split bedroom layout with one bedroom on west side and one on north side",
+      "bathroomPlacement": "back-to-back bathrooms sharing plumbing wall, one ensuite with north bedroom, one accessible from main living area",
+      "storageFeatures": [
+        "walk-in closet",
+        "pantry",
+        "bedroom closets",
+        "laundry room"
+      ],
+      "efficiencyNotes": [
+        "back-to-back bathrooms share plumbing",
+        "compact galley-style kitchen maximizes counter space",
+        "central laundry room efficiently placed",
+        "pantry provides dedicated food storage",
+        "open living/dining reduces circulation space"
+      ],
+      "uniqueFeatures": [
+        "L-shaped overall footprint",
+        "central laundry room with washer/dryer placement",
+        "walk-in closet accessed through W.I.C. label",
+        "kitchen peninsula configuration"
+      ],
+      "dimensionNotes": "49'-0\" total width with efficient 28'-0\" depth for main body, compact 1000 sqft footprint maximizes room count while maintaining livability"
+    },
+    {
+      "planId": "cypress",
+      "metadata": {
+        "id": "cypress",
+        "source": "betterplace",
+        "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/cypress/",
+        "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2024/04/Cypress-1192-SQ-FT-4-Bedroom-2-Bath-Floor-Plan-2.jpg",
+        "localImagePath": "cypress.jpg",
+        "squareFootage": 1192,
+        "bedrooms": 4,
+        "bathrooms": 2,
+        "stories": 1,
+        "style": "ADU",
+        "scrapedAt": "2025-12-10T17:14:10.324Z"
+      },
+      "roomCount": 11,
+      "roomTypes": [
+        "kitchen",
+        "dining",
+        "living room",
+        "bedroom",
+        "bathroom",
+        "walk-in closet",
+        "closet",
+        "laundry"
+      ],
+      "layoutType": "hybrid",
+      "circulationPattern": "central-hall",
+      "entryType": "direct entry into open living area with central hallway access to private zones",
+      "kitchenLocation": "front left corner with adjacent dining area, open to living room",
+      "bedroomLayout": "split bedroom layout with 3 bedrooms clustered on bottom and 1 bedroom separated on top right",
+      "bathroomPlacement": "back-to-back bathrooms sharing plumbing wall - one full bath centrally located, one full bath serving bedroom zone",
+      "storageFeatures": [
+        "walk-in closet",
+        "multiple bedroom closets",
+        "kitchen pantry",
+        "laundry area"
+      ],
+      "efficiencyNotes": [
+        "back-to-back bathrooms share plumbing",
+        "open kitchen-dining-living reduces circulation space",
+        "galley-style kitchen maximizes counter space",
+        "central hallway minimizes wasted corridor space",
+        "laundry integrated with storage area"
+      ],
+      "uniqueFeatures": [
+        "4 bedrooms in compact 1192 sqft footprint",
+        "washer/dryer centrally located between bedroom zones",
+        "walk-in closet (W.I.C.) provides generous storage",
+        "open concept public areas contrast with private bedroom wing"
+      ],
+      "dimensionNotes": "compact bedrooms averaging 9'-10' width, efficient use of 38'-6\" x 31'-0\" footprint, generous living area relative to bedroom sizes, bathrooms are compact but functional"
+    },
+    {
+      "planId": "elm",
+      "metadata": {
+        "id": "elm",
+        "source": "betterplace",
+        "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/elm/",
+        "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2024/04/Elm-400-SQ-FT-1-Bedroom-1-Bath-Floor-Plan-2.jpg",
+        "localImagePath": "elm.jpg",
+        "squareFootage": 400,
+        "bedrooms": 1,
+        "bathrooms": 1,
+        "stories": 1,
+        "style": "ADU",
+        "scrapedAt": "2025-12-10T17:17:42.210Z"
+      },
+      "roomCount": 7,
+      "roomTypes": [
+        "kitchen",
+        "bedroom",
+        "bathroom",
+        "living room",
+        "dining room",
+        "closet",
+        "laundry"
+      ],
+      "layoutType": "hybrid",
+      "circulationPattern": "open-flow",
+      "entryType": "direct entry into open living/dining area with no formal foyer",
+      "kitchenLocation": "upper right corner with adjacency to dining area and refrigerator alcove",
+      "bedroomLayout": "single bedroom positioned in upper left corner for privacy",
+      "bathroomPlacement": "centrally located full bathroom with direct access from main living area",
+      "storageFeatures": [
+        "walk-in closet",
+        "refrigerator alcove"
+      ],
+      "efficiencyNotes": [
+        "open living/dining area maximizes perceived space",
+        "compact galley-style kitchen with integrated appliances",
+        "washer/dryer placement near bathroom for shared plumbing",
+        "bedroom separated but adjacent to main living space",
+        "minimal hallway space reduces circulation waste"
+      ],
+      "uniqueFeatures": [
+        "integrated dining table in open concept area",
+        "dishwasher and appliances efficiently arranged in kitchen",
+        "angled entry wall creates interesting geometry",
+        "dedicated laundry space despite compact footprint"
+      ],
+      "dimensionNotes": "20'x20' square footprint efficiently divided with bedroom taking approximately 8'-6\" width, kitchen/dining occupying 10'-2.5\" section, and bathroom positioned centrally for optimal access from all areas"
+    },
+    {
+      "planId": "fir",
+      "metadata": {
+        "id": "fir",
+        "source": "betterplace",
+        "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/fir/",
+        "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2025/04/Fir-400-SQ-FT-1-Bedroom-1-Bath-Floor-Plan-2.jpg",
+        "localImagePath": "fir.jpg",
+        "squareFootage": 400,
+        "bedrooms": 1,
+        "bathrooms": 1,
+        "stories": 1,
+        "style": "ADU",
+        "scrapedAt": "2025-12-10T17:17:28.583Z"
+      },
+      "roomCount": 7,
+      "roomTypes": [
+        "living room",
+        "kitchen",
+        "bedroom",
+        "bathroom",
+        "walk-in closet",
+        "laundry",
+        "closet"
+      ],
+      "layoutType": "hybrid",
+      "circulationPattern": "linear",
+      "entryType": "direct entry into living room with no formal foyer",
+      "kitchenLocation": "left side of unit, adjacent to living room in open arrangement",
+      "bedroomLayout": "single bedroom located on right side, separated from main living areas",
+      "bathroomPlacement": "centrally located hall bathroom serving bedroom and main living areas",
+      "storageFeatures": [
+        "walk-in closet",
+        "closet",
+        "laundry area"
+      ],
+      "efficiencyNotes": [
+        "galley kitchen maximizes counter and storage space",
+        "combined laundry and utility area saves space",
+        "open living/kitchen reduces circulation space",
+        "compact bathroom with efficient fixture placement",
+        "walk-in closet provides generous storage for small unit"
+      ],
+      "uniqueFeatures": [
+        "separate walk-in closet adjacent to bedroom",
+        "dedicated laundry area with washer/dryer placement",
+        "compact 25' x 16' footprint maximizes 400 sqft"
+      ],
+      "dimensionNotes": "Overall dimensions 25'-0\" x 16'-0\", bedroom appears approximately 10' x 9', kitchen is galley style approximately 3' wide, living area takes advantage of open concept to feel larger than actual square footage"
+    },
+    {
+      "planId": "hickory",
+      "metadata": {
+        "id": "hickory",
+        "source": "betterplace",
+        "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/hickory/",
+        "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2024/04/Hickory-749-SQ-FT-2-Bedroom-1-Bath-Floor-Plan-2.jpg",
+        "localImagePath": "hickory.jpg",
+        "squareFootage": 749,
+        "bedrooms": 2,
+        "bathrooms": 1,
+        "stories": 1,
+        "style": "ADU",
+        "scrapedAt": "2025-12-10T17:16:02.666Z"
+      },
+      "roomCount": 7,
+      "roomTypes": [
+        "kitchen",
+        "bedroom",
+        "bathroom",
+        "living room",
+        "dining room",
+        "laundry",
+        "linen closet"
+      ],
+      "layoutType": "hybrid",
+      "circulationPattern": "central-hall",
+      "entryType": "direct entry into open living area with central circulation spine",
+      "kitchenLocation": "left side of unit, adjacent to dining area and living space, galley-style layout",
+      "bedroomLayout": "split bedroom layout with bedrooms on opposite ends of the unit for privacy",
+      "bathroomPlacement": "single centrally located bathroom accessible from main circulation area, serves both bedrooms",
+      "storageFeatures": [
+        "linen closet",
+        "bedroom closets",
+        "kitchen pantry area"
+      ],
+      "efficiencyNotes": [
+        "galley kitchen maximizes counter and storage space",
+        "central utility core groups bathroom, laundry and linen storage",
+        "open living/dining reduces circulation space",
+        "split bedroom layout provides privacy",
+        "compact bathroom with efficient fixture placement"
+      ],
+      "uniqueFeatures": [
+        "washer/dryer placement in central utility area",
+        "refrigerator positioned at kitchen entrance",
+        "dining area acts as transition between kitchen and living",
+        "symmetrical bedroom placement"
+      ],
+      "dimensionNotes": "32' x 23'-4' overall footprint efficiently accommodates all spaces; bedrooms appear adequately sized for furniture placement; open living area feels spacious despite compact footprint; kitchen galley is narrow but functional"
+    },
+    {
+      "planId": "katsura",
+      "metadata": {
+        "id": "katsura",
+        "source": "betterplace",
+        "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/katsura/",
+        "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2025/04/Katsura-500-SQ-FT-1-Bedroom-1-Bath-Floor-Plan-2.jpg",
+        "localImagePath": "katsura.jpg",
+        "squareFootage": 500,
+        "bedrooms": 1,
+        "bathrooms": 1,
+        "stories": 1,
+        "style": "ADU",
+        "scrapedAt": "2025-12-10T17:17:03.506Z"
+      },
+      "roomCount": 9,
+      "roomTypes": [
+        "bedroom",
+        "bathroom",
+        "walk-in closet",
+        "kitchen",
+        "living room",
+        "dining room",
+        "pantry",
+        "laundry",
+        "closet"
+      ],
+      "layoutType": "hybrid",
+      "circulationPattern": "open-flow",
+      "entryType": "direct entry into open living space with immediate access to all areas",
+      "kitchenLocation": "centrally located along right wall, adjacent to dining area and with easy access to living room",
+      "bedroomLayout": "single bedroom positioned in upper right corner for privacy, separated from main living areas",
+      "bathroomPlacement": "single full bathroom in upper left corner with adjacent walk-in closet, convenient to bedroom but also accessible from main living areas",
+      "storageFeatures": [
+        "walk-in closet",
+        "pantry",
+        "coat closet",
+        "laundry area with washer/dryer"
+      ],
+      "efficiencyNotes": [
+        "open concept living/dining/kitchen maximizes perceived space",
+        "compact galley-style kitchen layout",
+        "centralized plumbing with bathroom and laundry in same area",
+        "angled transitions between spaces optimize flow",
+        "multi-functional dining area serves as transition between kitchen and living"
+      ],
+      "dimensionNotes": "compact 22'-5\" square footprint with efficient room proportions - bedroom approximately 10'x11', open living area spans most of the lower portion, bathroom and closet areas appropriately sized for function without excess space",
+      "uniqueFeatures": [
+        "angled wall transitions create visual interest and optimize space usage",
+        "walk-in closet (W.I.C.) provides significant storage in small footprint",
+        "separate pantry adds valuable kitchen storage",
+        "dishwasher integrated into compact kitchen design",
+        "dual TV locations in bedroom and living room"
+      ],
+      "circulationEfficiency": "minimal hallway space with most circulation through functional areas, maximizing usable square footage"
+    },
+    {
+      "planId": "mahogany",
+      "metadata": {
+        "id": "mahogany",
+        "source": "betterplace",
+        "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/mahogany/",
+        "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2024/04/Mahogany-1200-SQ-FT-3-Bedroom-2-Bath-Floor-Plan-4.jpg",
+        "localImagePath": "mahogany.jpg",
+        "squareFootage": 1200,
+        "bedrooms": 3,
+        "bathrooms": 2,
+        "stories": 1,
+        "style": "ADU",
+        "scrapedAt": "2025-12-10T17:14:03.167Z"
+      },
+      "roomCount": 10,
+      "roomTypes": [
+        "bedroom",
+        "bathroom",
+        "living room",
+        "kitchen",
+        "dining room",
+        "hall",
+        "walk-in closet",
+        "built-in storage",
+        "laundry area"
+      ],
+      "layoutType": "hybrid",
+      "circulationPattern": "central-hall",
+      "entryType": "Entry appears to be into living area with central hall access to bedroom wing",
+      "kitchenLocation": "Central location with adjacency to dining area and living room, galley-style layout",
+      "bedroomLayout": "split bedroom layout with primary bedroom separated from two secondary bedrooms clustered together",
+      "bathroomPlacement": "back-to-back bathrooms share plumbing wall - one ensuite with primary bedroom, one hall bath serving secondary bedrooms",
+      "storageFeatures": [
+        "walk-in closet",
+        "built-in storage",
+        "multiple bedroom closets",
+        "laundry area with washer/dryer"
+      ],
+      "efficiencyNotes": [
+        "back-to-back bathrooms share plumbing",
+        "galley kitchen maximizes counter space",
+        "central hall minimizes circulation waste",
+        "built-in storage integrated into living area",
+        "compact rectangular footprint"
+      ],
+      "uniqueFeatures": [
+        "primary bedroom positioned for privacy",
+        "kitchen centrally located for easy access from all areas",
+        "built-in storage spans width of living area",
+        "compact 44'-3.5\" x 29'-1\" overall dimensions"
+      ],
+      "dimensionNotes": "Efficient rectangular plan with primary bedroom (13'-1.25\" wide) taking full depth, secondary bedrooms are modest but functional, living area is generous for the overall footprint, galley kitchen is narrow but well-planned"
+    },
+    {
+      "planId": "mangrove",
+      "metadata": {
+        "id": "mangrove",
+        "source": "betterplace",
+        "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/mangrove/",
+        "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2025/04/Mangrove-1000-SQ-FT-2-Bedroom-2-Bath-Floor-Plan-2.jpg",
+        "localImagePath": "mangrove.jpg",
+        "squareFootage": 1000,
+        "bedrooms": 2,
+        "bathrooms": 2,
+        "stories": 1,
+        "style": "ADU",
+        "scrapedAt": "2025-12-10T17:14:31.032Z"
+      },
+      "roomCount": 9,
+      "roomTypes": [
+        "kitchen",
+        "bedroom",
+        "bathroom",
+        "living room",
+        "dining room",
+        "laundry",
+        "closet",
+        "walk-in closet",
+        "pantry"
+      ],
+      "layoutType": "hybrid",
+      "circulationPattern": "central-hall",
+      "entryType": "direct entry into central living space with immediate access to all zones",
+      "kitchenLocation": "central-north position, open to dining area, adjacent to laundry and pantry",
+      "bedroomLayout": "split bedroom layout with master on right side and secondary bedroom on left side for privacy",
+      "bathroomPlacement": "ensuite bathroom in master bedroom, shared hall bathroom accessible from main living area and secondary bedroom",
+      "storageFeatures": [
+        "walk-in closet",
+        "pantry",
+        "standard bedroom closet",
+        "laundry room"
+      ],
+      "efficiencyNotes": [
+        "open kitchen-dining concept maximizes central space",
+        "back-to-back plumbing between bathrooms reduces costs",
+        "laundry room positioned near kitchen for utility efficiency",
+        "pantry adjacent to kitchen optimizes food storage",
+        "walk-in closet in master maximizes bedroom floor space"
+      ],
+      "uniqueFeatures": [
+        "kitchen island provides additional counter space and storage",
+        "split bedroom plan ensures privacy",
+        "dedicated laundry room rather than closet",
+        "separate W.I.C. (walk-in closet) and W.C. (water closet) in master suite"
+      ],
+      "dimensionNotes": "rectangular footprint approximately 41'2\" x 28'2\" maximizes interior space, bedrooms appear well-proportioned, central living area creates spacious feel despite 1000 sqft constraint"
+    },
+    {
+      "planId": "maple",
+      "metadata": {
+        "id": "maple",
+        "source": "betterplace",
+        "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/maple/",
+        "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2024/04/Maple-800-SQ-FT-2-Bedroom-2-Bath-Floor-Plan-2.jpg",
+        "localImagePath": "maple.jpg",
+        "squareFootage": 800,
+        "bedrooms": 2,
+        "bathrooms": 2,
+        "stories": 1,
+        "style": "ADU",
+        "scrapedAt": "2025-12-10T17:15:37.362Z"
+      },
+      "roomCount": 9,
+      "roomTypes": [
+        "kitchen",
+        "bedroom",
+        "bathroom",
+        "living room",
+        "dining room",
+        "laundry",
+        "closet",
+        "patio"
+      ],
+      "layoutType": "hybrid",
+      "circulationPattern": "central-hall",
+      "entryType": "direct entry into main living space with central hallway access",
+      "kitchenLocation": "upper left corner with galley layout, adjacent to dining area",
+      "bedroomLayout": "split bedroom layout with bedrooms on opposite sides of the unit",
+      "bathroomPlacement": "back-to-back bathrooms in central core, one ensuite-style for upper bedroom, one accessible from hallway",
+      "storageFeatures": [
+        "walk-in closets in both bedrooms",
+        "laundry closet",
+        "kitchen pantry area"
+      ],
+      "efficiencyNotes": [
+        "galley kitchen maximizes counter and storage space",
+        "back-to-back bathrooms share plumbing wall",
+        "central hallway minimizes circulation space",
+        "laundry integrated into bathroom area",
+        "closets positioned along interior walls"
+      ],
+      "uniqueFeatures": [
+        "patio extends living space outdoors",
+        "dining area positioned centrally for open feel",
+        "washer/dryer placement in bathroom corridor",
+        "both bedrooms have generous closet space"
+      ],
+      "dimensionNotes": "rectangular 34'-10¾\" x 24'-0\" footprint efficiently uses space with well-proportioned rooms, bedrooms appear adequately sized for furniture placement, kitchen galley approximately 13'-9\" long providing ample work space"
+    },
+    {
+      "planId": "mesquite",
+      "metadata": {
+        "id": "mesquite",
+        "source": "betterplace",
+        "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/mesquite/",
+        "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2024/04/Mesquite-880-SQ-FT-3-Bedroom-2-Bath-Floor-Plan-2.jpg",
+        "localImagePath": "mesquite.jpg",
+        "squareFootage": 880,
+        "bedrooms": 3,
+        "bathrooms": 2,
+        "stories": 1,
+        "style": "ADU",
+        "scrapedAt": "2025-12-10T17:15:23.608Z"
+      },
+      "roomCount": 9,
+      "roomTypes": [
+        "kitchen",
+        "bedroom",
+        "bathroom",
+        "living room",
+        "dining room",
+        "primary bedroom",
+        "closet",
+        "laundry"
+      ],
+      "layoutType": "hybrid",
+      "circulationPattern": "central-hall",
+      "entryType": "direct entry into open living area",
+      "kitchenLocation": "front left corner, adjacent to dining and living areas",
+      "bedroomLayout": "split bedroom layout with primary bedroom on right side, secondary bedroom on left side",
+      "bathroomPlacement": "ensuite bathroom for primary bedroom, shared hall bathroom centrally located near secondary bedroom",
+      "storageFeatures": [
+        "walk-in closet in primary bedroom",
+        "closet in secondary bedroom"
+      ],
+      "efficiencyNotes": [
+        "galley kitchen saves space",
+        "back-to-back bathrooms share plumbing",
+        "open living/dining/kitchen reduces circulation space",
+        "compact laundry area with washer/dryer placement",
+        "efficient use of corner spaces"
+      ],
+      "uniqueFeatures": [
+        "angled wall between living and primary bedroom creates interesting geometry",
+        "washer/dryer positioned between bathrooms for plumbing efficiency",
+        "kitchen peninsula provides workspace and separation"
+      ],
+      "dimensionNotes": "compact 880 sqft layout maximizes bedroom sizes while maintaining functional common areas, primary bedroom approximately 10'x11', secondary bedroom approximately 9'x11', open living area spans most of the front portion"
+    },
+    {
+      "planId": "oak",
+      "metadata": {
+        "id": "oak",
+        "source": "betterplace",
+        "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/oak/",
+        "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2024/04/Oak-650-SQ-FT-2-Bedroom-1-Bath-Floor-Plan-2.jpg",
+        "localImagePath": "oak.jpg",
+        "squareFootage": 650,
+        "bedrooms": 2,
+        "bathrooms": 1,
+        "stories": 1,
+        "style": "ADU",
+        "scrapedAt": "2025-12-10T17:16:26.983Z"
+      },
+      "roomCount": 9,
+      "roomTypes": [
+        "kitchen",
+        "bedroom",
+        "bathroom",
+        "living room",
+        "hall",
+        "closet",
+        "laundry"
+      ],
+      "layoutType": "traditional-separated",
+      "circulationPattern": "central-hall",
+      "entryType": "entry directly into central hall with immediate access to all main areas",
+      "kitchenLocation": "positioned in upper right corner with island layout, adjacent to living area",
+      "bedroomLayout": "split bedroom layout with bedrooms positioned on opposite sides of the unit for privacy",
+      "bathroomPlacement": "single shared hall bathroom centrally located between bedrooms",
+      "storageFeatures": [
+        "walk-in closet",
+        "bedroom closets",
+        "linen closet"
+      ],
+      "efficiencyNotes": [
+        "central hall eliminates wasted circulation space",
+        "kitchen island provides additional prep and storage",
+        "compact bathroom serves both bedrooms efficiently",
+        "washer/dryer unit integrated near hall",
+        "TV placement in hall serves multiple areas"
+      ],
+      "uniqueFeatures": [
+        "angled hall configuration creates interesting flow pattern",
+        "kitchen island in compact space maximizes function",
+        "TV mounted in hallway serves both living and circulation areas",
+        "refrigerator positioned separately from main kitchen run"
+      ],
+      "dimensionNotes": "overall dimensions 31'-0.5\" x 21'-3.5\", bedrooms are identically sized at 10' x 10', kitchen occupies 14' x portion of depth, efficient rectangular footprint maximizes usable space"
+    },
+    {
+      "planId": "olive",
+      "metadata": {
+        "id": "olive",
+        "source": "betterplace",
+        "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/olive/",
+        "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2025/04/Olive-500-SQ-FT-1-Bedroom-1-Bath-Floor-Plan-2.jpg",
+        "localImagePath": "olive.jpg",
+        "squareFootage": 500,
+        "bedrooms": 1,
+        "bathrooms": 1,
+        "stories": 1,
+        "style": "ADU",
+        "scrapedAt": "2025-12-10T17:16:56.723Z"
+      },
+      "roomCount": 8,
+      "roomTypes": [
+        "living room",
+        "dining room",
+        "kitchen",
+        "bedroom",
+        "bathroom",
+        "laundry",
+        "closet",
+        "walk-in closet"
+      ],
+      "layoutType": "hybrid",
+      "circulationPattern": "linear",
+      "entryType": "direct entry into living area without formal foyer",
+      "kitchenLocation": "southwest corner with galley layout, adjacent to dining area",
+      "bedroomLayout": "single bedroom positioned in northeast corner for privacy",
+      "bathroomPlacement": "centrally located shared bathroom with adjacent walk-in closet",
+      "storageFeatures": [
+        "walk-in closet",
+        "bedroom closet",
+        "laundry area"
+      ],
+      "efficiencyNotes": [
+        "galley kitchen maximizes counter and storage space",
+        "open living/dining area reduces circulation space",
+        "central bathroom serves entire unit efficiently",
+        "laundry integrated into kitchen area",
+        "walk-in closet provides substantial storage in compact footprint"
+      ],
+      "uniqueFeatures": [
+        "washer/dryer placement in kitchen area",
+        "angled wall creating visual separation between spaces",
+        "bench seating in walk-in closet",
+        "TV area designated in living room"
+      ],
+      "dimensionNotes": "compact 28'-1\" x 17'-9\" footprint with bedroom taking up significant portion (10'-0\" width), kitchen kept narrow but functional, bathroom efficiently sized at approximately 6'-0\" x 8'-0\""
+    },
+    {
+      "planId": "palm",
+      "metadata": {
+        "id": "palm",
+        "source": "betterplace",
+        "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/palm/",
+        "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2025/04/Palm-500-SQ-FT-1-Bedroom-1-Bath-Floor-Plan-2.jpg",
+        "localImagePath": "palm.jpg",
+        "squareFootage": 500,
+        "bedrooms": 1,
+        "bathrooms": 1,
+        "stories": 1,
+        "style": "ADU",
+        "scrapedAt": "2025-12-10T17:16:49.045Z"
+      },
+      "roomCount": 7,
+      "roomTypes": [
+        "bedroom",
+        "bathroom",
+        "kitchen",
+        "dining room",
+        "living room",
+        "laundry",
+        "closet"
+      ],
+      "layoutType": "hybrid",
+      "circulationPattern": "linear",
+      "entryType": "direct entry into living space without dedicated foyer",
+      "kitchenLocation": "northwest corner with linear galley layout, adjacent to dining area",
+      "bedroomLayout": "single bedroom located in northeast corner, separated from main living area",
+      "bathroomPlacement": "single full bathroom centrally located between bedroom and living areas",
+      "storageFeatures": [
+        "walk-in closet adjacent to bedroom",
+        "closet in living area"
+      ],
+      "efficiencyNotes": [
+        "galley kitchen maximizes counter and storage space",
+        "linear circulation minimizes wasted hallway space",
+        "open dining/living area creates sense of spaciousness",
+        "centralized plumbing location reduces costs",
+        "washer/dryer integrated into kitchen area"
+      ],
+      "uniqueFeatures": [
+        "angled entry door creates interesting geometric flow",
+        "bedroom positioned for privacy from main living areas",
+        "compact but complete kitchen with full appliance suite including dishwasher"
+      ],
+      "dimensionNotes": "20' x 23' overall footprint efficiently utilizes every square foot with appropriately scaled rooms for ADU living - bedroom is generous for the unit size, kitchen is compact but functional, and open living/dining maximizes perceived space"
+    },
+    {
+      "planId": "pine",
+      "metadata": {
+        "id": "pine",
+        "source": "betterplace",
+        "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/pine/",
+        "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2024/04/Pine-900-SQ-FT-2-Bedroom-2-Bath-Floor-Plan-2.jpg",
+        "localImagePath": "pine.jpg",
+        "squareFootage": 900,
+        "bedrooms": 2,
+        "bathrooms": 2,
+        "stories": 1,
+        "style": "ADU",
+        "scrapedAt": "2025-12-10T17:15:10.100Z"
+      },
+      "roomCount": 9,
+      "roomTypes": [
+        "kitchen",
+        "living room",
+        "dining room",
+        "bedroom",
+        "bathroom",
+        "laundry",
+        "closet",
+        "walk-in closet",
+        "hall"
+      ],
+      "layoutType": "hybrid",
+      "circulationPattern": "central-hall",
+      "entryType": "direct entry into central hall with immediate access to main living areas",
+      "kitchenLocation": "centrally located with open connection to dining area, adjacent to living room",
+      "bedroomLayout": "split bedroom layout with one bedroom in upper left and one bedroom in lower left, separated by main living areas",
+      "bathroomPlacement": "two full bathrooms - one ensuite to upper bedroom, one shared hall bath accessible from lower bedroom area",
+      "storageFeatures": [
+        "walk-in closet",
+        "standard closet",
+        "laundry room with washer/dryer"
+      ],
+      "efficiencyNotes": [
+        "open kitchen-dining-living area maximizes perceived space",
+        "central hall minimizes circulation space",
+        "back-to-back plumbing between bathrooms and laundry saves costs",
+        "compact galley-style kitchen efficient for small space",
+        "laundry room doubles as utility storage"
+      ],
+      "uniqueFeatures": [
+        "central refrigerator placement between kitchen and dining",
+        "angled entry hall creates interesting geometry",
+        "dishwasher integrated into kitchen island/peninsula",
+        "each bedroom has direct bathroom access"
+      ],
+      "dimensionNotes": "40'-1\" x 28'-0\" overall footprint with bedrooms approximately 11'-2\" x 8'-0\" and 10'-4\" x 5'-0\", open living area spans approximately 23' width creating spacious feel despite compact square footage"
+    },
+    {
+      "planId": "sandalwood",
+      "metadata": {
+        "id": "sandalwood",
+        "source": "betterplace",
+        "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/sandalwood/",
+        "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2025/04/Sandalwood-900-SQ-FT-2-Bedroom-2-Bath-Floor-Plan-2.jpg",
+        "localImagePath": "sandalwood.jpg",
+        "squareFootage": 900,
+        "bedrooms": 2,
+        "bathrooms": 2,
+        "stories": 1,
+        "style": "ADU",
+        "scrapedAt": "2025-12-10T17:15:03.542Z"
+      },
+      "roomCount": 10,
+      "roomTypes": [
+        "kitchen",
+        "dining room",
+        "living room",
+        "bedroom",
+        "bathroom",
+        "hall",
+        "closet",
+        "pantry",
+        "laundry area"
+      ],
+      "layoutType": "hybrid",
+      "circulationPattern": "central-hall",
+      "entryType": "direct entry into open living area with fireplace focal point",
+      "kitchenLocation": "northwest corner with galley layout, adjacent to dining area and pantry",
+      "bedroomLayout": "split bedroom layout with bedrooms on opposite sides of central hall",
+      "bathroomPlacement": "back-to-back bathrooms sharing plumbing wall, each bedroom has ensuite access",
+      "storageFeatures": [
+        "walk-in closet",
+        "pantry",
+        "multiple bedroom closets",
+        "hall closet"
+      ],
+      "efficiencyNotes": [
+        "galley kitchen maximizes counter space",
+        "back-to-back bathrooms share plumbing",
+        "open living/dining reduces circulation space",
+        "compact laundry integrated with kitchen area",
+        "central hall minimizes wasted corridor space"
+      ],
+      "uniqueFeatures": [
+        "fireplace as focal point between living and dining",
+        "TV niche built into fireplace wall",
+        "washer/dryer placement adjacent to kitchen",
+        "each bedroom has private bathroom access",
+        "pantry positioned for kitchen efficiency"
+      ],
+      "dimensionNotes": "rectangular footprint approximately 35' x 26', bedrooms are adequately sized for small home, open living area maximizes perceived space, kitchen galley layout fits well in allocated width"
+    },
+    {
+      "planId": "sequoia",
+      "metadata": {
+        "id": "sequoia",
+        "source": "betterplace",
+        "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/sequoia/",
+        "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2024/04/Sequoia-1020-SQ-FT-3-Bedroom-2-Bath-Floor-Plan-2.jpg",
+        "localImagePath": "sequoia.jpg",
+        "squareFootage": 1020,
+        "bedrooms": 3,
+        "bathrooms": 2,
+        "stories": 1,
+        "style": "ADU",
+        "scrapedAt": "2025-12-10T17:14:23.927Z"
+      },
+      "roomCount": 11,
+      "roomTypes": [
+        "bedroom",
+        "bathroom",
+        "kitchen",
+        "dining room",
+        "living room",
+        "patio",
+        "closet",
+        "laundry"
+      ],
+      "layoutType": "hybrid",
+      "circulationPattern": "central-hall",
+      "entryType": "direct entry into central hallway with immediate access to main living areas",
+      "kitchenLocation": "centrally located with open connection to dining area and living room, featuring island layout",
+      "bedroomLayout": "split bedroom layout with master bedroom separated on right side and two secondary bedrooms clustered on left side",
+      "bathroomPlacement": "back-to-back bathrooms in center of plan sharing plumbing wall, with hall bath serving two bedrooms and ensuite serving master bedroom area",
+      "storageFeatures": [
+        "multiple bedroom closets",
+        "kitchen pantry",
+        "utility closet"
+      ],
+      "efficiencyNotes": [
+        "back-to-back bathrooms share plumbing",
+        "open kitchen-dining-living concept maximizes perceived space",
+        "central hallway minimizes circulation space",
+        "compact laundry area with stacked washer/dryer",
+        "island kitchen provides additional counter and storage"
+      ],
+      "uniqueFeatures": [
+        "covered patio extends living space outdoors",
+        "kitchen island with seating for casual dining",
+        "fireplace focal point in living area",
+        "multiple closets in each bedroom"
+      ],
+      "dimensionNotes": "rectangular 42'-3\" x 23'-11½\" footprint efficiently maximizes interior space; bedrooms are adequately sized for ADU standards; open living areas create spacious feel despite compact footprint"
+    },
+    {
+      "planId": "sumac",
+      "metadata": {
+        "id": "sumac",
+        "source": "betterplace",
+        "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/sumac/",
+        "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2025/04/Sumac-985-SQ-FT-2-Bedroom-2-Bath-Floor-Plan-2.jpg",
+        "localImagePath": "sumac.jpg",
+        "squareFootage": 985,
+        "bedrooms": 2,
+        "bathrooms": 2,
+        "stories": 1,
+        "style": "ADU",
+        "scrapedAt": "2025-12-10T17:14:50.563Z"
+      },
+      "roomCount": 10,
+      "roomTypes": [
+        "kitchen",
+        "bedroom",
+        "bathroom",
+        "living room",
+        "laundry",
+        "closet",
+        "pantry",
+        "walk-in closet"
+      ],
+      "layoutType": "hybrid",
+      "circulationPattern": "central-hall",
+      "entryType": "direct entry into central living area with immediate access to all zones",
+      "kitchenLocation": "centrally located at top of plan, adjacent to living area and pantry, with island configuration",
+      "bedroomLayout": "split bedroom layout with bedrooms on opposite sides of the living area for privacy",
+      "bathroomPlacement": "ensuite bathroom for right bedroom, shared hall bathroom near left bedroom, both positioned efficiently near plumbing core",
+      "storageFeatures": [
+        "walk-in closet",
+        "pantry",
+        "regular closet",
+        "laundry room with washer/dryer"
+      ],
+      "efficiencyNotes": [
+        "back-to-back bathrooms share plumbing wall",
+        "central kitchen with island maximizes counter space",
+        "open living area reduces circulation space",
+        "compact laundry room with stacked or side-by-side units",
+        "pantry adjacent to kitchen for efficient food storage"
+      ],
+      "uniqueFeatures": [
+        "kitchen island with dishwasher and cooktop",
+        "separate pantry room",
+        "bench seating in bathroom",
+        "angled entry transitions",
+        "dedicated laundry room despite compact size"
+      ],
+      "dimensionNotes": "overall dimensions of 37'-9\" x 26'-2\" create efficient rectangular footprint; left bedroom appears smaller at 11'-2\" width, central living/kitchen zone is 15'-8\" wide providing good proportion, right bedroom at 10'-10\" width is moderately sized"
+    },
+    {
+      "planId": "sycamore",
+      "metadata": {
+        "id": "sycamore",
+        "source": "betterplace",
+        "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/sycamore/",
+        "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2025/04/Sycamore-749-SQ-FT-1-Bedroom-1-Bath-Floor-Plan-2.jpg",
+        "localImagePath": "sycamore.jpg",
+        "squareFootage": 749,
+        "bedrooms": 1,
+        "bathrooms": 1,
+        "stories": 1,
+        "style": "ADU",
+        "scrapedAt": "2025-12-10T17:15:43.934Z"
+      },
+      "roomCount": 8,
+      "roomTypes": [
+        "kitchen",
+        "bedroom",
+        "bathroom",
+        "living room",
+        "dining room",
+        "laundry",
+        "closet",
+        "pantry"
+      ],
+      "layoutType": "hybrid",
+      "circulationPattern": "open-flow",
+      "entryType": "direct entry into open living/dining area",
+      "kitchenLocation": "northeast corner with island, adjacent to dining and pantry",
+      "bedroomLayout": "single bedroom positioned in northwest corner for privacy",
+      "bathroomPlacement": "centrally located full bathroom accessible from main living area",
+      "storageFeatures": [
+        "walk-in closet",
+        "pantry",
+        "laundry room with W/D"
+      ],
+      "efficiencyNotes": [
+        "open kitchen-dining-living maximizes perceived space",
+        "kitchen island provides additional storage and workspace",
+        "centralized plumbing with bathroom and laundry adjacent",
+        "pantry provides dedicated food storage",
+        "bedroom separated from living areas for privacy"
+      ],
+      "uniqueFeatures": [
+        "kitchen island in small ADU layout",
+        "dedicated laundry room rather than closet",
+        "generous pantry space",
+        "bedroom positioned away from kitchen noise"
+      ],
+      "dimensionNotes": "compact 749 sqft efficiently organized with 32'-2.5\" x 28'-3\" footprint, bedroom approximately 11'-6\" x 13'-6\", kitchen island maximizes counter space in limited area"
+    },
+    {
+      "planId": "tamarind",
+      "metadata": {
+        "id": "tamarind",
+        "source": "betterplace",
+        "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/tamarind/",
+        "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2025/04/Tamarind-950-SQ-FT-2-Bedroom-2-Bath-Floor-Plan-2.jpg",
+        "localImagePath": "tamarind.jpg",
+        "squareFootage": 950,
+        "bedrooms": 2,
+        "bathrooms": 2,
+        "stories": 1,
+        "style": "ADU",
+        "scrapedAt": "2025-12-10T17:14:57.116Z"
+      },
+      "roomCount": 11,
+      "roomTypes": [
+        "kitchen",
+        "bedroom",
+        "bathroom",
+        "living room",
+        "dining room",
+        "laundry",
+        "closet",
+        "entry",
+        "pantry"
+      ],
+      "layoutType": "hybrid",
+      "circulationPattern": "central-hall",
+      "entryType": "dedicated entry foyer with direct access to main circulation spine",
+      "kitchenLocation": "positioned centrally along north wall, adjacent to dining area with kitchen island/peninsula configuration",
+      "bedroomLayout": "split bedroom layout with bedrooms positioned at opposite ends of the unit for privacy",
+      "bathroomPlacement": "back-to-back bathroom configuration sharing plumbing wall, one accessible from hallway, one serving as ensuite",
+      "storageFeatures": [
+        "walk-in closets in both bedrooms",
+        "linen closet",
+        "pantry storage",
+        "laundry room with built-in storage"
+      ],
+      "efficiencyNotes": [
+        "back-to-back bathrooms share plumbing to reduce costs",
+        "central hallway minimizes circulation space",
+        "kitchen peninsula provides extra counter space and storage",
+        "dedicated laundry room consolidates utilities",
+        "open dining-living connection maximizes perceived space"
+      ],
+      "uniqueFeatures": [
+        "dedicated laundry room with washer/dryer placement",
+        "kitchen peninsula design maximizes work surface",
+        "central spine circulation pattern",
+        "multiple closet access points"
+      ],
+      "dimensionNotes": "compact 42'6\" x 22'4\" footprint with efficiently sized rooms - bedrooms appear adequately sized for furniture placement, living area spans width of unit for spaciousness, kitchen work triangle optimized within galley-style layout"
+    },
+    {
+      "planId": "teak",
+      "metadata": {
+        "id": "teak",
+        "source": "betterplace",
+        "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/teak/",
+        "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2024/04/Teak-749-SQ-FT-3-Bedroom-2-Bath-Floor-Plan-2.jpg",
+        "localImagePath": "teak.jpg",
+        "squareFootage": 749,
+        "bedrooms": 3,
+        "bathrooms": 2,
+        "stories": 1,
+        "style": "ADU",
+        "scrapedAt": "2025-12-10T17:15:55.995Z"
+      },
+      "roomCount": 9,
+      "roomTypes": [
+        "bedroom",
+        "bathroom",
+        "kitchen",
+        "entry/living",
+        "walk-in closet",
+        "closet",
+        "laundry"
+      ],
+      "layoutType": "hybrid",
+      "circulationPattern": "linear",
+      "entryType": "direct entry into combined living/dining space with open concept to kitchen",
+      "kitchenLocation": "central location with open connection to entry/living area and access to laundry",
+      "bedroomLayout": "split bedroom layout with one bedroom on left side and two bedrooms on right side",
+      "bathroomPlacement": "two full bathrooms - one accessible from main living area, one shared between right-side bedrooms",
+      "storageFeatures": [
+        "walk-in closet",
+        "closet",
+        "laundry area"
+      ],
+      "efficiencyNotes": [
+        "galley-style kitchen maximizes counter and cabinet space",
+        "back-to-back bathroom placement shares plumbing",
+        "open entry/living/kitchen reduces circulation space",
+        "compact laundry integrated with kitchen area",
+        "strategic placement of closets for storage"
+      ],
+      "uniqueFeatures": [
+        "angled walls create visual interest and optimize space usage",
+        "integrated laundry with kitchen area",
+        "three bedrooms in compact 749 sqft footprint",
+        "two full bathrooms for a small ADU"
+      ],
+      "dimensionNotes": "overall dimensions 44'-0\" x 17'-0\", with bedrooms ranging from compact to moderate size, efficient use of every square foot with minimal hallway space"
+    },
+    {
+      "planId": "torrey-pine",
+      "metadata": {
+        "id": "torrey-pine",
+        "source": "betterplace",
+        "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/torrey-pine/",
+        "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2024/04/Torrey-Pine-1192-SQ-FT-3-Bedroom-2-Bath-Floor-Plan-2.jpg",
+        "localImagePath": "torrey-pine.jpg",
+        "squareFootage": 1192,
+        "bedrooms": 3,
+        "bathrooms": 2,
+        "stories": 1,
+        "style": "ADU",
+        "scrapedAt": "2025-12-10T17:14:17.346Z"
+      },
+      "roomCount": 10,
+      "roomTypes": [
+        "kitchen",
+        "bedroom",
+        "bathroom",
+        "living room",
+        "dining room",
+        "laundry",
+        "closet",
+        "pantry"
+      ],
+      "layoutType": "hybrid",
+      "circulationPattern": "central-hall",
+      "entryType": "direct entry into living area with central circulation spine",
+      "kitchenLocation": "northeast corner with adjacent dining area and pantry, connected to living space",
+      "bedroomLayout": "split bedroom layout with master bedroom separated on west side, two secondary bedrooms clustered on south side",
+      "bathroomPlacement": "back-to-back bathrooms sharing central plumbing wall - ensuite master bath and shared hall bathroom",
+      "storageFeatures": [
+        "walk-in closet",
+        "pantry",
+        "laundry room",
+        "bedroom closets"
+      ],
+      "efficiencyNotes": [
+        "back-to-back bathrooms share plumbing to reduce costs",
+        "galley kitchen maximizes counter space",
+        "central hallway minimizes circulation space",
+        "laundry room centrally located for efficiency",
+        "pantry provides additional kitchen storage"
+      ],
+      "uniqueFeatures": [
+        "angled walls create visual interest and space definition",
+        "separate dining area despite compact footprint",
+        "dedicated laundry room rather than closet",
+        "multiple closets throughout"
+      ],
+      "dimensionNotes": "compact but well-proportioned rooms with living area taking largest allocation, bedrooms appropriately sized for ADU scale, efficient use of 44'-8\" x 26'-8\" footprint"
+    },
+    {
+      "planId": "willow",
+      "metadata": {
+        "id": "willow",
+        "source": "betterplace",
+        "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/willow/",
+        "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2024/04/Willow-450-SQ-FT-1-Bedroom-1-Bath-Floor-Plan-2.jpg",
+        "localImagePath": "willow.jpg",
+        "squareFootage": 450,
+        "bedrooms": 1,
+        "bathrooms": 1,
+        "stories": 1,
+        "style": "ADU",
+        "scrapedAt": "2025-12-10T17:17:16.625Z"
+      },
+      "roomCount": 8,
+      "roomTypes": [
+        "bedroom",
+        "bathroom",
+        "kitchen",
+        "living room",
+        "dining room",
+        "closet",
+        "pantry",
+        "laundry"
+      ],
+      "layoutType": "hybrid",
+      "circulationPattern": "open-flow",
+      "entryType": "direct entry into open living/dining area",
+      "kitchenLocation": "northeast corner with peninsula layout, adjacent to dining area",
+      "bedroomLayout": "single bedroom positioned in southwest corner for privacy",
+      "bathroomPlacement": "centrally located full bathroom accessible from main living area",
+      "storageFeatures": [
+        "walk-in closet in bedroom",
+        "pantry in kitchen area",
+        "washer/dryer closet"
+      ],
+      "efficiencyNotes": [
+        "open concept living/dining maximizes perceived space",
+        "galley-style kitchen with peninsula saves space",
+        "centralized bathroom serves all areas",
+        "compact washer/dryer placement",
+        "bedroom closet maximizes storage in small footprint"
+      ],
+      "uniqueFeatures": [
+        "kitchen peninsula creates natural separation without walls",
+        "bathroom positioned to serve as buffer between public and private spaces",
+        "dedicated laundry area despite small footprint",
+        "separate pantry storage"
+      ],
+      "dimensionNotes": "bedroom is generous at approximately 11' x 9', open living/dining area spans majority of width for spacious feel, kitchen is compact but functional with adequate counter space"
+    }
+  ]
+}

@@ -39,6 +39,52 @@ model User {
   ownedProjects Project[]     @relation("ProjectOwner")
   uploadedFiles ProjectFile[] @relation("UploadedFiles")
   chatMessages  ChatMessage[]
+  vendors       Vendor[]      @relation("CreatedVendors")
+  siteAnalyses  SiteAnalysis[]
+}
+
+model SiteAnalysis {
+  id                  String    @id @default(cuid())
+  userId              String
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Basic property info
+  address             String
+  apn                 String?
+  latitude            Float?
+  longitude           Float?
+
+  // Property details
+  lotSizeSqFt         Float?
+  zoning              String?
+  zoningDescription   String?
+  existingBuildingSqFt Float?
+  existingStories     Int?
+
+  // Buildable area analysis
+  maxBuildableArea    Float?
+  currentCoverage     Float?
+  remainingArea       Float?
+
+  // Full analysis data (JSON)
+  zoningRules         Json?      // Full zoning regulations from database
+  assessorData        Json?      // Full assessor scraper response
+  feasibilityReport   Json?      // Complete AI analysis with projects, timeline, etc.
+
+  // Summary fields
+  overallAssessment   String?    // "GO", "PROCEED_WITH_CAUTION", "NO_GO"
+  status              String     @default("completed") // "completed", "failed"
+
+  // Link to project (when created from Scout)
+  projectId           String?
+  project             Project?   @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([status])
 }
 
 model Org {
@@ -87,6 +133,14 @@ model Project {
   tags              String[] @default([])
   archivedAt        DateTime?
 
+  // Budget tracking
+  budget            Float?
+  budgetNotes       String?
+  targetCompletionDate DateTime?
+
+  // Scope of work
+  scopeOfWork       String?
+
   owner           User                     @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   org             Org?                     @relation(fields: [orgId], references: [id], onDelete: Cascade)
   parcel          Parcel?                  @relation(fields: [parcelId], references: [id])
@@ -99,6 +153,9 @@ model Project {
   chatMessages    ChatMessage[]
   measurements    Measurement[]
   roadmap         ProjectRoadmap?
+  auditLogs       ProjectAuditLog[]
+  floorPlans      FloorPlan[]
+  siteAnalyses    SiteAnalysis[]
 }
 
 model Parcel {
@@ -139,12 +196,23 @@ model Task {
   projectId         String
   assignedTo        String?
   phaseId           String?
+  category          String?  // Tags like 'adu', 'pool', 'kitchen', etc. for cascade deletion
+  isActive          Boolean  @default(true) // For soft delete when scope is removed
   lastStatusChange  DateTime @default(now())
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
+  // Vendor & cost tracking
+  vendorId          String?
+  estimatedCost     Float?
+  actualCost        Float?
+  paymentStatus     String   @default("not_paid") // not_paid, partial, paid
+  acceptedBidId     String?  // The winning bid
+
   project Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
   phase   RoadmapPhase? @relation(fields: [phaseId], references: [id], onDelete: SetNull)
+  vendor  Vendor?       @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  bids    Bid[]
 }
 
 model Note {
@@ -169,6 +237,64 @@ model EngineeringRequirement {
   updatedAt  DateTime @updatedAt
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+// ============================================
+// VENDOR & BID MANAGEMENT
+// ============================================
+
+model Vendor {
+  id              String    @id @default(cuid())
+  name            String
+  company         String?
+  email           String?
+  phone           String?
+  trade           String    // Surveyor, Structural Engineer, Electrician, etc.
+  licenseNumber   String?
+  insuranceExpiry DateTime?
+  rating          Float?    // 1-5 stars average
+  notes           String?
+  isPreferred     Boolean   @default(false)
+  createdById     String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  createdBy User @relation("CreatedVendors", fields: [createdById], references: [id], onDelete: Cascade)
+  bids      Bid[]
+  tasks     Task[]
+
+  @@index([createdById])
+  @@index([trade])
+}
+
+model Bid {
+  id                      String    @id @default(cuid())
+  taskId                  String    // Requirement this bid is for
+  vendorId                String
+  amount                  Float
+  currency                String    @default("USD")
+  estimatedCompletionDate DateTime?
+  status                  String    @default("received") // requested, received, accepted, rejected
+  notes                   String?
+  attachmentUrl           String?
+  attachmentName          String?   // Display name for attachment
+  submittedAt             DateTime  @default(now())
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  // Payment tracking
+  paymentStatus           String    @default("unpaid") // unpaid, partial, paid
+  amountPaid              Float     @default(0)
+  paymentDate             DateTime?
+  paymentNotes            String?
+  invoiceNumber           String?
+
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([vendorId])
+  @@index([status])
 }
 
 model ProjectFile {
@@ -437,6 +563,26 @@ model Measurement {
   @@index([projectId])
 }
 
+model ProjectAuditLog {
+  id                   String   @id @default(cuid())
+  projectId            String
+  action               String   // "scope_added", "scope_removed", "field_updated", "project_created"
+  scopeItem            String?  // "pool", "adu", "kitchen", etc. for scope changes
+  details              Json?    // Additional context (field name, values, source, etc.)
+  requirementsAffected Int      @default(0)
+  tasksAffected        Int      @default(0)
+  previousValue        String?  // For field updates
+  newValue             String?  // For field updates
+  createdAt            DateTime @default(now())
+  createdBy            String?  // User email or ID
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([createdAt])
+  @@map("project_audit_logs")
+}
+
 // ============================================
 // PHOENIX ZONING REQUIREMENTS
 // ============================================
@@ -491,6 +637,33 @@ model PhoenixZoning {
   @@index([zoningDistrict])
 }
 
+model PermitTimeline {
+  id                 String   @id @default(cuid())
+  jurisdiction       String   // phoenix, chandler, scottsdale, mesa, gilbert, tempe
+  permitType         String   // residential_addition, adu, new_construction, remodel
+
+  // Timeline (business days)
+  planReviewDays     Int?
+  revisionDays       Int?
+  typicalRevisions   Int?
+  approvalDays       Int?
+  inspectionDays     Int?
+
+  // Fees
+  baseFee            Float?
+  feePerSqFt         Float?
+  expeditedAvailable Boolean  @default(false)
+  expeditedFee       Float?
+
+  notes              String?
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([jurisdiction, permitType])
+  @@index([jurisdiction])
+}
+
 // ============================================
 // PROJECT ROADMAP SYSTEM
 // ============================================
@@ -517,10 +690,19 @@ model RoadmapPhase {
   order       Int      // 1-6
   status      String   @default("waiting") // waiting, in_progress, completed
 
-  // Timing
-  estimatedDuration String?  // "2-4 weeks"
+  // Timing - Legacy
+  estimatedDuration String?  // "2-4 weeks" (display string)
   startDate         DateTime?
   endDate           DateTime?
+
+  // Timeline fields - Dynamic calculation
+  defaultDuration  Int?      // Default duration in business days
+  estimatedDays    Int?      // Current estimate (from vendor bids, permit data)
+  actualDays       Int?      // Actual days taken (calculated on completion)
+  targetDate       DateTime? // User's target completion date
+
+  // Dependencies
+  dependsOnPhaseId String?   // Phase that must complete before this starts
 
   // Services included in this phase
   services    Json     // Array of service objects
@@ -538,4 +720,36 @@ model RoadmapPhase {
   updatedAt   DateTime @updatedAt
 
   @@map("roadmap_phases")
+}
+
+// ============================================
+// FLOOR PLAN GENERATION
+// ============================================
+
+model FloorPlan {
+  id            String   @id @default(cuid())
+  projectId     String
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  name          String?
+  imageUrl      String
+  thumbnailUrl  String?
+
+  squareFootage Int?
+  bedrooms      Int?
+  bathrooms     Float?
+  stories       Int?
+  style         String?
+
+  prompt        String?
+  generatedBy   String?  // 'ai', 'uploaded'
+
+  status        String   @default("draft")  // draft, approved, final
+  version       Int      @default(1)
+  notes         String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([projectId])
 }

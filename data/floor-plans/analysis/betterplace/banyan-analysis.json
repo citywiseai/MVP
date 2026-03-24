@@ -1,0 +1,52 @@
+{
+  "planId": "banyan",
+  "metadata": {
+    "id": "banyan",
+    "source": "betterplace",
+    "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/banyan/",
+    "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2025/03/Banyan-1000-SQ-FT-3-Bedroom-2-Bath-Floor-Plan-2.jpg",
+    "localImagePath": "banyan.jpg",
+    "squareFootage": 1000,
+    "bedrooms": 3,
+    "bathrooms": 2,
+    "stories": 1,
+    "style": "ADU",
+    "scrapedAt": "2025-12-10T17:14:44.089Z"
+  },
+  "roomCount": 11,
+  "roomTypes": [
+    "kitchen",
+    "bedroom",
+    "bathroom",
+    "living room",
+    "dining room",
+    "laundry",
+    "closet",
+    "pantry"
+  ],
+  "layoutType": "hybrid",
+  "circulationPattern": "central-hall",
+  "entryType": "direct entry into open living/dining area from bottom of plan",
+  "kitchenLocation": "right side of unit, adjacent to dining area with pantry access",
+  "bedroomLayout": "split bedroom layout with master bedroom on right side and two secondary bedrooms on left side",
+  "bathroomPlacement": "ensuite bathroom for master bedroom, shared hall bathroom serving two secondary bedrooms",
+  "storageFeatures": [
+    "walk-in closets in all bedrooms",
+    "pantry adjacent to kitchen",
+    "laundry room with washer/dryer"
+  ],
+  "efficiencyNotes": [
+    "back-to-back bathroom plumbing shares wall",
+    "central laundry room efficiently placed",
+    "open kitchen-dining connection saves space",
+    "compact galley-style kitchen layout",
+    "built-in storage maximizes space"
+  ],
+  "uniqueFeatures": [
+    "dedicated laundry room rather than closet",
+    "each bedroom has generous walk-in closet",
+    "pantry separate from kitchen for additional storage",
+    "dining area centrally located for traffic flow"
+  ],
+  "dimensionNotes": "40x25 foot rectangular footprint with bedrooms appearing similarly sized, open living/dining area takes up significant central space, efficient corridor minimizes wasted circulation area"
+}

@@ -1,0 +1,53 @@
+{
+  "planId": "cherry",
+  "metadata": {
+    "id": "cherry",
+    "source": "betterplace",
+    "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/cherry/",
+    "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2025/04/Cherry-880-SQ-FT-2-Bedroom-2-Bath-Floor-Plan-2.jpg",
+    "localImagePath": "cherry.jpg",
+    "squareFootage": 880,
+    "bedrooms": 2,
+    "bathrooms": 2,
+    "stories": 1,
+    "style": "ADU",
+    "scrapedAt": "2025-12-10T17:15:16.458Z"
+  },
+  "roomCount": 10,
+  "roomTypes": [
+    "living room",
+    "dining room",
+    "kitchen",
+    "bedroom",
+    "bathroom",
+    "walk-in closet",
+    "closet",
+    "laundry"
+  ],
+  "layoutType": "hybrid",
+  "circulationPattern": "central-hall",
+  "entryType": "Direct entry into living area with immediate access to main circulation space",
+  "kitchenLocation": "Central location adjacent to dining area and main circulation corridor, with easy access to living space",
+  "bedroomLayout": "Split bedroom layout with bedrooms on opposite sides of the unit for privacy",
+  "bathroomPlacement": "Two full bathrooms strategically placed - one ensuite with master bedroom, one shared hall bath accessible from main living areas",
+  "storageFeatures": [
+    "walk-in closet",
+    "multiple bedroom closets",
+    "kitchen pantry area",
+    "utility closet"
+  ],
+  "efficiencyNotes": [
+    "Back-to-back bathroom placement shares plumbing",
+    "Galley-style kitchen maximizes counter and storage space",
+    "Central hallway minimizes wasted circulation space",
+    "Compact laundry area integrated near kitchen",
+    "Open dining/living connection saves space"
+  ],
+  "uniqueFeatures": [
+    "Walk-in closet in master bedroom unusual for 880 sqft unit",
+    "Separate utility/laundry room rather than stacked in closet",
+    "Two full bathrooms in compact footprint",
+    "Kitchen island or peninsula for additional workspace"
+  ],
+  "dimensionNotes": "Rectangular footprint approximately 41'5\" x 26'7\", bedrooms are generously sized for the overall square footage, kitchen appears galley-style but with good counter space, bathrooms are compact but functional"
+}

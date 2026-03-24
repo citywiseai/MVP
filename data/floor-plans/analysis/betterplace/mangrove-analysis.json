@@ -1,0 +1,54 @@
+{
+  "planId": "mangrove",
+  "metadata": {
+    "id": "mangrove",
+    "source": "betterplace",
+    "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/mangrove/",
+    "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2025/04/Mangrove-1000-SQ-FT-2-Bedroom-2-Bath-Floor-Plan-2.jpg",
+    "localImagePath": "mangrove.jpg",
+    "squareFootage": 1000,
+    "bedrooms": 2,
+    "bathrooms": 2,
+    "stories": 1,
+    "style": "ADU",
+    "scrapedAt": "2025-12-10T17:14:31.032Z"
+  },
+  "roomCount": 9,
+  "roomTypes": [
+    "kitchen",
+    "bedroom",
+    "bathroom",
+    "living room",
+    "dining room",
+    "laundry",
+    "closet",
+    "walk-in closet",
+    "pantry"
+  ],
+  "layoutType": "hybrid",
+  "circulationPattern": "central-hall",
+  "entryType": "direct entry into central living space with immediate access to all zones",
+  "kitchenLocation": "central-north position, open to dining area, adjacent to laundry and pantry",
+  "bedroomLayout": "split bedroom layout with master on right side and secondary bedroom on left side for privacy",
+  "bathroomPlacement": "ensuite bathroom in master bedroom, shared hall bathroom accessible from main living area and secondary bedroom",
+  "storageFeatures": [
+    "walk-in closet",
+    "pantry",
+    "standard bedroom closet",
+    "laundry room"
+  ],
+  "efficiencyNotes": [
+    "open kitchen-dining concept maximizes central space",
+    "back-to-back plumbing between bathrooms reduces costs",
+    "laundry room positioned near kitchen for utility efficiency",
+    "pantry adjacent to kitchen optimizes food storage",
+    "walk-in closet in master maximizes bedroom floor space"
+  ],
+  "uniqueFeatures": [
+    "kitchen island provides additional counter space and storage",
+    "split bedroom plan ensures privacy",
+    "dedicated laundry room rather than closet",
+    "separate W.I.C. (walk-in closet) and W.C. (water closet) in master suite"
+  ],
+  "dimensionNotes": "rectangular footprint approximately 41'2\" x 28'2\" maximizes interior space, bedrooms appear well-proportioned, central living area creates spacious feel despite 1000 sqft constraint"
+}

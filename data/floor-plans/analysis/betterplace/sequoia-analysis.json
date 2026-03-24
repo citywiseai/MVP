@@ -1,0 +1,52 @@
+{
+  "planId": "sequoia",
+  "metadata": {
+    "id": "sequoia",
+    "source": "betterplace",
+    "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/sequoia/",
+    "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2024/04/Sequoia-1020-SQ-FT-3-Bedroom-2-Bath-Floor-Plan-2.jpg",
+    "localImagePath": "sequoia.jpg",
+    "squareFootage": 1020,
+    "bedrooms": 3,
+    "bathrooms": 2,
+    "stories": 1,
+    "style": "ADU",
+    "scrapedAt": "2025-12-10T17:14:23.927Z"
+  },
+  "roomCount": 11,
+  "roomTypes": [
+    "bedroom",
+    "bathroom",
+    "kitchen",
+    "dining room",
+    "living room",
+    "patio",
+    "closet",
+    "laundry"
+  ],
+  "layoutType": "hybrid",
+  "circulationPattern": "central-hall",
+  "entryType": "direct entry into central hallway with immediate access to main living areas",
+  "kitchenLocation": "centrally located with open connection to dining area and living room, featuring island layout",
+  "bedroomLayout": "split bedroom layout with master bedroom separated on right side and two secondary bedrooms clustered on left side",
+  "bathroomPlacement": "back-to-back bathrooms in center of plan sharing plumbing wall, with hall bath serving two bedrooms and ensuite serving master bedroom area",
+  "storageFeatures": [
+    "multiple bedroom closets",
+    "kitchen pantry",
+    "utility closet"
+  ],
+  "efficiencyNotes": [
+    "back-to-back bathrooms share plumbing",
+    "open kitchen-dining-living concept maximizes perceived space",
+    "central hallway minimizes circulation space",
+    "compact laundry area with stacked washer/dryer",
+    "island kitchen provides additional counter and storage"
+  ],
+  "uniqueFeatures": [
+    "covered patio extends living space outdoors",
+    "kitchen island with seating for casual dining",
+    "fireplace focal point in living area",
+    "multiple closets in each bedroom"
+  ],
+  "dimensionNotes": "rectangular 42'-3\" x 23'-11½\" footprint efficiently maximizes interior space; bedrooms are adequately sized for ADU standards; open living areas create spacious feel despite compact footprint"
+}

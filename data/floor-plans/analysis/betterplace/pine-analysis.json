@@ -1,0 +1,53 @@
+{
+  "planId": "pine",
+  "metadata": {
+    "id": "pine",
+    "source": "betterplace",
+    "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/pine/",
+    "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2024/04/Pine-900-SQ-FT-2-Bedroom-2-Bath-Floor-Plan-2.jpg",
+    "localImagePath": "pine.jpg",
+    "squareFootage": 900,
+    "bedrooms": 2,
+    "bathrooms": 2,
+    "stories": 1,
+    "style": "ADU",
+    "scrapedAt": "2025-12-10T17:15:10.100Z"
+  },
+  "roomCount": 9,
+  "roomTypes": [
+    "kitchen",
+    "living room",
+    "dining room",
+    "bedroom",
+    "bathroom",
+    "laundry",
+    "closet",
+    "walk-in closet",
+    "hall"
+  ],
+  "layoutType": "hybrid",
+  "circulationPattern": "central-hall",
+  "entryType": "direct entry into central hall with immediate access to main living areas",
+  "kitchenLocation": "centrally located with open connection to dining area, adjacent to living room",
+  "bedroomLayout": "split bedroom layout with one bedroom in upper left and one bedroom in lower left, separated by main living areas",
+  "bathroomPlacement": "two full bathrooms - one ensuite to upper bedroom, one shared hall bath accessible from lower bedroom area",
+  "storageFeatures": [
+    "walk-in closet",
+    "standard closet",
+    "laundry room with washer/dryer"
+  ],
+  "efficiencyNotes": [
+    "open kitchen-dining-living area maximizes perceived space",
+    "central hall minimizes circulation space",
+    "back-to-back plumbing between bathrooms and laundry saves costs",
+    "compact galley-style kitchen efficient for small space",
+    "laundry room doubles as utility storage"
+  ],
+  "uniqueFeatures": [
+    "central refrigerator placement between kitchen and dining",
+    "angled entry hall creates interesting geometry",
+    "dishwasher integrated into kitchen island/peninsula",
+    "each bedroom has direct bathroom access"
+  ],
+  "dimensionNotes": "40'-1\" x 28'-0\" overall footprint with bedrooms approximately 11'-2\" x 8'-0\" and 10'-4\" x 5'-0\", open living area spans approximately 23' width creating spacious feel despite compact square footage"
+}

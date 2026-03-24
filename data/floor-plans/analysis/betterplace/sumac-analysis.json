@@ -1,0 +1,54 @@
+{
+  "planId": "sumac",
+  "metadata": {
+    "id": "sumac",
+    "source": "betterplace",
+    "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/sumac/",
+    "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2025/04/Sumac-985-SQ-FT-2-Bedroom-2-Bath-Floor-Plan-2.jpg",
+    "localImagePath": "sumac.jpg",
+    "squareFootage": 985,
+    "bedrooms": 2,
+    "bathrooms": 2,
+    "stories": 1,
+    "style": "ADU",
+    "scrapedAt": "2025-12-10T17:14:50.563Z"
+  },
+  "roomCount": 10,
+  "roomTypes": [
+    "kitchen",
+    "bedroom",
+    "bathroom",
+    "living room",
+    "laundry",
+    "closet",
+    "pantry",
+    "walk-in closet"
+  ],
+  "layoutType": "hybrid",
+  "circulationPattern": "central-hall",
+  "entryType": "direct entry into central living area with immediate access to all zones",
+  "kitchenLocation": "centrally located at top of plan, adjacent to living area and pantry, with island configuration",
+  "bedroomLayout": "split bedroom layout with bedrooms on opposite sides of the living area for privacy",
+  "bathroomPlacement": "ensuite bathroom for right bedroom, shared hall bathroom near left bedroom, both positioned efficiently near plumbing core",
+  "storageFeatures": [
+    "walk-in closet",
+    "pantry",
+    "regular closet",
+    "laundry room with washer/dryer"
+  ],
+  "efficiencyNotes": [
+    "back-to-back bathrooms share plumbing wall",
+    "central kitchen with island maximizes counter space",
+    "open living area reduces circulation space",
+    "compact laundry room with stacked or side-by-side units",
+    "pantry adjacent to kitchen for efficient food storage"
+  ],
+  "uniqueFeatures": [
+    "kitchen island with dishwasher and cooktop",
+    "separate pantry room",
+    "bench seating in bathroom",
+    "angled entry transitions",
+    "dedicated laundry room despite compact size"
+  ],
+  "dimensionNotes": "overall dimensions of 37'-9\" x 26'-2\" create efficient rectangular footprint; left bedroom appears smaller at 11'-2\" width, central living/kitchen zone is 15'-8\" wide providing good proportion, right bedroom at 10'-10\" width is moderately sized"
+}

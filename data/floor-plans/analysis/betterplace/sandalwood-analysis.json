@@ -1,0 +1,55 @@
+{
+  "planId": "sandalwood",
+  "metadata": {
+    "id": "sandalwood",
+    "source": "betterplace",
+    "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/sandalwood/",
+    "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2025/04/Sandalwood-900-SQ-FT-2-Bedroom-2-Bath-Floor-Plan-2.jpg",
+    "localImagePath": "sandalwood.jpg",
+    "squareFootage": 900,
+    "bedrooms": 2,
+    "bathrooms": 2,
+    "stories": 1,
+    "style": "ADU",
+    "scrapedAt": "2025-12-10T17:15:03.542Z"
+  },
+  "roomCount": 10,
+  "roomTypes": [
+    "kitchen",
+    "dining room",
+    "living room",
+    "bedroom",
+    "bathroom",
+    "hall",
+    "closet",
+    "pantry",
+    "laundry area"
+  ],
+  "layoutType": "hybrid",
+  "circulationPattern": "central-hall",
+  "entryType": "direct entry into open living area with fireplace focal point",
+  "kitchenLocation": "northwest corner with galley layout, adjacent to dining area and pantry",
+  "bedroomLayout": "split bedroom layout with bedrooms on opposite sides of central hall",
+  "bathroomPlacement": "back-to-back bathrooms sharing plumbing wall, each bedroom has ensuite access",
+  "storageFeatures": [
+    "walk-in closet",
+    "pantry",
+    "multiple bedroom closets",
+    "hall closet"
+  ],
+  "efficiencyNotes": [
+    "galley kitchen maximizes counter space",
+    "back-to-back bathrooms share plumbing",
+    "open living/dining reduces circulation space",
+    "compact laundry integrated with kitchen area",
+    "central hall minimizes wasted corridor space"
+  ],
+  "uniqueFeatures": [
+    "fireplace as focal point between living and dining",
+    "TV niche built into fireplace wall",
+    "washer/dryer placement adjacent to kitchen",
+    "each bedroom has private bathroom access",
+    "pantry positioned for kitchen efficiency"
+  ],
+  "dimensionNotes": "rectangular footprint approximately 35' x 26', bedrooms are adequately sized for small home, open living area maximizes perceived space, kitchen galley layout fits well in allocated width"
+}

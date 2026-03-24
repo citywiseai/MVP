@@ -29,6 +29,7 @@ interface ProjectChatWrapperProps {
 export default function ProjectChatWrapper({ projectId }: ProjectChatWrapperProps) {
   const [projectData, setProjectData] = useState<any>(null)
   const [requirements, setRequirements] = useState<EngineeringRequirement[]>([])
+  const [permitTimeline, setPermitTimeline] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
@@ -38,16 +39,84 @@ export default function ProjectChatWrapper({ projectId }: ProjectChatWrapperProp
         const res = await fetch(`/api/projects/${projectId}`)
         if (!res.ok) throw new Error('Failed to fetch project')
         const data = await res.json()
-        
+
+        // Fetch municipal requirements for this jurisdiction and zoning
+        let municipalRequirements: any[] = []
+        if (data.jurisdiction && data.parcel?.zoning) {
+          try {
+            const reqRes = await fetch(
+              `/api/municipal-requirements?jurisdiction=${encodeURIComponent(data.jurisdiction)}&zoning=${encodeURIComponent(data.parcel.zoning)}&projectType=${encodeURIComponent(data.projectType || '')}`
+            )
+            if (reqRes.ok) {
+              const reqData = await reqRes.json()
+              municipalRequirements = reqData.requirements || []
+            }
+          } catch (err) {
+            console.error('Error fetching municipal requirements:', err)
+          }
+        }
+
+        // Fetch Phoenix zoning rules (setbacks, height, ADU regulations)
+        // Now supports multiple jurisdictions (Phoenix, Chandler, Scottsdale, Mesa, Gilbert, Tempe)
+        let phoenixZoning: any = null
+        if (data.parcel?.zoning) {
+          try {
+            // Get jurisdiction from parcel, default to phoenix
+            const jurisdiction = data.parcel?.jurisdiction?.toLowerCase() || 'phoenix'
+            const zoningCode = data.parcel.zoning
+
+            console.log(`🏠 ProjectChatWrapper - Fetching zoning for ${jurisdiction} - ${zoningCode}`)
+
+            const zoningRes = await fetch(
+              `/api/phoenix-zoning?code=${encodeURIComponent(zoningCode)}&jurisdiction=${encodeURIComponent(jurisdiction)}`
+            )
+            console.log('🏠 ProjectChatWrapper - Zoning API status:', zoningRes.status)
+            if (zoningRes.ok) {
+              const zoningData = await zoningRes.json()
+              phoenixZoning = zoningData.zoning
+              console.log('🏠 ProjectChatWrapper - Zoning data:', phoenixZoning)
+            } else {
+              console.log('🏠 ProjectChatWrapper - Zoning API failed:', await zoningRes.text())
+            }
+          } catch (err) {
+            console.error('🏠 ProjectChatWrapper - Error fetching zoning:', err)
+          }
+        } else {
+          console.log('🏠 ProjectChatWrapper - No zoning code, skipping zoning fetch')
+        }
+
+        // Derive jurisdiction from parcel city
+        const jurisdiction = data.parcel?.city
+          ? data.parcel.city.charAt(0).toUpperCase() + data.parcel.city.slice(1)
+          : data.jurisdiction || 'Unknown'
+
         setProjectData({
           name: data.name,
           projectType: data.projectType,
           propertyType: data.propertyType,
-          jurisdiction: data.jurisdiction,
+          jurisdiction,
           fullAddress: data.fullAddress,
-          description: data.description
+          description: data.description,
+          squareFootage: data.squareFootage || 0,
+          scopeOfWork: data.scopeOfWork || data.description || '',
+          hillsideGrade: data.hillsideGrade || false,
+          onSeptic: data.onSeptic || false,
+          // Parcel data
+          parcel: data.parcel ? {
+            zoning: data.parcel.zoning,
+            lotSizeSqFt: data.parcel.lotSizeSqFt,
+            address: data.parcel.address,
+            city: data.parcel.city,
+            state: data.parcel.state,
+            county: data.parcel.county,
+            zoningRules: data.parcel.zoningRules || []
+          } : null,
+          // Municipal requirements from database
+          municipalRequirements,
+          // Phoenix zoning regulations (setbacks, height, ADU rules)
+          phoenixZoning
         })
-        
+
         setRequirements(data.engineeringReqs || [])
       } catch (error) {
         console.error('Error fetching project:', error)
@@ -60,6 +129,41 @@ export default function ProjectChatWrapper({ projectId }: ProjectChatWrapperProp
       fetchProjectData()
     }
   }, [projectId])
+
+  // Fetch permit timeline based on jurisdiction and project type
+  useEffect(() => {
+    const fetchPermitTimeline = async () => {
+      if (!projectData?.parcel?.city) return
+
+      const jurisdiction = projectData.parcel.city.toLowerCase()
+
+      // Determine permit type from project details
+      const scope = projectData.scopeOfWork?.toLowerCase() || projectData.description?.toLowerCase() || ''
+      const projectType = scope.includes('adu') ? 'adu'
+        : scope.includes('new construction') || scope.includes('new home') ? 'new_construction'
+        : scope.includes('remodel') ? 'remodel'
+        : 'residential_addition'
+
+      console.log(`⏱️ Fetching permit timeline: ${jurisdiction} - ${projectType}`)
+
+      try {
+        const response = await fetch(
+          `/api/permit-timeline?jurisdiction=${jurisdiction}&type=${projectType}`
+        )
+        if (response.ok) {
+          const data = await response.json()
+          console.log('⏱️ Permit timeline loaded:', data)
+          setPermitTimeline(data)
+        } else {
+          console.log('⏱️ No permit timeline found for:', jurisdiction, projectType)
+        }
+      } catch (error) {
+        console.error('Failed to fetch permit timeline:', error)
+      }
+    }
+
+    fetchPermitTimeline()
+  }, [projectData?.parcel?.city, projectData?.scopeOfWork, projectData?.description])
 
   const handleRequirementsUpdate = (newRequirements: EngineeringRequirement[]) => {
     setRequirements(newRequirements)
@@ -109,6 +213,7 @@ export default function ProjectChatWrapper({ projectId }: ProjectChatWrapperProp
         currentRequirements={requirements}
         onRequirementsUpdate={handleRequirementsUpdate}
         projectId={projectId}
+        permitTimeline={permitTimeline}
       />
     </div>
   )

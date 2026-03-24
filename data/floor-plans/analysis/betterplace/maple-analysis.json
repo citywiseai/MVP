@@ -1,0 +1,52 @@
+{
+  "planId": "maple",
+  "metadata": {
+    "id": "maple",
+    "source": "betterplace",
+    "sourceUrl": "https://betterplacedesignbuild.com/floor-plans/maple/",
+    "imageUrl": "https://a084b90c.delivery.rocketcdn.me/wp-content/uploads/2024/04/Maple-800-SQ-FT-2-Bedroom-2-Bath-Floor-Plan-2.jpg",
+    "localImagePath": "maple.jpg",
+    "squareFootage": 800,
+    "bedrooms": 2,
+    "bathrooms": 2,
+    "stories": 1,
+    "style": "ADU",
+    "scrapedAt": "2025-12-10T17:15:37.362Z"
+  },
+  "roomCount": 9,
+  "roomTypes": [
+    "kitchen",
+    "bedroom",
+    "bathroom",
+    "living room",
+    "dining room",
+    "laundry",
+    "closet",
+    "patio"
+  ],
+  "layoutType": "hybrid",
+  "circulationPattern": "central-hall",
+  "entryType": "direct entry into main living space with central hallway access",
+  "kitchenLocation": "upper left corner with galley layout, adjacent to dining area",
+  "bedroomLayout": "split bedroom layout with bedrooms on opposite sides of the unit",
+  "bathroomPlacement": "back-to-back bathrooms in central core, one ensuite-style for upper bedroom, one accessible from hallway",
+  "storageFeatures": [
+    "walk-in closets in both bedrooms",
+    "laundry closet",
+    "kitchen pantry area"
+  ],
+  "efficiencyNotes": [
+    "galley kitchen maximizes counter and storage space",
+    "back-to-back bathrooms share plumbing wall",
+    "central hallway minimizes circulation space",
+    "laundry integrated into bathroom area",
+    "closets positioned along interior walls"
+  ],
+  "uniqueFeatures": [
+    "patio extends living space outdoors",
+    "dining area positioned centrally for open feel",
+    "washer/dryer placement in bathroom corridor",
+    "both bedrooms have generous closet space"
+  ],
+  "dimensionNotes": "rectangular 34'-10¾\" x 24'-0\" footprint efficiently uses space with well-proportioned rooms, bedrooms appear adequately sized for furniture placement, kitchen galley approximately 13'-9\" long providing ample work space"
+}

@@ -30,8 +30,12 @@ export async function POST(request: NextRequest) {
         jurisdiction: jurisdictionResult.displayName,
         jurisdictionType: jurisdictionResult.type,
         jurisdictionCode: jurisdictionResult.jurisdiction,
-        hasGeometry: !!parcelData.boundaryCoordinates
+        hasGeometry: !!parcelData.boundaryCoordinates,
+        boundaryCoordinatesLength: parcelData.boundaryCoordinates?.length || 0,
+        boundaryRingsLength: parcelData.boundaryRings?.length || 0
       })
+
+      console.log('📍 Returning parcel data, has boundaries:', !!parcelData.boundaryCoordinates, 'length:', parcelData.boundaryCoordinates?.length)
 
       return NextResponse.json({
         address: `${parcelData.address}, ${parcelData.city}, ${parcelData.zip}`,
@@ -47,7 +51,7 @@ export async function POST(request: NextRequest) {
         propertyType: parcelData.propertyType,
         zoning: parcelData.zoning,
         parcelNumber: parcelData.apn,
-  ownerName: parcelData.owner,
+        ownerName: parcelData.owner,
         assessedValue: null,
         floodZone: 'X',
         seismicZone: 'Low',
@@ -64,7 +68,10 @@ export async function POST(request: NextRequest) {
         },
         latitude: parcelData.latitude,
         longitude: parcelData.longitude,
-        apn: parcelData.apn
+        apn: parcelData.apn,
+        // CRITICAL: Include boundary coordinates for map visualization
+        boundaryCoordinates: parcelData.boundaryCoordinates,
+        boundaryRings: parcelData.boundaryRings
       })
     }
     
