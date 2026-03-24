@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';;
-
-
+import { prisma } from '@/lib/prisma';
+import { searchRegridParcel } from '@/lib/regrid';
 
 export async function POST(
   req: NextRequest,
@@ -25,25 +24,78 @@ export async function POST(
       return NextResponse.json({ error: 'No address to fetch' }, { status: 400 });
     }
 
-    // Fetch complete parcel data from Regrid (including propertyMetadata)
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/parcels/fetch`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ address: project.fullAddress }),
+    console.log('🔍 Fetching parcel from Regrid for:', project.fullAddress);
+
+    // Fetch parcel data directly from Regrid
+    const parcelData = await searchRegridParcel(project.fullAddress);
+
+    if (!parcelData) {
+      return NextResponse.json({ error: 'Parcel not found in Regrid' }, { status: 404 });
+    }
+
+    console.log('📦 Parcel data received:', {
+      apn: parcelData.apn,
+      address: parcelData.address,
     });
 
-    if (!response.ok) {
-      return NextResponse.json({ error: 'Failed to fetch parcel data' }, { status: 500 });
+    // Build zoning rules array with subdivision info
+    const zoningRules = [];
+    
+    if (parcelData.subdivision || parcelData.platBook) {
+      zoningRules.push({
+        type: 'subdivision',
+        name: parcelData.subdivision || 'Unknown Subdivision',
+        platBook: parcelData.platBook,
+        platPage: parcelData.platPage,
+        mcrweblink: parcelData.mcrweblink,
+        subdivisionId: null
+      });
     }
 
-    const result = await response.json();
-
-    if (!result.success || !result.parcel) {
-      return NextResponse.json({ error: 'Failed to fetch parcel data' }, { status: 500 });
+    if (parcelData.zoning) {
+      zoningRules.push({
+        type: 'zoning',
+        code: parcelData.zoning,
+        name: `Zoning: ${parcelData.zoning}`
+      });
     }
 
-    // The /api/parcels/fetch endpoint already created/updated the parcel with complete data
-    const parcel = result.parcel;
+    // Store complete Regrid data
+    const propertyMetadata = parcelData.rawRegridData || {};
+
+    // Create or update parcel in database
+    const parcel = await prisma.parcel.upsert({
+      where: { apn: parcelData.apn },
+      create: {
+        apn: parcelData.apn,
+        address: parcelData.address,
+        city: parcelData.city,
+        state: parcelData.state,
+        county: parcelData.county,
+        zipCode: parcelData.zip,
+        zoning: parcelData.zoning || '',
+        lotSizeSqFt: Math.round(parcelData.lotSizeSqFt || 0),
+        latitude: parcelData.latitude,
+        longitude: parcelData.longitude,
+        boundaryCoordinates: parcelData.boundaryRings,
+        zoningRules: zoningRules,
+        propertyMetadata: propertyMetadata,
+      },
+      update: {
+        address: parcelData.address,
+        city: parcelData.city,
+        state: parcelData.state,
+        county: parcelData.county,
+        zipCode: parcelData.zip,
+        zoning: parcelData.zoning || '',
+        lotSizeSqFt: Math.round(parcelData.lotSizeSqFt || 0),
+        latitude: parcelData.latitude,
+        longitude: parcelData.longitude,
+        boundaryCoordinates: parcelData.boundaryRings,
+        zoningRules: zoningRules,
+        propertyMetadata: propertyMetadata,
+      },
+    });
 
     // Link the parcel to the project if not already linked
     if (!project.parcelId || project.parcelId !== parcel.id) {
@@ -53,9 +105,11 @@ export async function POST(
       });
     }
 
+    console.log('✅ Parcel linked to project:', parcel.id);
+
     return NextResponse.json({ success: true, parcel });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching parcel:', error);
-    return NextResponse.json({ error: 'Failed to fetch parcel' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Failed to fetch parcel' }, { status: 500 });
   }
 }

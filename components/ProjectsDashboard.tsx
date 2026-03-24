@@ -24,7 +24,7 @@ import ExportReportButton from '@/components/ExportReportButton'
 
 const MapboxPropertyVisualization = dynamic(() => import('./MapboxPropertyVisualization'), {
   ssr: false,
-  loading: () => <div className="h-[400px] bg-gray-100 animate-pulse rounded-lg" />
+  loading: () => <div className="h-[700px] bg-gray-100 animate-pulse rounded-lg" />
 })
 
 const ProjectChatWrapper = dynamic(() => import('./ProjectChatWrapper'), {
@@ -110,6 +110,9 @@ export function ProjectsDashboard({
   // Roadmap state
   const [roadmap, setRoadmap] = useState<ProjectRoadmap | null>(null)
   const [selectedPhaseId, setSelectedPhaseId] = useState<string>('')
+  
+  // Map height state (default 700px for better visibility)
+  const [mapHeight, setMapHeight] = useState(1000)
 
   // Permit Timeline state
   const [permitTimeline, setPermitTimeline] = useState<any>(null)
@@ -128,6 +131,8 @@ export function ProjectsDashboard({
   // Auto-fetch parcel data if project has address but no parcel
   // Also fetch complete Regrid data if propertyMetadata is missing
   useEffect(() => {
+    // Clear assessor data when switching projects
+    setAssessorData(null);
     console.log('🔄 useEffect: selectedProject changed:', selectedProject?.name || 'none');
     console.log('🔄 useEffect: Has parcel?', !!selectedProject?.parcel);
     console.log('🔄 useEffect: Parcel ID:', selectedProject?.parcel?.id);
@@ -1618,19 +1623,46 @@ export function ProjectsDashboard({
             {/* Property Visualization Map */}
             {selectedProject.parcel?.boundaryCoordinates && selectedProject.parcel?.latitude && selectedProject.parcel?.longitude && (
               <div className="mb-8 bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-                <div className="px-3 py-4 border-b border-gray-100">
+                <div className="px-3 py-4 border-b border-gray-100 flex items-center justify-between">
                   <h2 className="text-xl font-bold text-[#1e3a5f]">Property Map</h2>
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <span>Height:</span>
+                    <button
+                      onClick={() => setMapHeight(Math.max(400, mapHeight - 100))}
+                      className="px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-gray-600"
+                      title="Decrease height"
+                    >
+                      −
+                    </button>
+                    <span className="w-16 text-center">{mapHeight}px</span>
+                    <button
+                      onClick={() => setMapHeight(Math.min(1200, mapHeight + 100))}
+                      className="px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-gray-600"
+                      title="Increase height"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
                 <div className="px-3 py-4">
                   <MapboxPropertyVisualization
                     parcelId={selectedProject.parcel.id}
                     projectId={selectedProject.id}
-                    boundaryCoords={typeof selectedProject.parcel.boundaryCoordinates === 'string'
-                      ? JSON.parse(selectedProject.parcel.boundaryCoordinates)
-                      : selectedProject.parcel.boundaryCoordinates}
+                    boundaryCoords={(() => {
+                      const coords = typeof selectedProject.parcel.boundaryCoordinates === 'string'
+                        ? JSON.parse(selectedProject.parcel.boundaryCoordinates)
+                        : selectedProject.parcel.boundaryCoordinates;
+                      // boundaryCoordinates is stored as [[[lng, lat], ...]] (rings format)
+                      // Extract the first ring to get [[lng, lat], ...]
+                      if (Array.isArray(coords) && Array.isArray(coords[0]) && Array.isArray(coords[0][0])) {
+                        return coords[0];
+                      }
+                      return coords || [];
+                    })()}
                     centerLat={selectedProject.parcel.latitude}
                     centerLng={selectedProject.parcel.longitude}
                     parcel={selectedProject.parcel}
+                    containerHeight={mapHeight}
                   />
                 </div>
               </div>

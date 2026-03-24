@@ -105,12 +105,54 @@ export async function searchRegridParcel(address: string): Promise<ParcelData | 
     })
     
     let boundaryCoordinates: number[][] = []
-    let boundaryRings: number[][][]= []
+    let boundaryRings: number[][][] = []
     
     if (result.geometry?.coordinates) {
-      boundaryRings = result.geometry.coordinates
-      if (boundaryRings.length > 0 && boundaryRings[0].length > 0) {
-        boundaryCoordinates = boundaryRings[0]
+      const geomType = result.geometry.type
+      console.log('📐 Geometry type:', geomType)
+      console.log('📐 Raw coordinates structure:', JSON.stringify(result.geometry.coordinates).slice(0, 200))
+      
+      if (geomType === 'MultiPolygon') {
+        // MultiPolygon: coordinates[polygon_index][ring_index][point_index]
+        // Take the first polygon's rings
+        if (result.geometry.coordinates.length > 0) {
+          boundaryRings = result.geometry.coordinates[0]
+          if (boundaryRings.length > 0) {
+            boundaryCoordinates = boundaryRings[0]
+          }
+        }
+      } else if (geomType === 'Polygon') {
+        // Polygon: coordinates[ring_index][point_index]
+        boundaryRings = result.geometry.coordinates
+        if (boundaryRings.length > 0 && boundaryRings[0].length > 0) {
+          boundaryCoordinates = boundaryRings[0]
+        }
+      } else {
+        // Fallback - try to extract any coordinates we can find
+        console.log('⚠️ Unknown geometry type, attempting extraction')
+        const coords = result.geometry.coordinates
+        if (Array.isArray(coords) && coords.length > 0) {
+          if (Array.isArray(coords[0]) && Array.isArray(coords[0][0])) {
+            // Nested array - could be Polygon or MultiPolygon
+            if (Array.isArray(coords[0][0][0])) {
+              // MultiPolygon structure
+              boundaryRings = coords[0]
+            } else {
+              // Polygon structure
+              boundaryRings = coords
+            }
+            if (boundaryRings.length > 0) {
+              boundaryCoordinates = boundaryRings[0]
+            }
+          }
+        }
+      }
+      
+      console.log('📐 Extracted boundaryRings count:', boundaryRings.length)
+      console.log('📐 Extracted boundaryCoordinates count:', boundaryCoordinates.length)
+      if (boundaryCoordinates.length > 0) {
+        console.log('📐 First coordinate:', boundaryCoordinates[0])
+        console.log('📐 Last coordinate:', boundaryCoordinates[boundaryCoordinates.length - 1])
       }
     }
     
